@@ -307,7 +307,8 @@ class SQLiteService(DatabaseService):
         # Return the created reaction
         return {
             'id': reaction_id,
-            'post_id': target_id if target_type == 'post' else None,
+            'target_id': target_id,
+            'target_type': target_type,
             'user_id': user_id,
             'reaction_type': reaction_type,
             'created_ts': 'now'  # In real implementation, get actual timestamp

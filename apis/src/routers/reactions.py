@@ -4,6 +4,7 @@ Handles reaction-related endpoints for posts
 """
 
 from typing import Dict, Any, List
+from ..utils.logger import get_logger
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
@@ -16,6 +17,9 @@ router = APIRouter()
 # Global database service
 db_service = DatabaseServiceFactory.create_service()
 
+# Initialize logger - now just like log4j!
+logger = get_logger("PostsAPI", level="DEBUG", json_format=False)
+
 async def get_db_service() -> DatabaseService:
     """Dependency to get database service"""
     if not hasattr(db_service, 'initialized') or not db_service.initialized:
@@ -27,7 +31,8 @@ class ReactionRequest(BaseModel):
 
 class ReactionResponse(BaseModel):
     id: str
-    post_id: str
+    target_id: str
+    target_type: str = "post"  # Default to post
     user_id: str
     reaction_type: str
     created_ts: str
@@ -85,10 +90,14 @@ async def add_reaction_to_discussion(
     user: Dict[str, Any] = Depends(get_current_user_from_middleware)
 ):
     """Add a reaction to a discussion/comment"""
+    logger.debug(f"Adding reaction {req.reaction_type} to discussion {discussion_id} by user {user.get('user_id')}")
+     
     try:
         reaction = await db.add_reaction(discussion_id, user.get("user_id"), req.reaction_type, target_type="discussion")
+        logger.debug(f"Reaction added: {reaction}")
         return ReactionResponse(**reaction)
     except Exception as e:
+        logger.error(f"Error adding reaction: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error adding reaction: {str(e)}")
 
 @router.delete("/discussion/{discussion_id}/remove", response_model=Dict[str, bool])
