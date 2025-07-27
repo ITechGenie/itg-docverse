@@ -48,6 +48,28 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
     }
   };
 
+  const handleSubmitComment = async () => {
+    if (!newComment.trim() || submittingComment) return;
+    
+    try {
+      setSubmittingComment(true);
+      const response = await api.createComment(post.id, newComment.trim());
+      
+      if (response.success && response.data) {
+        // Add new comment to the list
+        setComments([response.data, ...comments]);
+        setNewComment('');
+        console.log('Comment posted successfully!');
+      } else {
+        console.error('Failed to post comment:', response.error);
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
   const fetchCommentReactions = async (comments: Comment[]) => {
     try {
       const reactions: Record<string, any[]> = {};
@@ -82,84 +104,6 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
       }
     } catch (error) {
       console.error('Failed to toggle comment reaction:', error);
-    }
-  };
-
-  const fetchCommentReactions = async (comments: Comment[]) => {
-    try {
-      const reactions: Record<string, any[]> = {};
-      
-      // For now, fetch reactions for each comment individually
-      // TODO: Optimize with bulk query
-      for (const comment of comments) {
-        const response = await api.getReactions(comment.id, 'discussion');
-        if (response.success && response.data) {
-          reactions[comment.id] = response.data;
-        }
-      }
-      
-      setCommentReactions(reactions);
-    } catch (error) {
-      console.error('Failed to fetch comment reactions:', error);
-    }
-  };
-
-  const handleCommentReaction = async (commentId: string, reactionType: string) => {
-    try {
-      const response = await api.toggleReaction(commentId, reactionType as any, 'discussion');
-      if (response.success) {
-        // Refresh reactions for this comment
-        const reactionsResponse = await api.getReactions(commentId, 'discussion');
-        if (reactionsResponse.success && reactionsResponse.data) {
-          setCommentReactions(prev => ({
-            ...prev,
-            [commentId]: reactionsResponse.data
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Failed to toggle comment reaction:', error);
-    }
-  };
-
-  // Fetch comments on component mount
-  useEffect(() => {
-    fetchComments();
-  }, [post.id]);
-
-  const fetchComments = async () => {
-    try {
-      setLoadingComments(true);
-      const response = await api.getComments(post.id);
-      if (response.success && response.data) {
-        setComments(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch comments:', error);
-    } finally {
-      setLoadingComments(false);
-    }
-  };
-
-  const handleSubmitComment = async () => {
-    if (!newComment.trim() || submittingComment) return;
-    
-    try {
-      setSubmittingComment(true);
-      const response = await api.createComment(post.id, newComment.trim());
-      
-      if (response.success && response.data) {
-        // Add new comment to the list
-        setComments([response.data, ...comments]);
-        setNewComment('');
-        console.log('Comment posted successfully!');
-      } else {
-        console.error('Failed to post comment:', response.error);
-      }
-    } catch (error) {
-      console.error('Error posting comment:', error);
-    } finally {
-      setSubmittingComment(false);
     }
   };
 
@@ -289,18 +233,24 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                           size="sm" 
                           className="h-7 px-2 text-muted-foreground hover:text-foreground hover:text-green-600"
                           title="Like this comment"
+                          onClick={() => handleCommentReaction(comment.id, 'event-thumbs-up')}
                         >
                           <ThumbsUp className="w-3 h-3 mr-1" />
-                          <span>{comment.stats.totalReactions}</span>
+                          <span>
+                            {commentReactions[comment.id]?.filter(r => r.reaction_type === 'event-thumbs-up').length || 0}
+                          </span>
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="sm" 
                           className="h-7 px-2 text-muted-foreground hover:text-foreground hover:text-red-600"
                           title="Dislike this comment"
+                          onClick={() => handleCommentReaction(comment.id, 'event-thumbs-down')}
                         >
                           <ThumbsDown className="w-3 h-3 mr-1" />
-                          <span>0</span>
+                          <span>
+                            {commentReactions[comment.id]?.filter(r => r.reaction_type === 'event-thumbs-down').length || 0}
+                          </span>
                         </Button>
                         <Button 
                           variant="ghost" 
@@ -341,18 +291,24 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                                 size="sm" 
                                 className="h-6 px-2 text-muted-foreground hover:text-foreground hover:text-green-600"
                                 title="Like this reply"
+                                onClick={() => handleCommentReaction(reply.id, 'event-thumbs-up')}
                               >
                                 <ThumbsUp className="w-3 h-3 mr-1" />
-                                <span>{reply.stats.totalReactions}</span>
+                                <span>
+                                  {commentReactions[reply.id]?.filter(r => r.reaction_type === 'event-thumbs-up').length || 0}
+                                </span>
                               </Button>
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
                                 className="h-6 px-2 text-muted-foreground hover:text-foreground hover:text-red-600"
                                 title="Dislike this reply"
+                                onClick={() => handleCommentReaction(reply.id, 'event-thumbs-down')}
                               >
                                 <ThumbsDown className="w-3 h-3 mr-1" />
-                                <span>0</span>
+                                <span>
+                                  {commentReactions[reply.id]?.filter(r => r.reaction_type === 'event-thumbs-down').length || 0}
+                                </span>
                               </Button>
                             </div>
                           </div>
