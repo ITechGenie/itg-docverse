@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { api } from '@/lib/api-client';
 import type { Post, Comment } from '@/types';
+import { useAuth } from '@/hooks/use-auth';
 
 interface DiscussionSectionProps {
   post: Post;
@@ -26,6 +27,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
   const [loadingComments, setLoadingComments] = useState(true);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [commentReactions, setCommentReactions] = useState<Record<string, any[]>>({});
+  const { user: currentUser } = useAuth();
 
   // Fetch comments on component mount
   useEffect(() => {
@@ -290,7 +292,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                                 variant="ghost" 
                                 size="sm" 
                                 className={`h-6 px-2 text-muted-foreground hover:text-foreground hover:text-green-600 ${
-                                  commentReactions[reply.id]?.some(r => r.reaction_type === 'event-thumbs-up' && r.user_id === currentUserId) 
+                                  commentReactions[reply.id]?.some(r => r.reaction_type === 'event-thumbs-up' && r.user_id ===   currentUser?.id) 
                                     ? 'text-green-600 bg-green-50' 
                                     : ''
                                 }`}
@@ -306,7 +308,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                                 variant="ghost" 
                                 size="sm" 
                                 className={`h-6 px-2 text-muted-foreground hover:text-foreground hover:text-red-600 ${
-                                  commentReactions[reply.id]?.some(r => r.reaction_type === 'event-thumbs-down' && r.user_id === currentUserId) 
+                                  commentReactions[reply.id]?.some(r => r.reaction_type === 'event-thumbs-down' && r.user_id ===  currentUser?.id) 
                                     ? 'text-red-600 bg-red-50' 
                                     : ''
                                 }`}
