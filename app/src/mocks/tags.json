@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "tag-1",
+      "name": "javascript",
+      "description": "JavaScript programming language",
+      "color": "#f7df1e",
+      "postsCount": 1234
+    },
+    {
+      "id": "tag-2",
+      "name": "react",
+      "description": "React library for building UIs",
+      "color": "#61dafb",
+      "postsCount": 987
+    },
+    {
+      "id": "tag-3",
+      "name": "typescript",
+      "description": "TypeScript superset of JavaScript",
+      "color": "#3178c6",
+      "postsCount": 756
+    },
+    {
+      "id": "tag-4",
+      "name": "webdev",
+      "description": "Web Development",
+      "color": "#ff6b6b",
+      "postsCount": 2345
+    },
+    {
+      "id": "tag-5",
+      "name": "opensource",
+      "description": "Open Source Software",
+      "color": "#4ecdc4",
+      "postsCount": 654
+    }
+  ]
+}

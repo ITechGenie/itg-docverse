@@ -1,0 +1,40 @@
+the project and you have helped build best ux available in /app folder.. the ui app is app to allow users to share posts, thoughts and app docus in one place .. the json are mocks used by the ui application. 
+now lets concentrate on the API part .. 
+ i have moved the code from the parent folder to /app .. and created a new folder apis for backend apis .. 
+ we are going to use python for backend .. fast api as framework .. important aspect .. 
+ i am building this for a hackathon using redis .. so we wil be using redis as the database itself .. 
+ not just as caching .. make sure to create service impl to change it to sqlite or postgres or redis anytime tmro .. 
+ it should be minimal to no change to swtich between the techs - i am counting on you for this .. 
+
+- we wil build the vite project and copy it to app folder inside apis for the fastapi to serve the static content - create a shell script and a bat file with the steps
+
+now to the apis .. 
+
+use a bootstrap.sql - which wil have all the initial data  - all db level changes should go from here so it wil be easy to setup anywhere .. have an .env file to dictate the db connections .. if nothing specified default to sqlite .. 
+
+db schema base requirements,
+
+0. users - user profile info put a dummy conent for now 
+1. posts - overall posts (similar to posts.json) - use type column - refer to post_types below
+2. posts_content - manage versions here (similar to post-details) - this should 
+3. tags_types - master data for tags - use a type colum - we can expand to documemnt types n user journey later
+4. post_tags - association btwn tags and post/document/thought - ideally btwn posts & tags types 
+5. reactions - reactions, views, favourites of users - should support for both post / discussion / users (if we award a badge we can associate to the user as a reaction) 
+6. post_types  - post / thought / llm-short, llm-long, block-diagram etc, we can expand
+7. event_types - master data for all the events that can happen in portal from reactions, favoutites, login, profile updates, post updates etc .. 
+8. user_events - record all user events here in this table - refer to the master table event_types 
+9. post_discussions - association of a post and the discussion - use reference to a version/revision of a post here but display all in the use so we can know if the discussion based on old version. use recursive logic here to support threads like replies to replies etc .. 
+
+apis 
+
+- first thing first - /apis/public/auth - we wil return the auth api response with hardcoded user id - itg-docuerse and create a jwt with 4 hours expiry - use an interface that will use inmemory cache or redis based on .env setting and use it for validation 
+- all apis (/apis/secure/***) from this point should use the jwt token in header as x-auth-user and backend should validate for the jwt signature if good proceed else route to unauthorized page. skip auth for /apis/public/**, assign a default signature key if not available in .env file
+
+all apis can use get / post for operations - all are soft deletes so use posts for updates also to make the status as deleted and dont use put/delete http method
+
+create proper routes and manage them properly in the appropriate route files
+
+- /apis/secure/feed - to list all the posts .. create get / post for operations -  support lazy loading on scroll  like in the feed page we wil load first 10 and then keep expanding by 10 posts on scroll - support filters to get the posts so we can use it for favourite posts, tagged posts, in user profile page we show draft and published posts 
+- /apis/seucre/user/<user_id> - use for user or profile level operations 
+- /apis/secure/posts - to manage the posts - use the filters to return properly 
+
