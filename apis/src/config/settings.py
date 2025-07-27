@@ -16,7 +16,7 @@ class Settings(BaseModel):
     
     # Database Configuration
     database_type: str = "sqlite"  # redis, sqlite, postgresql, mock
-    database_url: str = "sqlite:///./docverse.db"
+    database_url: str = "sqlite:///./itg_docverse.db"
     
     # Redis Configuration
     redis_host: str = "localhost"
