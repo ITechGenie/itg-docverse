@@ -42,16 +42,16 @@ const HeartPlusIcon = ({ className }: { className?: string }) => (
 ); 
 
 const reactionEmojis: Record<ReactionType, React.ReactNode> = {
-  heart: <span className="text-xl">❤️</span>,
-  'broken-heart': <span className="text-xl">💔</span>,
-  'thumbs-up': <span className="text-xl">👍</span>,
-  'thumbs-down': <span className="text-xl">👎</span>,
-  unicorn: <span className="text-xl">🦄</span>,
-  fire: <span className="text-xl">🔥</span>,
-  celebrate: <span className="text-xl">🎉</span>,
-  surprised: <span className="text-xl">😮</span>,
-  thinking: <span className="text-xl">🤔</span>,
-  favorite: <span className="text-xl">⭐</span>,
+  'event-heart': <span className="text-xl">❤️</span>,
+  'event-broken-heart': <span className="text-xl">💔</span>,
+  'event-thumbs-up': <span className="text-xl">👍</span>,
+  'event-thumbs-down': <span className="text-xl">👎</span>,
+  'event-unicorn': <span className="text-xl">🦄</span>,
+  'event-fire': <span className="text-xl">🔥</span>,
+  'event-celebrate': <span className="text-xl">🎉</span>,
+  'event-surprised': <span className="text-xl">😮</span>,
+  'event-thinking': <span className="text-xl">🤔</span>,
+  'event-favorite': <span className="text-xl">⭐</span>,
 };
 
 interface PostHeaderProps {

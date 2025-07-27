@@ -78,16 +78,16 @@ export interface Reaction {
 }
 
 export type ReactionType = 
-  | 'heart' 
-  | 'broken-heart' 
-  | 'thumbs-up' 
-  | 'thumbs-down' 
-  | 'unicorn' 
-  | 'fire' 
-  | 'celebrate' 
-  | 'surprised' 
-  | 'thinking' 
-  | 'favorite';
+  | 'event-heart' 
+  | 'event-broken-heart' 
+  | 'event-thumbs-up' 
+  | 'event-thumbs-down' 
+  | 'event-unicorn' 
+  | 'event-fire' 
+  | 'event-celebrate' 
+  | 'event-surprised' 
+  | 'event-thinking' 
+  | 'event-favorite';
 
 export interface Comment {
   id: string;

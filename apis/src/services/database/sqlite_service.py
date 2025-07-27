@@ -280,21 +280,58 @@ class SQLiteService(DatabaseService):
             (post_id, True)
         )
         
-    # Reaction operations
-    async def add_reaction(self, reaction_data: Dict[str, Any]) -> str:
-        """Add a reaction"""
+    # Reaction operations  
+    async def add_reaction(self, post_id: str, user_id: str, reaction_type: str) -> Dict[str, Any]:
+        """Add a reaction to a post"""
+        import uuid
+        reaction_id = str(uuid.uuid4())
+        
+        # Get event type ID for the reaction
+        event_type_result = await self.execute_query(
+            "SELECT id FROM event_types WHERE id = ? AND category = 'reaction'",
+            (reaction_type,)
+        )
+        
+        if not event_type_result:
+            raise ValueError(f"Unknown reaction type: {reaction_type}")
+            
+        event_type_id = event_type_result[0]['id']
+        
         await self.execute_command(
             """INSERT OR REPLACE INTO reactions 
                (id, event_type_id, user_id, target_type, target_id, target_revision, reaction_value)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (
-                reaction_data['id'], reaction_data['event_type_id'],
-                reaction_data['user_id'], reaction_data['target_type'],
-                reaction_data['target_id'], reaction_data.get('target_revision'),
-                reaction_data.get('reaction_value', 1)
-            )
+            (reaction_id, event_type_id, user_id, 'post', post_id, None, 1)
         )
-        return reaction_data['id']
+        
+        # Return the created reaction
+        return {
+            'id': reaction_id,
+            'post_id': post_id,
+            'user_id': user_id,
+            'reaction_type': reaction_type,
+            'created_ts': 'now'  # In real implementation, get actual timestamp
+        }
+
+    async def remove_reaction(self, post_id: str, user_id: str, reaction_type: str) -> bool:
+        """Remove a reaction from a post"""
+        # Get event type ID for the reaction
+        event_type_result = await self.execute_query(
+            "SELECT id FROM event_types WHERE id = ? AND category = 'reaction'",
+            (reaction_type,)
+        )
+        
+        if not event_type_result:
+            return False
+            
+        event_type_id = event_type_result[0]['id']
+        
+        await self.execute_command(
+            """DELETE FROM reactions 
+               WHERE event_type_id = ? AND user_id = ? AND target_type = 'post' AND target_id = ?""",
+            (event_type_id, user_id, post_id)
+        )
+        return True
         
     async def get_post_reactions(self, post_id: str) -> List[Dict[str, Any]]:
         """Get reactions for a post"""

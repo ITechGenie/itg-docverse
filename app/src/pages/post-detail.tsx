@@ -75,8 +75,16 @@ export default function PostDetail(props: PostDetailProps) {
   const handleReaction = async (type: ReactionType) => {
     if (!post) return;
     try {
-      // Simulate API call - in real app this would be implemented
-      console.log(`Added ${type} reaction to post ${post.id}`);
+      console.log(`Toggling ${type} reaction for post ${post.id}`);
+      const response = await api.toggleReaction(post.id, type);
+      
+      if (response.success) {
+        console.log(`Successfully toggled ${type} reaction`);
+        // TODO: Update local state to reflect the reaction change
+        // You might want to refetch the post or update the reactions locally
+      } else {
+        console.error('Failed to toggle reaction:', response.error);
+      }
     } catch (error) {
       console.error('Failed to add reaction:', error);
     }

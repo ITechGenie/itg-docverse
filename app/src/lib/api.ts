@@ -71,8 +71,8 @@ Mattermost is an open-source messaging platform that enables secure team collabo
     status: 'published',
     revision: 1,
     reactions: [
-      { id: 'r1', type: 'heart', userId: 'user-2', user: mockUser, createdAt: '2025-07-22T11:00:00Z' },
-      { id: 'r2', type: 'unicorn', userId: 'user-3', user: mockUser, createdAt: '2025-07-22T11:30:00Z' },
+      { id: 'r1', type: 'event-heart', userId: 'user-2', user: mockUser, createdAt: '2025-07-22T11:00:00Z' },
+      { id: 'r2', type: 'event-unicorn', userId: 'user-3', user: mockUser, createdAt: '2025-07-22T11:30:00Z' },
     ],
     comments: [],
     stats: {
@@ -200,7 +200,7 @@ export const api = {
       author: mockUser,
       tags: mockTags.filter(tag => data.tags.includes(tag.name)),
       createdAt: new Date().toISOString(),
-      readTime: data.type === 'long-form' ? Math.ceil(data.content.length / 1000) : undefined,
+      readTime: data.type === 'long-form' ? Math.ceil((data.content ?? '').length / 1000) : undefined,
       reactions: [],
       comments: [],
       status: 'published',

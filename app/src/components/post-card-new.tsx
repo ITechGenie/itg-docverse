@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { PostHeader } from '@/components/common/post-header';
+import { api } from '@/lib/api-client';
 import type { Post, ReactionType } from '@/types';
 
 interface PostCardProps {
@@ -8,8 +9,20 @@ interface PostCardProps {
 
 export default function PostCard({ post }: PostCardProps) {
   const handleReaction = async (type: ReactionType) => {
-    // Simulate API call - in real app this would be implemented
-    console.log(`Added ${type} reaction to post ${post.id}`);
+    try {
+      console.log(`Toggling ${type} reaction for post ${post.id}`);
+      const response = await api.toggleReaction(post.id, type);
+      
+      if (response.success) {
+        console.log(`Successfully toggled ${type} reaction`);
+        // TODO: Update local state to reflect the reaction change
+        // You might want to refetch the post or update the reactions locally
+      } else {
+        console.error('Failed to toggle reaction:', response.error);
+      }
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+    }
   };
 
   const handleFavorite = async () => {

@@ -301,14 +301,17 @@ INSERT OR IGNORE INTO post_types (id, name, description, icon, color) VALUES
 
 -- Insert default event types
 INSERT OR IGNORE INTO event_types (id, name, description, category, icon, color) VALUES
--- Reaction events
+-- Reaction events (matching frontend ReactionType)
 ('event-heart', 'heart', 'Heart reaction', 'reaction', '❤️', '#E74C3C'),
-('event-like', 'like', 'Like reaction', 'reaction', '👍', '#3498DB'),
+('event-broken-heart', 'broken-heart', 'Broken heart reaction', 'reaction', '�', '#E74C3C'),
+('event-thumbs-up', 'thumbs-up', 'Thumbs up reaction', 'reaction', '�👍', '#3498DB'),
+('event-thumbs-down', 'thumbs-down', 'Thumbs down reaction', 'reaction', '👎', '#E74C3C'),
 ('event-unicorn', 'unicorn', 'Unicorn reaction', 'reaction', '🦄', '#9B59B6'),
 ('event-fire', 'fire', 'Fire reaction', 'reaction', '🔥', '#E67E22'),
+('event-celebrate', 'celebrate', 'Celebrate reaction', 'reaction', '🎉', '#F1C40F'),
+('event-surprised', 'surprised', 'Surprised reaction', 'reaction', '😮', '#95A5A6'),
+('event-thinking', 'thinking', 'Thinking reaction', 'reaction', '🤔', '#34495E'),
 ('event-favorite', 'favorite', 'Favorite/Bookmark', 'reaction', '⭐', '#F39C12'),
-('event-insightful', 'insightful', 'Insightful reaction', 'reaction', '💡', '#F1C40F'),
-('event-helpful', 'helpful', 'Helpful reaction', 'reaction', '🙏', '#2ECC71'),
 
 -- Engagement events
 ('event-view', 'view', 'Content view', 'engagement', '👁️', '#95A5A6'),

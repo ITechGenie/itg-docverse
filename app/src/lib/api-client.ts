@@ -31,7 +31,7 @@ export class ApiClient {
       timeout: 10000,
     });
 
-    // Request interceptor to add auth token
+        // Request interceptor to add auth token
     this.client.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -143,6 +143,14 @@ export class ApiClient {
     }
 
     try {
+      // Ensure we have a valid token for real API calls
+      if (USE_REAL_API) {
+        const authResult = await this.ensureAuthenticated();
+        if (!authResult.success) {
+          return { success: false, error: authResult.error || 'Authentication failed' };
+        }
+      }
+
       const config: any = {
         method,
         url: endpoint,
@@ -174,13 +182,50 @@ export class ApiClient {
   }
 
   // Auth APIs
+  async ensureAuthenticated(): Promise<ApiResponse<string>> {
+    try {
+      const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (token) {
+        // Check if token is still valid by trying to parse it
+        try {
+          const tokenPayload = this.parseJwtPayload(token);
+          const currentTime = Math.floor(Date.now() / 1000);
+          
+          // If token is not expired, return it
+          if (tokenPayload.exp && tokenPayload.exp > currentTime) {
+            return { success: true, data: token };
+          }
+        } catch (error) {
+          // Token is invalid, remove it
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+        }
+      }
+      
+      // No valid token, get a new one from the public auth endpoint
+      const authResponse = await this.apiCall<{ access_token: string }>('/public/auth', 'POST');
+      if (authResponse.success && authResponse.data?.access_token) {
+        const newToken = authResponse.data.access_token;
+        localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
+        return { success: true, data: newToken };
+      }
+      
+      return { success: false, error: 'Failed to authenticate' };
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      return { success: false, error: 'Authentication failed' };
+    }
+  }
+
   async getCurrentUser(): Promise<ApiResponse<User & { token?: string }>> {
     try {
       if (USE_REAL_API) {
-        const token = localStorage.getItem(TOKEN_STORAGE_KEY);
-        if (!token) {
-          return { success: false, error: 'No authentication token found' };
+        // Ensure we have a valid token
+        const authResult = await this.ensureAuthenticated();
+        if (!authResult.success) {
+          return { success: false, error: authResult.error };
         }
+        
+        const token = authResult.data!;
         
         try {
           const tokenPayload = this.parseJwtPayload(token);
@@ -398,12 +443,42 @@ export class ApiClient {
     }
   }
 
-  async toggleReaction(_postId: string, _reactionType: ReactionType): Promise<ApiResponse<boolean>> {
+  async toggleReaction(postId: string, reactionType: ReactionType): Promise<ApiResponse<boolean>> {
     try {
       if (USE_REAL_API) {
-        // Real API doesn't support reactions yet, return mock success
-        await new Promise(resolve => setTimeout(resolve, 200));
-        return { success: true, data: true };
+        // First check if user already has this reaction
+        const reactionsResponse = await this.apiCall<any[]>(`/reactions/post/${postId}`);
+        
+        if (reactionsResponse.success && reactionsResponse.data) {
+          const currentUser = await this.getCurrentUser();
+          if (!currentUser.success) {
+            return { success: false, error: 'User not authenticated' };
+          }
+          
+          const userReaction = reactionsResponse.data.find(
+            r => r.user_id === currentUser.data!.id && r.reaction_type === reactionType
+          );
+          
+          if (userReaction) {
+            // Remove existing reaction
+            const removeResponse = await this.apiCall(
+              `/reactions/post/${postId}/remove`,
+              'DELETE',
+              { reaction_type: reactionType }
+            );
+            return { success: removeResponse.success, data: removeResponse.success };
+          } else {
+            // Add new reaction
+            const addResponse = await this.apiCall(
+              `/reactions/post/${postId}/add`,
+              'POST',
+              { reaction_type: reactionType }
+            );
+            return { success: addResponse.success, data: addResponse.success };
+          }
+        }
+        
+        return { success: false, error: 'Failed to check existing reactions' };
       } else {
         // Mock reaction toggle - just return success
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -412,6 +487,21 @@ export class ApiClient {
     } catch (error) {
       console.error('Toggle reaction failed:', error);
       return { success: false, error: 'Failed to toggle reaction' };
+    }
+  }
+
+  async getPostReactions(postId: string): Promise<ApiResponse<any[]>> {
+    try {
+      if (USE_REAL_API) {
+        return await this.apiCall<any[]>(`/reactions/post/${postId}`);
+      } else {
+        // Mock reactions
+        await new Promise(resolve => setTimeout(resolve, 200));
+        return { success: true, data: [] };
+      }
+    } catch (error) {
+      console.error('Get post reactions failed:', error);
+      return { success: false, error: 'Failed to get post reactions' };
     }
   }
 
