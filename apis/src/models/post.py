@@ -9,9 +9,14 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 class PostType(str, Enum):
-    """Post type enumeration"""
-    LONG_FORM = "long-form"
-    THOUGHTS = "thoughts"
+    """Post type enumeration - matches database post_types table"""
+    POSTS = "posts"                     # Articles and blog posts
+    THOUGHTS = "thoughts"               # Quick thoughts and micro-posts
+    LLM_SHORT = "llm-short"            # AI-generated short summaries
+    LLM_LONG = "llm-long"              # AI-generated detailed documentation
+    BLOCK_DIAGRAM = "block-diagram"     # Visual diagrams and flowcharts
+    CODE_SNIPPET = "code-snippet"      # Code examples and snippets
+    DISCUSSION = "discussion"           # Discussion starters and questions
 
 class PostStatus(str, Enum):
     """Post status enumeration"""
@@ -25,7 +30,7 @@ class Post(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     content: str = Field(..., min_length=1)
     author_id: str
-    post_type: PostType = PostType.LONG_FORM
+    post_type: PostType = PostType.POSTS
     status: PostStatus = PostStatus.DRAFT
     tags: List[str] = Field(default_factory=list)
     
@@ -54,7 +59,7 @@ class PostCreate(BaseModel):
     """Post creation model"""
     title: str = Field(..., min_length=1, max_length=200)
     content: str = Field(..., min_length=1)
-    post_type: PostType = PostType.LONG_FORM
+    post_type: PostType = PostType.POSTS
     tags: List[str] = Field(default_factory=list)
     is_document: bool = Field(default=False)
     project_id: Optional[str] = Field(None, max_length=100)

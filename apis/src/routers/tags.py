@@ -1,16 +1,17 @@
 """
 Tags API Router
-Handles all tag-related endpoints
+Handles all tag-related endpoints (requires authentication)
 """
 
-from typing import List
+from typing import List, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Query
 
 from ..models.tag import Tag, TagCreate, TagUpdate, TagPublic
 from ..services.database.factory import DatabaseServiceFactory
 from ..services.database.base import DatabaseService
+from ..middleware.dependencies import get_current_user_from_middleware
 
-router = APIRouter(prefix="/api/tags", tags=["tags"])
+router = APIRouter()
 
 # Global database service
 db_service = DatabaseServiceFactory.create_service()
@@ -23,9 +24,10 @@ async def get_db_service() -> DatabaseService:
 
 @router.get("/", response_model=List[TagPublic])
 async def get_tags(
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
     db: DatabaseService = Depends(get_db_service)
 ):
-    """Get all tags"""
+    """Get all tags (requires authentication)"""
     try:
         tags = await db.get_tags()
         return [TagPublic(**tag.model_dump()) for tag in tags]
@@ -35,9 +37,10 @@ async def get_tags(
 @router.get("/{tag_id}", response_model=TagPublic)
 async def get_tag(
     tag_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
     db: DatabaseService = Depends(get_db_service)
 ):
-    """Get a specific tag by ID"""
+    """Get a specific tag by ID (requires authentication)"""
     try:
         tag = await db.get_tag_by_id(tag_id)
         if not tag:
@@ -51,9 +54,10 @@ async def get_tag(
 @router.get("/name/{tag_name}", response_model=TagPublic)
 async def get_tag_by_name(
     tag_name: str,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
     db: DatabaseService = Depends(get_db_service)
 ):
-    """Get a specific tag by name"""
+    """Get a specific tag by name (requires authentication)"""
     try:
         tag = await db.get_tag_by_name(tag_name)
         if not tag:
@@ -67,9 +71,10 @@ async def get_tag_by_name(
 @router.post("/", response_model=TagPublic)
 async def create_tag(
     tag_data: TagCreate,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
     db: DatabaseService = Depends(get_db_service)
 ):
-    """Create a new tag"""
+    """Create a new tag (requires authentication)"""
     try:
         tag = Tag(**tag_data.model_dump())
         created_tag = await db.create_tag(tag)

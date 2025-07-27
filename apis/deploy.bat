@@ -10,7 +10,7 @@ cd ..\app
 call npm install
 call npm run build
 
-if %errorlevel% neq 0 (
+if errorlevel 1 (
     echo ❌ Frontend build failed!
     exit /b 1
 )
@@ -22,20 +22,34 @@ echo 📁 Copying built files to FastAPI static directory...
 cd ..\apis
 
 REM Create app directory if it doesn't exist
-if not exist app mkdir app
+if not exist "app" mkdir app
 
 REM Remove old files and copy new ones
 rmdir /s /q app 2>nul
 mkdir app
-xcopy /e /i /y ..\app\dist\* app\
+xcopy /e /i ..\app\dist\* app
 
 echo ✅ Files copied successfully!
 
 REM Step 3: Install Python dependencies
 echo 🐍 Installing Python dependencies...
+
+REM Check if virtual environment exists, create if not
+if not exist ".venv" (
+    echo Creating virtual environment...
+    python -m venv .venv
+)
+
+REM Activate virtual environment
+call .venv\Scripts\activate.bat
+
+REM Install/upgrade pip
+python -m pip install --upgrade pip
+
+REM Install requirements
 pip install -r requirements.txt
 
-if %errorlevel% neq 0 (
+if errorlevel 1 (
     echo ❌ Python dependencies installation failed!
     exit /b 1
 )
@@ -43,10 +57,10 @@ if %errorlevel% neq 0 (
 echo ✅ Python dependencies installed successfully!
 
 REM Step 4: Run database bootstrap
-echo 🗄️  Running database bootstrap...
-python scripts\bootstrap.py
+echo 🗄️ Running database bootstrap...
+python bootstrap.py
 
-if %errorlevel% neq 0 (
+if errorlevel 1 (
     echo ❌ Database bootstrap failed!
     exit /b 1
 )
@@ -62,4 +76,4 @@ echo.
 echo Press Ctrl+C to stop the server
 echo.
 
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+python main.py

@@ -9,6 +9,8 @@ from typing import Type
 from .base import DatabaseService
 from .mock_service import MockDatabaseService
 from .redis_service import RedisService
+from .sqlite_service import SQLiteService
+from .postgresql_service import PostgreSQLService
 from ...config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -21,21 +23,21 @@ class DatabaseServiceFactory:
         """Create database service based on configuration"""
         db_type = settings.database_type.lower()
         
+        # For testing, temporarily use MockDatabaseService
+        logger.info("Creating Mock database service for testing")
+        return MockDatabaseService()
+        
         if db_type == "redis":
             logger.info("Creating Redis database service")
             return RedisService()
         
         elif db_type == "sqlite":
             logger.info("Creating SQLite database service")
-            # TODO: Import and return SQLiteService
-            logger.warning("SQLite service not yet implemented, using mock service")
-            return MockDatabaseService()
+            return SQLiteService()
         
         elif db_type == "postgresql":
             logger.info("Creating PostgreSQL database service")
-            # TODO: Import and return PostgreSQLService
-            logger.warning("PostgreSQL service not yet implemented, using mock service")
-            return MockDatabaseService()
+            return PostgreSQLService()
         
         elif db_type == "mock":
             logger.info("Creating Mock database service")

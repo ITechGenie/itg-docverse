@@ -1,10 +1,10 @@
 """
 ITG DocVerse API
-Main FastAPI application
+Main FastAPI application with JWT Authentication Middleware
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -13,8 +13,11 @@ import uvicorn
 import os
 
 from src.config.settings import get_settings
-from src.routers import posts, users, tags, comments
+from src.routers import posts, users, tags, comments, stats
+from src.routers import public_auth
 from src.database.connection import get_database_service
+from src.middleware.auth import AuthenticationMiddleware
+from src.auth.jwt_service import AuthService
 
 # Initialize settings
 settings = get_settings()
@@ -60,11 +63,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add authentication middleware (handles JWT for all protected routes)
+auth_service = AuthService()
+app.add_middleware(AuthenticationMiddleware, auth_service=auth_service)
+
 # Include API routers
-app.include_router(users.router, prefix="/api/users", tags=["Users"])
-app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
-app.include_router(tags.router, prefix="/api/tags", tags=["Tags"])
-app.include_router(comments.router, prefix="/api/comments", tags=["Comments"])
+# Public endpoints (no authentication required) - Only JWT auth
+app.include_router(public_auth.router, prefix="/apis/public", tags=["Public Auth"])
+
+# All other endpoints require authentication (handled by middleware)
+app.include_router(posts.router, prefix="/apis/posts", tags=["Posts"])
+app.include_router(users.router, prefix="/apis/users", tags=["Users"])
+app.include_router(tags.router, prefix="/apis/tags", tags=["Tags"])
+app.include_router(comments.router, prefix="/apis/comments", tags=["Comments"])
+app.include_router(stats.router, prefix="/apis/stats", tags=["Statistics"])
 
 # Health check endpoint
 @app.get("/api/health")
@@ -99,7 +111,7 @@ if app_path.exists():
         This enables client-side routing to work properly
         """
         if full_path.startswith("api/"):
-            return {"error": "API endpoint not found"}
+            raise HTTPException(status_code=404, detail="API endpoint not found")
         
         index_file = app_path / "index.html"
         if index_file.exists():

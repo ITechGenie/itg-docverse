@@ -33,6 +33,20 @@ echo "✅ Files copied successfully!"
 
 # Step 3: Install Python dependencies
 echo "🐍 Installing Python dependencies..."
+
+# Check if virtual environment exists, create if not
+if [ ! -d ".venv" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv .venv
+fi
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install/upgrade pip
+pip install --upgrade pip
+
+# Install requirements
 pip install -r requirements.txt
 
 if [ $? -ne 0 ]; then
@@ -44,7 +58,7 @@ echo "✅ Python dependencies installed successfully!"
 
 # Step 4: Run database bootstrap
 echo "🗄️  Running database bootstrap..."
-python scripts/bootstrap.py
+python bootstrap.py
 
 if [ $? -ne 0 ]; then
     echo "❌ Database bootstrap failed!"
@@ -62,4 +76,4 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+python main.py
