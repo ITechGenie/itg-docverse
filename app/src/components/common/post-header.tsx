@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { 
   MessageCircle, 
@@ -19,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getAvatarUrl } from '@/lib/avatar';
+import { api } from '@/lib/api-client';
 import type { Post, ReactionType } from '@/types';
 
 const HeartPlusIcon = ({ className }: { className?: string }) => (
@@ -59,7 +61,6 @@ interface PostHeaderProps {
   showImage?: boolean;
   isDetailView?: boolean;
   onReaction?: (type: ReactionType) => void;
-  onFavorite?: () => void;
   onShare?: () => void;
   onEdit?: () => void;
   onViewVersions?: () => void;
@@ -70,13 +71,45 @@ export const PostHeader = ({
   showImage = true, 
   isDetailView = false,
   onReaction,
-  onFavorite,
   onShare,
   onEdit,
   onViewVersions
 }: PostHeaderProps) => {
+  const [reactions, setReactions] = useState<any[]>([]);
+  const [loadingReactions, setLoadingReactions] = useState(true);
+  const [totalReactions, setTotalReactions] = useState(0);
+  
   const avatarUrl = getAvatarUrl(post.author.email || post.author.username, 48);
   const formattedDate = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
+
+  // Fetch reactions independently
+  useEffect(() => {
+    fetchReactions();
+  }, [post.id]);
+
+  const fetchReactions = async () => {
+    try {
+      setLoadingReactions(true);
+      const response = await api.getPostReactions(post.id);
+      if (response.success && response.data) {
+        console.log('Fetched reactions:', response.data);
+        setReactions(response.data);
+        setTotalReactions(response.data.length);
+      }
+    } catch (error) {
+      console.error('Failed to fetch reactions:', error);
+    } finally {
+      setLoadingReactions(false);
+    }
+  };
+
+  const handleReactionClick = async (type: ReactionType) => {
+    if (onReaction) {
+      await onReaction(type);
+      // Refetch reactions after the action
+      await fetchReactions();
+    }
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -141,7 +174,7 @@ export const PostHeader = ({
                 title="Add reaction"
               >
                 <HeartPlusIcon className="w-4 h-4" />
-                <span className="text-sm">{post.stats.totalReactions}</span>
+                <span className="text-sm">{loadingReactions ? '...' : totalReactions}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -150,7 +183,7 @@ export const PostHeader = ({
                   <DropdownMenuItem
                     key={reactionType}
                     className="flex items-center justify-center p-2 cursor-pointer hover:bg-accent"
-                    onClick={() => onReaction?.(reactionType)}
+                    onClick={() => handleReactionClick(reactionType)}
                   >
                     {reactionEmojis[reactionType]}
                   </DropdownMenuItem>
@@ -173,12 +206,24 @@ export const PostHeader = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onFavorite}
+            onClick={() => handleReactionClick('event-favorite')}
             className="flex items-center space-x-2 text-muted-foreground hover:text-foreground"
             title="Save"
           >
-            <Bookmark className="w-4 h-4" />
-            <span className="text-sm">{Math.floor(post.stats.totalReactions * 0.6)}</span>
+            <Bookmark className={`w-4 h-4 ${(() => {
+              // Check if current user has favorited this post
+              // TODO: Get current user ID from context/auth
+              const currentUserId = 'itg-docverse'; // Mock current user
+              const userHasFavorited = reactions.some(r => 
+                r.reaction_type === 'event-favorite' && r.user_id === currentUserId
+              );
+              return userHasFavorited ? 'fill-current text-yellow-500' : '';
+            })()} `} />
+            <span className="text-sm">{(() => {
+              // Count favorite reactions for this post
+              const favoriteCount = reactions.filter(r => r.reaction_type === 'event-favorite').length;
+              return favoriteCount;
+            })()}</span>
           </Button>
 
           <Button
@@ -340,26 +385,30 @@ export const PostHeader = ({
       )}
 
       {/* Row 5: Reaction Emojis with Counts (only show if reactions exist and post is published) */}
-      {post.reactions && post.reactions.length > 0 && post.status === 'published' && (
+      {!loadingReactions && reactions.length > 0 && post.status === 'published' && (
         <div className="flex items-center space-x-6 mb-4 p-3 bg-muted/30 rounded-lg">
           <div className="flex items-center space-x-4">
             {(() => {
               // Group reactions by type and count them
-              const reactionCounts = post.reactions.reduce((acc, reaction) => {
-                acc[reaction.type] = (acc[reaction.type] || 0) + 1;
+              const reactionCounts = reactions.reduce((acc, reaction) => {
+                const reactionType = reaction.reaction_type;
+                acc[reactionType] = (acc[reactionType] || 0) + 1;
                 return acc;
               }, {} as Record<ReactionType, number>);
+
+              console.log('Reaction counts:', reactionCounts);
+              console.log('Available emojis:', Object.keys(reactionEmojis));
 
               return Object.entries(reactionCounts).map(([type, count]) => (
                 <div key={type} className="flex items-center space-x-2">
                   {reactionEmojis[type as ReactionType]}
-                  <span className="text-muted-foreground font-medium">{count}</span>
+                  <span className="text-muted-foreground font-medium">{count as number}</span>
                 </div>
               ));
             })()}
           </div>
           <div className="text-sm text-muted-foreground">
-            {post.stats.totalReactions} Reactions
+            ({totalReactions} Reactions)
           </div>
         </div>
       )}

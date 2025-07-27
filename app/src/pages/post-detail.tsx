@@ -32,45 +32,45 @@ export default function PostDetail(props: PostDetailProps) {
     // Skip fetching if props are provided (wrapper component handles it)
     if (props.post !== undefined) return;
     
-    const fetchPost = async () => {
-      if (!id) return;
-      
-      try {
-        setInternalLoading(true);
-        
-        console.log(`Fetching post with ID: ${id}`);
-        console.log(`Current path: ${location.pathname}`);
-        console.log(`Version: ${version}, DocType: ${docType}`);
-        
-        // For standalone usage, handle both posts and documents
-        const isDocumentRoute = location.hash.includes('/code-summaries/documents/');
-        const isDocumentType = docType && isNaN(parseInt(docType));
-        const versionToFetch = version || (isDocumentType ? undefined : docType);
-        
-        console.log(`Fetching version: ${versionToFetch}`);
-        
-        const response = versionToFetch ? await api.getPostVersion(id, parseInt(versionToFetch)) : await api.getPost(id);
-        
-        console.log('API Response:', response);
-        
-        if (response.success && response.data) {
-          setInternalPost(response.data);
-          
-          if (isDocumentRoute && isDocumentType) {
-            console.log(`Viewing document ${id} with type: ${docType}`);
-          }
-        } else {
-          console.error('No data in API response:', response);
-        }
-      } catch (error) {
-        console.error('Failed to fetch post:', error);
-      } finally {
-        setInternalLoading(false);
-      }
-    };
-
     fetchPost();
   }, [id, version, docType, props.post]); // Remove location.pathname dependency
+
+  const fetchPost = async () => {
+    if (!id) return;
+    
+    try {
+      setInternalLoading(true);
+      
+      console.log(`Fetching post with ID: ${id}`);
+      console.log(`Current path: ${location.pathname}`);
+      console.log(`Version: ${version}, DocType: ${docType}`);
+      
+      // For standalone usage, handle both posts and documents
+      const isDocumentRoute = location.hash.includes('/code-summaries/documents/');
+      const isDocumentType = docType && isNaN(parseInt(docType));
+      const versionToFetch = version || (isDocumentType ? undefined : docType);
+      
+      console.log(`Fetching version: ${versionToFetch}`);
+      
+      const response = versionToFetch ? await api.getPostVersion(id, parseInt(versionToFetch)) : await api.getPost(id);
+      
+      console.log('API Response:', response);
+      
+      if (response.success && response.data) {
+        setInternalPost(response.data);
+        
+        if (isDocumentRoute && isDocumentType) {
+          console.log(`Viewing document ${id} with type: ${docType}`);
+        }
+      } else {
+        console.error('No data in API response:', response);
+      }
+    } catch (error) {
+      console.error('Failed to fetch post:', error);
+    } finally {
+      setInternalLoading(false);
+    }
+  };
 
   const handleReaction = async (type: ReactionType) => {
     if (!post) return;
@@ -80,23 +80,12 @@ export default function PostDetail(props: PostDetailProps) {
       
       if (response.success) {
         console.log(`Successfully toggled ${type} reaction`);
-        // TODO: Update local state to reflect the reaction change
-        // You might want to refetch the post or update the reactions locally
+        // PostHeader will handle its own reaction refetch
       } else {
         console.error('Failed to toggle reaction:', response.error);
       }
     } catch (error) {
       console.error('Failed to add reaction:', error);
-    }
-  };
-
-  const handleFavorite = async () => {
-    if (!post) return;
-    try {
-      // Simulate API call - in real app this would be implemented
-      console.log(`Favorited post ${post.id}`);
-    } catch (error) {
-      console.error('Failed to favorite post:', error);
     }
   };
 
@@ -182,7 +171,6 @@ export default function PostDetail(props: PostDetailProps) {
         showImage={true}
         isDetailView={true}
         onReaction={handleReaction}
-        onFavorite={handleFavorite}
         onShare={handleShare}
         onEdit={handleEdit}
         onViewVersions={handleViewVersions}

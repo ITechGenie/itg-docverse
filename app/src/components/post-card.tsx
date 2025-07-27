@@ -15,19 +15,13 @@ export default function PostCard({ post }: PostCardProps) {
       
       if (response.success) {
         console.log(`Successfully toggled ${type} reaction`);
-        // TODO: Update local state to reflect the reaction change
-        // You might want to refetch the post or update the reactions locally
+        // PostHeader will handle its own reaction refetch
       } else {
         console.error('Failed to toggle reaction:', response.error);
       }
     } catch (error) {
       console.error('Failed to add reaction:', error);
     }
-  };
-
-  const handleFavorite = async () => {
-    // Simulate API call - in real app this would be implemented
-    console.log(`Favorited post ${post.id}`);
   };
 
   const handleShare = () => {
@@ -50,7 +44,6 @@ export default function PostCard({ post }: PostCardProps) {
           showImage={false}
           isDetailView={false}
           onReaction={handleReaction}
-          onFavorite={handleFavorite}
           onShare={handleShare}
         />
         

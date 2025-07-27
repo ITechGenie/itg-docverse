@@ -549,11 +549,39 @@ export class ApiClient {
   }
 
   // Comments APIs
-  async getComments(_postId: string): Promise<ApiResponse<Comment[]>> {
+  async getComments(postId: string): Promise<ApiResponse<Comment[]>> {
     try {
       if (USE_REAL_API) {
-        // Real API doesn't support comments yet, return empty array
-        return { success: true, data: [] };
+        const response = await this.apiCall<any[]>(`/comments/post/${postId}`);
+
+        if (!response.success) {
+          return { success: false, error: response.error };
+        }
+
+        // Transform API comments to frontend format
+        const comments: Comment[] = response.data!.map((apiComment: any) => ({
+          id: apiComment.id,
+          content: apiComment.content,
+          author: {
+            id: apiComment.author_id,
+            username: apiComment.author_id, // TODO: Get real author data
+            displayName: apiComment.author_id,
+            email: '',
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiComment.author_id}`,
+            joinedDate: new Date().toISOString(),
+            stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
+          },
+          postId: apiComment.post_id,
+          parentId: apiComment.parent_id,
+          createdAt: apiComment.created_at,
+          reactions: [],
+          stats: {
+            totalReactions: apiComment.like_count || 0,
+            totalReplies: 0,
+          },
+        }));
+
+        return { success: true, data: comments };
       } else {
         // Mock empty comments for now
         return { success: true, data: [] };
@@ -567,25 +595,41 @@ export class ApiClient {
   async createComment(postId: string, content: string, parentId?: string): Promise<ApiResponse<Comment>> {
     try {
       if (USE_REAL_API) {
-        // Real API doesn't support comments yet, return mock
+        const response = await this.apiCall<any>(
+          '/comments/',
+          'POST',
+          {
+            post_id: postId,
+            content,
+            parent_id: parentId
+          }
+        );
+
+        if (!response.success) {
+          return { success: false, error: response.error };
+        }
+
+        const apiComment = response.data!;
+        
+        // Transform API comment to frontend format
         const newComment: Comment = {
-          id: `comment-${Date.now()}`,
-          content,
+          id: apiComment.id,
+          content: apiComment.content,
           author: {
-            id: 'itg-docverse',
-            username: 'ITG DocVerse User',
-            displayName: 'ITG DocVerse User',
-            email: 'user@docverse.local',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=itg-docverse',
+            id: apiComment.author_id,
+            username: apiComment.author_id, // TODO: Get real author data
+            displayName: apiComment.author_id,
+            email: '',
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiComment.author_id}`,
             joinedDate: new Date().toISOString(),
             stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
           },
-          postId,
-          parentId,
-          createdAt: new Date().toISOString(),
+          postId: apiComment.post_id,
+          parentId: apiComment.parent_id,
+          createdAt: apiComment.created_at,
           reactions: [],
           stats: {
-            totalReactions: 0,
+            totalReactions: apiComment.like_count || 0,
             totalReplies: 0,
           },
         };

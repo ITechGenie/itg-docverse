@@ -336,7 +336,7 @@ class SQLiteService(DatabaseService):
     async def get_post_reactions(self, post_id: str) -> List[Dict[str, Any]]:
         """Get reactions for a post"""
         return await self.execute_query(
-            """SELECT r.*, et.name as reaction_type, et.icon, et.color,
+            """SELECT r.*, et.id as reaction_type, et.icon, et.color,
                       u.username, u.display_name
                FROM reactions r
                JOIN event_types et ON r.event_type_id = et.id

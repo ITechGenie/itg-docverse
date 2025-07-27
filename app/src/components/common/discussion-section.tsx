@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Heart, 
   MessageCircle, 
@@ -9,7 +9,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import type { Post } from '@/types';
+import { api } from '@/lib/api-client';
+import type { Post, Comment } from '@/types';
 
 interface DiscussionSectionProps {
   post: Post;
@@ -20,6 +21,51 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
   const [showReplyDialog, setShowReplyDialog] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [loadingComments, setLoadingComments] = useState(true);
+  const [submittingComment, setSubmittingComment] = useState(false);
+
+  // Fetch comments on component mount
+  useEffect(() => {
+    fetchComments();
+  }, [post.id]);
+
+  const fetchComments = async () => {
+    try {
+      setLoadingComments(true);
+      const response = await api.getComments(post.id);
+      if (response.success && response.data) {
+        setComments(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const handleSubmitComment = async () => {
+    if (!newComment.trim() || submittingComment) return;
+    
+    try {
+      setSubmittingComment(true);
+      const response = await api.createComment(post.id, newComment.trim());
+      
+      if (response.success && response.data) {
+        // Add new comment to the list
+        setComments([response.data, ...comments]);
+        setNewComment('');
+        console.log('Comment posted successfully!');
+      } else {
+        console.error('Failed to post comment:', response.error);
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
 
   const handleReply = (commentId: string, authorName: string) => {
     setReplyTo({ id: commentId, name: authorName });
@@ -82,16 +128,72 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                 className="w-full p-3 border border-border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
                 rows={3}
                 placeholder="Write a comment..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                disabled={submittingComment}
               />
               <div className="flex items-center justify-between mt-3">
                 <span className="text-xs text-muted-foreground">
                   Be kind and respectful to get the best response.
                 </span>
-                <Button size="sm">Post Comment</Button>
+                <Button 
+                  size="sm" 
+                  onClick={handleSubmitComment}
+                  disabled={!newComment.trim() || submittingComment}
+                >
+                  {submittingComment ? 'Posting...' : 'Post Comment'}
+                </Button>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Real Comments List */}
+        {loadingComments ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Loading comments...
+          </div>
+        ) : comments.length > 0 ? (
+          <div className="space-y-6">
+            {comments.map((comment) => (
+              <div key={comment.id} className="flex items-start space-x-3">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={comment.author.avatar} />
+                  <AvatarFallback>
+                    {comment.author.displayName.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="font-semibold text-sm">{comment.author.displayName}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(comment.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-sm mb-3 leading-relaxed text-foreground">{comment.content}</p>
+                  <div className="flex items-center space-x-4 text-xs">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground">
+                      <ThumbsUp className="w-3 h-3 mr-1" />
+                      <span>{comment.stats.totalReactions}</span>
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                      onClick={() => handleReply(comment.id, comment.author.displayName)}
+                    >
+                      Reply
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            No comments yet. Be the first to comment!
+          </div>
+        )}
 
         {/* Mock Comment Thread Example */}
         <div className="space-y-8">

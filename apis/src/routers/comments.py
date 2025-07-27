@@ -45,8 +45,22 @@ async def get_comments_by_post(
 ):
     """Get all comments for a specific post (requires authentication)"""
     try:
-        comments = await db.get_comments_by_post(post_id)
-        return [CommentPublic(**comment.model_dump()) for comment in comments]
+        comments_data = await db.get_comments_by_post(post_id)
+        comments = []
+        for comment_dict in comments_data:
+            comment = CommentPublic(
+                id=comment_dict['id'],
+                post_id=comment_dict['post_id'],
+                author_id=comment_dict['author_id'],
+                content=comment_dict['content'],
+                parent_id=comment_dict.get('parent_id'),
+                like_count=comment_dict.get('like_count', 0),
+                is_edited=comment_dict.get('is_edited', False),
+                created_at=comment_dict['created_at'],
+                updated_at=comment_dict.get('updated_at', comment_dict['created_at'])
+            )
+            comments.append(comment)
+        return comments
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching comments: {str(e)}")
 
@@ -58,10 +72,20 @@ async def get_comment(
 ):
     """Get a specific comment by ID (requires authentication)"""
     try:
-        comment = await db.get_comment_by_id(comment_id)
-        if not comment:
+        comment_dict = await db.get_comment_by_id(comment_id)
+        if not comment_dict:
             raise HTTPException(status_code=404, detail="Comment not found")
-        return CommentPublic(**comment.model_dump())
+        return CommentPublic(
+            id=comment_dict['id'],
+            post_id=comment_dict['post_id'],
+            author_id=comment_dict['author_id'],
+            content=comment_dict['content'],
+            parent_id=comment_dict.get('parent_id'),
+            like_count=comment_dict.get('like_count', 0),
+            is_edited=comment_dict.get('is_edited', False),
+            created_at=comment_dict['created_at'],
+            updated_at=comment_dict.get('updated_at', comment_dict['created_at'])
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -78,13 +102,32 @@ async def create_comment(
         # Use authenticated user as author
         author_id = current_user.get("user_id")
         
-        comment = Comment(
-            **comment_data.model_dump(),
-            author_id=author_id
-        )
+        # Create comment data dictionary for the database service
+        comment_dict = {
+            "post_id": comment_data.post_id,
+            "author_id": author_id,
+            "content": comment_data.content,
+            "parent_id": comment_data.parent_id
+        }
         
-        created_comment = await db.create_comment(comment)
-        return CommentPublic(**created_comment.model_dump())
+        created_id = await db.create_comment(comment_dict)
+        
+        # Fetch the created comment to return it
+        created_comment_dict = await db.get_comment_by_id(created_id)
+        if not created_comment_dict:
+            raise HTTPException(status_code=500, detail="Failed to retrieve created comment")
+            
+        return CommentPublic(
+            id=created_comment_dict['id'],
+            post_id=created_comment_dict['post_id'],
+            author_id=created_comment_dict['author_id'],
+            content=created_comment_dict['content'],
+            parent_id=created_comment_dict.get('parent_id'),
+            like_count=created_comment_dict.get('like_count', 0),
+            is_edited=created_comment_dict.get('is_edited', False),
+            created_at=created_comment_dict['created_at'],
+            updated_at=created_comment_dict.get('updated_at', created_comment_dict['created_at'])
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating comment: {str(e)}")
 
