@@ -4,6 +4,7 @@ Handles all comment-related endpoints (requires authentication)
 """
 
 from typing import List, Dict, Any
+import uuid
 from fastapi import APIRouter, HTTPException, Depends, Query
 
 from ..models.comment import Comment, CommentCreate, CommentUpdate, CommentPublic
@@ -53,11 +54,11 @@ async def get_comments_by_post(
                 post_id=comment_dict['post_id'],
                 author_id=comment_dict['author_id'],
                 content=comment_dict['content'],
-                parent_id=comment_dict.get('parent_id'),
+                parent_id=comment_dict.get('parent_discussion_id'),
                 like_count=comment_dict.get('like_count', 0),
                 is_edited=comment_dict.get('is_edited', False),
-                created_at=comment_dict['created_at'],
-                updated_at=comment_dict.get('updated_at', comment_dict['created_at'])
+                created_at=comment_dict['created_ts'],
+                updated_at=comment_dict.get('updated_ts', comment_dict['created_ts'])
             )
             comments.append(comment)
         return comments
@@ -80,11 +81,11 @@ async def get_comment(
             post_id=comment_dict['post_id'],
             author_id=comment_dict['author_id'],
             content=comment_dict['content'],
-            parent_id=comment_dict.get('parent_id'),
+            parent_id=comment_dict.get('parent_discussion_id'),
             like_count=comment_dict.get('like_count', 0),
             is_edited=comment_dict.get('is_edited', False),
-            created_at=comment_dict['created_at'],
-            updated_at=comment_dict.get('updated_at', comment_dict['created_at'])
+            created_at=comment_dict['created_ts'],
+            updated_at=comment_dict.get('updated_ts', comment_dict['created_ts'])
         )
     except HTTPException:
         raise
@@ -101,13 +102,15 @@ async def create_comment(
     try:
         # Use authenticated user as author
         author_id = current_user.get("user_id")
+        comment_id = str(uuid.uuid4())
         
         # Create comment data dictionary for the database service
         comment_dict = {
+            "id": comment_id,
             "post_id": comment_data.post_id,
             "author_id": author_id,
             "content": comment_data.content,
-            "parent_id": comment_data.parent_id
+            "parent_discussion_id": comment_data.parent_id
         }
         
         created_id = await db.create_comment(comment_dict)
@@ -122,11 +125,11 @@ async def create_comment(
             post_id=created_comment_dict['post_id'],
             author_id=created_comment_dict['author_id'],
             content=created_comment_dict['content'],
-            parent_id=created_comment_dict.get('parent_id'),
+            parent_id=created_comment_dict.get('parent_discussion_id'),
             like_count=created_comment_dict.get('like_count', 0),
             is_edited=created_comment_dict.get('is_edited', False),
-            created_at=created_comment_dict['created_at'],
-            updated_at=created_comment_dict.get('updated_at', created_comment_dict['created_at'])
+            created_at=created_comment_dict['created_ts'],
+            updated_at=created_comment_dict.get('updated_ts', created_comment_dict['created_ts'])
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating comment: {str(e)}")

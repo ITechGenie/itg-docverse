@@ -443,11 +443,14 @@ export class ApiClient {
     }
   }
 
-  async toggleReaction(postId: string, reactionType: ReactionType): Promise<ApiResponse<boolean>> {
+  async toggleReaction(targetId: string, reactionType: ReactionType, targetType: string = 'post'): Promise<ApiResponse<boolean>> {
     try {
       if (USE_REAL_API) {
         // First check if user already has this reaction
-        const reactionsResponse = await this.apiCall<any[]>(`/reactions/post/${postId}`);
+        const endpoint = targetType === 'post' 
+          ? `/reactions/post/${targetId}` 
+          : `/reactions/${targetType}/${targetId}`;
+        const reactionsResponse = await this.apiCall<any[]>(endpoint);
         
         if (reactionsResponse.success && reactionsResponse.data) {
           const currentUser = await this.getCurrentUser();
@@ -461,16 +464,22 @@ export class ApiClient {
           
           if (userReaction) {
             // Remove existing reaction
+            const removeEndpoint = targetType === 'post' 
+              ? `/reactions/post/${targetId}/remove` 
+              : `/reactions/${targetType}/${targetId}/remove`;
             const removeResponse = await this.apiCall(
-              `/reactions/post/${postId}/remove`,
+              removeEndpoint,
               'DELETE',
               { reaction_type: reactionType }
             );
             return { success: removeResponse.success, data: removeResponse.success };
           } else {
             // Add new reaction
+            const addEndpoint = targetType === 'post' 
+              ? `/reactions/post/${targetId}/add` 
+              : `/reactions/${targetType}/${targetId}/add`;
             const addResponse = await this.apiCall(
-              `/reactions/post/${postId}/add`,
+              addEndpoint,
               'POST',
               { reaction_type: reactionType }
             );
@@ -490,19 +499,27 @@ export class ApiClient {
     }
   }
 
-  async getPostReactions(postId: string): Promise<ApiResponse<any[]>> {
+  async getReactions(targetId: string, targetType: string = 'post'): Promise<ApiResponse<any[]>> {
     try {
       if (USE_REAL_API) {
-        return await this.apiCall<any[]>(`/reactions/post/${postId}`);
+        const endpoint = targetType === 'post' 
+          ? `/reactions/post/${targetId}` 
+          : `/reactions/${targetType}/${targetId}`;
+        return await this.apiCall<any[]>(endpoint);
       } else {
         // Mock reactions
         await new Promise(resolve => setTimeout(resolve, 200));
         return { success: true, data: [] };
       }
     } catch (error) {
-      console.error('Get post reactions failed:', error);
-      return { success: false, error: 'Failed to get post reactions' };
+      console.error('Get reactions failed:', error);
+      return { success: false, error: 'Failed to get reactions' };
     }
+  }
+
+  // Keep the old method for backward compatibility
+  async getPostReactions(postId: string): Promise<ApiResponse<any[]>> {
+    return this.getReactions(postId, 'post');
   }
 
   async toggleFavorite(_postId: string): Promise<ApiResponse<boolean>> {

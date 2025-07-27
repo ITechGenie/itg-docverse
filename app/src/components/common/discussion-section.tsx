@@ -25,6 +25,102 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(true);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [commentReactions, setCommentReactions] = useState<Record<string, any[]>>({});
+
+  // Fetch comments on component mount
+  useEffect(() => {
+    fetchComments();
+  }, [post.id]);
+
+  const fetchComments = async () => {
+    try {
+      setLoadingComments(true);
+      const response = await api.getComments(post.id);
+      if (response.success && response.data) {
+        setComments(response.data);
+        // Fetch reactions for each comment
+        await fetchCommentReactions(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const fetchCommentReactions = async (comments: Comment[]) => {
+    try {
+      const reactions: Record<string, any[]> = {};
+      
+      // For now, fetch reactions for each comment individually
+      // TODO: Optimize with bulk query
+      for (const comment of comments) {
+        const response = await api.getReactions(comment.id, 'discussion');
+        if (response.success && response.data) {
+          reactions[comment.id] = response.data;
+        }
+      }
+      
+      setCommentReactions(reactions);
+    } catch (error) {
+      console.error('Failed to fetch comment reactions:', error);
+    }
+  };
+
+  const handleCommentReaction = async (commentId: string, reactionType: string) => {
+    try {
+      const response = await api.toggleReaction(commentId, reactionType as any, 'discussion');
+      if (response.success) {
+        // Refresh reactions for this comment
+        const reactionsResponse = await api.getReactions(commentId, 'discussion');
+        if (reactionsResponse.success && reactionsResponse.data) {
+          setCommentReactions(prev => ({
+            ...prev,
+            [commentId]: reactionsResponse.data || []
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle comment reaction:', error);
+    }
+  };
+
+  const fetchCommentReactions = async (comments: Comment[]) => {
+    try {
+      const reactions: Record<string, any[]> = {};
+      
+      // For now, fetch reactions for each comment individually
+      // TODO: Optimize with bulk query
+      for (const comment of comments) {
+        const response = await api.getReactions(comment.id, 'discussion');
+        if (response.success && response.data) {
+          reactions[comment.id] = response.data;
+        }
+      }
+      
+      setCommentReactions(reactions);
+    } catch (error) {
+      console.error('Failed to fetch comment reactions:', error);
+    }
+  };
+
+  const handleCommentReaction = async (commentId: string, reactionType: string) => {
+    try {
+      const response = await api.toggleReaction(commentId, reactionType as any, 'discussion');
+      if (response.success) {
+        // Refresh reactions for this comment
+        const reactionsResponse = await api.getReactions(commentId, 'discussion');
+        if (reactionsResponse.success && reactionsResponse.data) {
+          setCommentReactions(prev => ({
+            ...prev,
+            [commentId]: reactionsResponse.data
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle comment reaction:', error);
+    }
+  };
 
   // Fetch comments on component mount
   useEffect(() => {
@@ -72,10 +168,22 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
     setShowReplyDialog(true);
   };
 
-  const handleSubmitReply = () => {
+  const handleSubmitReply = async () => {
     if (!replyText.trim() || !replyTo) return;
     
-    console.log(`Reply to ${replyTo.name} (${replyTo.id}): ${replyText}`);
+    try {
+      const response = await api.createComment(post.id, replyText.trim(), replyTo.id);
+      
+      if (response.success && response.data) {
+        // Add new reply to the comments list
+        setComments([response.data, ...comments]);
+        console.log(`Reply posted to ${replyTo.name}`);
+      } else {
+        console.error('Failed to post reply:', response.error);
+      }
+    } catch (error) {
+      console.error('Error posting reply:', error);
+    }
     
     // Reset form
     setReplyText('');
@@ -155,39 +263,104 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
           </div>
         ) : comments.length > 0 ? (
           <div className="space-y-6">
-            {comments.map((comment) => (
-              <div key={comment.id} className="flex items-start space-x-3">
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={comment.author.avatar} />
-                  <AvatarFallback>
-                    {comment.author.displayName.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <span className="font-semibold text-sm">{comment.author.displayName}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(comment.createdAt).toLocaleDateString()}
-                    </span>
+            {comments
+              .filter(comment => !comment.parentId) // Show only top-level comments first
+              .map((comment) => (
+                <div key={comment.id}>
+                  {/* Top-level comment */}
+                  <div className="flex items-start space-x-3">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={comment.author.avatar} />
+                      <AvatarFallback>
+                        {comment.author.displayName.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="font-semibold text-sm">{comment.author.displayName}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(comment.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm mb-3 leading-relaxed text-foreground">{comment.content}</p>
+                      <div className="flex items-center space-x-4 text-xs">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 px-2 text-muted-foreground hover:text-foreground hover:text-green-600"
+                          title="Like this comment"
+                        >
+                          <ThumbsUp className="w-3 h-3 mr-1" />
+                          <span>{comment.stats.totalReactions}</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 px-2 text-muted-foreground hover:text-foreground hover:text-red-600"
+                          title="Dislike this comment"
+                        >
+                          <ThumbsDown className="w-3 h-3 mr-1" />
+                          <span>0</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                          onClick={() => handleReply(comment.id, comment.author.displayName)}
+                        >
+                          Reply
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm mb-3 leading-relaxed text-foreground">{comment.content}</p>
-                  <div className="flex items-center space-x-4 text-xs">
-                    <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground">
-                      <ThumbsUp className="w-3 h-3 mr-1" />
-                      <span>{comment.stats.totalReactions}</span>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleReply(comment.id, comment.author.displayName)}
-                    >
-                      Reply
-                    </Button>
-                  </div>
+
+                  {/* Nested replies */}
+                  {comments
+                    .filter(reply => reply.parentId === comment.id)
+                    .map((reply) => (
+                      <div key={reply.id} className="ml-11 mt-4 relative">
+                        <div className="absolute left-0 top-0 bottom-0 w-px bg-border"></div>
+                        <div className="flex items-start space-x-3 pl-4">
+                          <Avatar className="w-6 h-6">
+                            <AvatarImage src={reply.author.avatar} />
+                            <AvatarFallback>
+                              {reply.author.displayName.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="font-semibold text-xs">{reply.author.displayName}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(reply.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-xs mb-2 leading-relaxed text-foreground">{reply.content}</p>
+                            <div className="flex items-center space-x-4 text-xs">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-muted-foreground hover:text-foreground hover:text-green-600"
+                                title="Like this reply"
+                              >
+                                <ThumbsUp className="w-3 h-3 mr-1" />
+                                <span>{reply.stats.totalReactions}</span>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 text-muted-foreground hover:text-foreground hover:text-red-600"
+                                title="Dislike this reply"
+                              >
+                                <ThumbsDown className="w-3 h-3 mr-1" />
+                                <span>0</span>
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">

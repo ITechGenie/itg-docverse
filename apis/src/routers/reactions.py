@@ -75,3 +75,48 @@ async def get_post_reactions(
         return reactions
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching reactions: {str(e)}")
+
+# Discussion/Comment Reaction Endpoints
+@router.post("/discussion/{discussion_id}/add", response_model=ReactionResponse)
+async def add_reaction_to_discussion(
+    discussion_id: str,
+    req: ReactionRequest,
+    db: DatabaseService = Depends(get_db_service),
+    user: Dict[str, Any] = Depends(get_current_user_from_middleware)
+):
+    """Add a reaction to a discussion/comment"""
+    try:
+        reaction = await db.add_reaction(discussion_id, user.get("user_id"), req.reaction_type, target_type="discussion")
+        return ReactionResponse(**reaction)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding reaction: {str(e)}")
+
+@router.delete("/discussion/{discussion_id}/remove", response_model=Dict[str, bool])
+async def remove_reaction_from_discussion(
+    discussion_id: str,
+    req: ReactionRequest,
+    db: DatabaseService = Depends(get_db_service),
+    user: Dict[str, Any] = Depends(get_current_user_from_middleware)
+):
+    """Remove a reaction from a discussion/comment"""
+    try:
+        success = await db.remove_reaction(discussion_id, user.get("user_id"), req.reaction_type, target_type="discussion")
+        if not success:
+            raise HTTPException(status_code=404, detail="Reaction not found")
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error removing reaction: {str(e)}")
+
+@router.get("/discussion/{discussion_id}", response_model=List[Dict[str, Any]])
+async def get_discussion_reactions(
+    discussion_id: str,
+    db: DatabaseService = Depends(get_db_service)
+):
+    """Get all reactions for a discussion/comment"""
+    try:
+        reactions = await db.get_discussion_reactions(discussion_id)
+        return reactions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching reactions: {str(e)}")

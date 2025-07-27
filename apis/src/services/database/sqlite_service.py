@@ -281,8 +281,8 @@ class SQLiteService(DatabaseService):
         )
         
     # Reaction operations  
-    async def add_reaction(self, post_id: str, user_id: str, reaction_type: str) -> Dict[str, Any]:
-        """Add a reaction to a post"""
+    async def add_reaction(self, target_id: str, user_id: str, reaction_type: str, target_type: str = 'post') -> Dict[str, Any]:
+        """Add a reaction to a post or discussion"""
         import uuid
         reaction_id = str(uuid.uuid4())
         
@@ -301,20 +301,20 @@ class SQLiteService(DatabaseService):
             """INSERT OR REPLACE INTO reactions 
                (id, event_type_id, user_id, target_type, target_id, target_revision, reaction_value)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (reaction_id, event_type_id, user_id, 'post', post_id, None, 1)
+            (reaction_id, event_type_id, user_id, target_type, target_id, None, 1)
         )
         
         # Return the created reaction
         return {
             'id': reaction_id,
-            'post_id': post_id,
+            'post_id': target_id if target_type == 'post' else None,
             'user_id': user_id,
             'reaction_type': reaction_type,
             'created_ts': 'now'  # In real implementation, get actual timestamp
         }
 
-    async def remove_reaction(self, post_id: str, user_id: str, reaction_type: str) -> bool:
-        """Remove a reaction from a post"""
+    async def remove_reaction(self, target_id: str, user_id: str, reaction_type: str, target_type: str = 'post') -> bool:
+        """Remove a reaction from a post or discussion"""
         # Get event type ID for the reaction
         event_type_result = await self.execute_query(
             "SELECT id FROM event_types WHERE id = ? AND category = 'reaction'",
@@ -328,23 +328,31 @@ class SQLiteService(DatabaseService):
         
         await self.execute_command(
             """DELETE FROM reactions 
-               WHERE event_type_id = ? AND user_id = ? AND target_type = 'post' AND target_id = ?""",
-            (event_type_id, user_id, post_id)
+               WHERE event_type_id = ? AND user_id = ? AND target_type = ? AND target_id = ?""",
+            (event_type_id, user_id, target_type, target_id)
         )
         return True
         
     async def get_post_reactions(self, post_id: str) -> List[Dict[str, Any]]:
         """Get reactions for a post"""
+        return await self.get_reactions(post_id, 'post')
+
+    async def get_reactions(self, target_id: str, target_type: str = 'post') -> List[Dict[str, Any]]:
+        """Get reactions for a post or discussion"""
         return await self.execute_query(
             """SELECT r.*, et.id as reaction_type, et.icon, et.color,
                       u.username, u.display_name
                FROM reactions r
                JOIN event_types et ON r.event_type_id = et.id
                JOIN users u ON r.user_id = u.id
-               WHERE r.target_type = 'post' AND r.target_id = ?
+               WHERE r.target_type = ? AND r.target_id = ?
                ORDER BY r.created_ts DESC""",
-            (post_id,)
+            (target_type, target_id)
         )
+
+    async def get_discussion_reactions(self, discussion_id: str) -> List[Dict[str, Any]]:
+        """Get reactions for a discussion/comment"""
+        return await self.get_reactions(discussion_id, 'discussion')
         
     # Comment/Discussion operations
     async def get_post_discussions(self, post_id: str) -> List[Dict[str, Any]]:
