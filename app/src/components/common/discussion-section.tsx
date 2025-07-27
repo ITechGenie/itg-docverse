@@ -289,7 +289,11 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                className="h-6 px-2 text-muted-foreground hover:text-foreground hover:text-green-600"
+                                className={`h-6 px-2 text-muted-foreground hover:text-foreground hover:text-green-600 ${
+                                  commentReactions[reply.id]?.some(r => r.reaction_type === 'event-thumbs-up' && r.user_id === currentUserId) 
+                                    ? 'text-green-600 bg-green-50' 
+                                    : ''
+                                }`}
                                 title="Like this reply"
                                 onClick={() => handleCommentReaction(reply.id, 'event-thumbs-up')}
                               >
@@ -301,7 +305,11 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                className="h-6 px-2 text-muted-foreground hover:text-foreground hover:text-red-600"
+                                className={`h-6 px-2 text-muted-foreground hover:text-foreground hover:text-red-600 ${
+                                  commentReactions[reply.id]?.some(r => r.reaction_type === 'event-thumbs-down' && r.user_id === currentUserId) 
+                                    ? 'text-red-600 bg-red-50' 
+                                    : ''
+                                }`}
                                 title="Dislike this reply"
                                 onClick={() => handleCommentReaction(reply.id, 'event-thumbs-down')}
                               >
