@@ -23,7 +23,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth } from "@/contexts/auth-context"
 import { getAvatarUrl } from "@/lib/avatar"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

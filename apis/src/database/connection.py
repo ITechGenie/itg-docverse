@@ -63,17 +63,5 @@ def get_database_service() -> DatabaseService:
     Factory function to get the appropriate database service
     based on configuration
     """
-    settings = get_settings()
-    
-    if settings.database_type == "redis":
-        # return RedisService(settings)
-        print("⚠️  Redis service not implemented yet, using mock")
-        return MockDatabaseService()
-    elif settings.database_type == "postgresql":
-        # return PostgreSQLService(settings)
-        print("⚠️  PostgreSQL service not implemented yet, using mock")
-        return MockDatabaseService()
-    else:  # sqlite
-        # return SQLiteService(settings)
-        print("⚠️  SQLite service not implemented yet, using mock")
-        return MockDatabaseService()
+    from ..services.database.factory import DatabaseServiceFactory
+    return DatabaseServiceFactory.create_service()

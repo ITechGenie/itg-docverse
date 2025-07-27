@@ -16,7 +16,7 @@ class Settings(BaseModel):
     
     # Database Configuration
     database_type: str = "sqlite"  # redis, sqlite, postgresql, mock
-    database_url: str = "sqlite:///./itg_docverse.db"
+    database_url: str = "sqlite:///./docverse.db"
     
     # Redis Configuration
     redis_host: str = "localhost"
@@ -32,7 +32,7 @@ class Settings(BaseModel):
     postgres_password: str = "password"
     
     # SQLite Configuration
-    sqlite_path: str = "./itg_docverse.db"
+    sqlite_path: str = "./docverse.db"
     
     # JWT Configuration
     jwt_secret_key: str = "itg-docverse-default-jwt-secret-change-in-production"

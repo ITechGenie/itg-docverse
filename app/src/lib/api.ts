@@ -203,7 +203,7 @@ export const api = {
       readTime: data.type === 'long-form' ? Math.ceil(data.content.length / 1000) : undefined,
       reactions: [],
       comments: [],
-      status: 'draft',
+      status: 'published',
       revision: 1,
       stats: {
         views: 0,

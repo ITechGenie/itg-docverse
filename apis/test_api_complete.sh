@@ -194,9 +194,13 @@ test_endpoint "POST" "/apis/posts/" "Create post with invalid type" \
     '{"title": "Invalid Post", "content": "This has invalid type", "post_type": "invalid-type"}' \
     422 "" true
 
-test_endpoint "POST" "/apis/posts/" "Create post missing title" \
+test_endpoint "POST" "/apis/posts/" "Create post missing title (should auto-generate)" \
     '{"content": "Content without title", "post_type": "posts"}' \
-    422 "" true
+    200 "" true
+
+test_endpoint "POST" "/apis/posts/" "Create thought without title (frontend test)" \
+    '{"content": "hello world", "post_type": "thoughts", "tags": ["hello"], "status": "draft"}' \
+    200 "" true
 
 test_endpoint "POST" "/apis/posts/" "Create post missing content" \
     '{"title": "Title without content", "post_type": "posts"}' \

@@ -2,6 +2,7 @@ import { HashRouter } from "react-router-dom"
 import { Suspense, useEffect } from "react"
 import { ThemeProvider } from "./components/theme-provider"
 import { ErrorBoundary } from "./components/common/error-boundary"
+import { AuthProvider } from "./contexts/auth-context"
 import AppRouter from "./components/app-router"
 import { Skeleton } from "./components/ui/skeleton"
 import { preloadCriticalRoutes } from "./hooks/use-lazy-component"
@@ -31,11 +32,13 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <HashRouter>
-          <Suspense fallback={<AppLoadingFallback />}>
-            <AppRouter />
-          </Suspense>
-        </HashRouter>
+        <AuthProvider>
+          <HashRouter>
+            <Suspense fallback={<AppLoadingFallback />}>
+              <AppRouter />
+            </Suspense>
+          </HashRouter>
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   )

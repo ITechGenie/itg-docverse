@@ -356,14 +356,18 @@ INSERT OR IGNORE INTO users (id, username, display_name, email, bio, location, w
 ('user-1', 'prakashm88', 'Prakash M', 'prakash@example.com', 'Full Stack Developer | Tech Enthusiast | Open Source Contributor', 'Bangalore, India', 'https://prakash.dev', 'system'),
 ('user-2', 'sarah_dev', 'Sarah Johnson', 'sarah@example.com', 'Frontend Developer | React Specialist | UI/UX Enthusiast', 'San Francisco, USA', 'https://sarahdev.com', 'system'),
 ('user-3', 'mike_backend', 'Mike Chen', 'mike@example.com', 'Backend Engineer | Python & Go | Distributed Systems', 'Toronto, Canada', NULL, 'system'),
-('user-system', 'system', 'System', 'system@itgdocverse.com', 'System user for automated actions', 'Cloud', NULL, 'system');
+('user-system', 'system', 'System', 'system@itgdocverse.com', 'System user for automated actions', 'Cloud', NULL, 'system'),
+('itg-docverse', 'ITG DocVerse User', 'ITG DocVerse User', 'user@itgdocverse.com', 'Default user for ITG DocVerse hackathon', 'ITG Office', NULL, 'system'),
+('user-admin', 'admin', 'System Administrator', 'admin@itgdocverse.com', 'System Administrator for ITG DocVerse', 'ITG Office', NULL, 'system');
 
 -- Initialize user stats
 INSERT OR IGNORE INTO user_stats (user_id, posts_count, comments_count, tags_followed) VALUES
 ('user-1', 25, 120, 8),
 ('user-2', 18, 85, 6),
 ('user-3', 12, 45, 4),
-('user-system', 0, 0, 0);
+('user-system', 0, 0, 0),
+('itg-docverse', 0, 0, 0),
+('user-admin', 0, 0, 0);
 
 -- Initialize tag stats
 INSERT OR IGNORE INTO tag_stats (tag_id, posts_count) VALUES

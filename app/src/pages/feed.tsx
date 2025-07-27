@@ -22,7 +22,7 @@ export default function Feed() {
 
   useEffect(() => {
     loadPosts();
-  }, [searchParams, tagName, filter]);
+  }, [searchParams.toString(), tagName, filter]); // Use searchParams.toString() to avoid object reference issues
 
   const loadPosts = async () => {
     setLoading(true);

@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
-import { useEffect, lazy, Suspense } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import { lazy, Suspense } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import Layout from '@/components/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -16,6 +16,7 @@ const NotFound = lazy(() => import('@/pages/not-found'));
 const GitRepos = lazy(() => import('@/pages/git-repos'));
 const Documents = lazy(() => import('@/pages/documents'));
 const PostVersions = lazy(() => import('@/pages/post-versions'));
+const LoginPage = lazy(() => import('@/pages/login'));
 
 // Loading fallback components for different sections
 const PageLoadingFallback = () => (
@@ -62,12 +63,23 @@ const FeedLoadingFallback = () => (
 );
 
 export default function AppRouter() {
-  const { initialize } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
+  // Show loading while checking authentication
+  if (isLoading) {
+    return <PageLoadingFallback />;
+  }
 
+  // If not authenticated, show login page
+  if (!isAuthenticated) {
+    return (
+      <Suspense fallback={<PageLoadingFallback />}>
+        <LoginPage />
+      </Suspense>
+    );
+  }
+
+  // If authenticated, show the main app
   return (
     <Layout>
       <Routes>

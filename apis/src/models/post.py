@@ -57,7 +57,7 @@ class Post(BaseModel):
 
 class PostCreate(BaseModel):
     """Post creation model"""
-    title: str = Field(..., min_length=1, max_length=200)
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
     content: str = Field(..., min_length=1)
     post_type: PostType = PostType.POSTS
     tags: List[str] = Field(default_factory=list)

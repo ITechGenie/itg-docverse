@@ -70,7 +70,7 @@ export default function PostDetail(props: PostDetailProps) {
     };
 
     fetchPost();
-  }, [id, version || '', docType || '', location.pathname, props.post]);
+  }, [id, version, docType, props.post]); // Remove location.pathname dependency
 
   const handleReaction = async (type: ReactionType) => {
     if (!post) return;
@@ -182,7 +182,7 @@ export default function PostDetail(props: PostDetailProps) {
 
       {/* Row 8: Content */}
       <div className="w-full max-w-4xl mx-auto py-6">
-        {post.content ? (
+        {post.content && post.content.trim() ? (
           post.type === 'long-form' ? (
             <MarkdownRenderer content={post.content} />
           ) : (
@@ -192,6 +192,10 @@ export default function PostDetail(props: PostDetailProps) {
               </div>
             </div>
           )
+        ) : post.type === 'thoughts' ? (
+          <div className="text-center py-4">
+            <p className="text-muted-foreground italic">Just a thought...</p>
+          </div>
         ) : (
           <div className="text-center py-8">
             <p className="text-muted-foreground">Loading content...</p>

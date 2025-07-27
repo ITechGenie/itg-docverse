@@ -9,13 +9,17 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getAvatarUrl } from '@/lib/avatar';
 import { useAuth } from '@/hooks/use-auth';
-import type { User } from '@/types';
+import { api } from '@/lib/api-client';
+import PostCard from '@/components/post-card';
+import type { User, Post } from '@/types';
 
 export default function Profile() {
   const { username } = useParams<{ username?: string }>();
   const { user: currentUser } = useAuth();
   const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(true);
 
   // Mock user data - in real app, fetch from API
   const mockUser: User = {
@@ -54,6 +58,13 @@ export default function Profile() {
     loadProfile();
   }, [username]);
 
+  useEffect(() => {
+    // Load posts after profile is loaded or if we have current user
+    if (profileUser || currentUser) {
+      loadUserPosts();
+    }
+  }, [profileUser, currentUser]);
+
   const loadProfile = async () => {
     setLoading(true);
     try {
@@ -64,6 +75,28 @@ export default function Profile() {
       console.error('Failed to load profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUserPosts = async () => {
+    setPostsLoading(true);
+    try {
+      const targetUserId = profileUser?.id || currentUser?.id;
+      if (targetUserId) {
+        const response = await api.getPosts({ 
+          page: 1, 
+          limit: 10,
+          author: targetUserId 
+        });
+        
+        if (response.success && response.data) {
+          setUserPosts(response.data);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load user posts:', error);
+    } finally {
+      setPostsLoading(false);
     }
   };
 
@@ -221,14 +254,38 @@ export default function Profile() {
           <h2 className="text-xl font-semibold">Recent Posts</h2>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No posts yet. {isOwnProfile ? 'Share your first post!' : `${displayUser.displayName} hasn't posted anything yet.`}</p>
-            {isOwnProfile && (
-              <Link to="/#/create">
-                <Button className="mt-4">Create Your First Post</Button>
-              </Link>
-            )}
-          </div>
+          {postsLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="space-y-4 p-4 border border-border rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <Skeleton className="w-10 h-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ))}
+            </div>
+          ) : userPosts.length > 0 ? (
+            <div className="space-y-4">
+              {userPosts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No posts yet. {isOwnProfile ? 'Share your first post!' : `${displayUser.displayName} hasn't posted anything yet.`}</p>
+              {isOwnProfile && (
+                <Link to="/#/create">
+                  <Button className="mt-4">Create Your First Post</Button>
+                </Link>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

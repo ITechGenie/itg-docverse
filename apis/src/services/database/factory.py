@@ -23,10 +23,6 @@ class DatabaseServiceFactory:
         """Create database service based on configuration"""
         db_type = settings.database_type.lower()
         
-        # For testing, temporarily use MockDatabaseService
-        logger.info("Creating Mock database service for testing")
-        return MockDatabaseService()
-        
         if db_type == "redis":
             logger.info("Creating Redis database service")
             return RedisService()
@@ -44,5 +40,5 @@ class DatabaseServiceFactory:
             return MockDatabaseService()
         
         else:
-            logger.warning(f"Unknown database type '{db_type}', using mock service")
-            return MockDatabaseService()
+            logger.warning(f"Unknown database type '{db_type}', defaulting to SQLite service")
+            return SQLiteService()

@@ -31,16 +31,46 @@ class SQLiteService(DatabaseService):
             db_path = Path(self.db_path)
             db_path.parent.mkdir(parents=True, exist_ok=True)
             
+            # Check if database is new/empty
+            is_new_db = not db_path.exists() or db_path.stat().st_size == 0
+            
             # Test connection
             async with aiosqlite.connect(self.db_path) as db:
                 # Enable foreign key constraints
                 await db.execute("PRAGMA foreign_keys = ON")
                 await db.commit()
                 
+                # If database is new or empty, run bootstrap
+                if is_new_db:
+                    await self._run_bootstrap(db)
+                
             logger.info(f"✅ SQLite database initialized: {self.db_path}")
             
         except Exception as e:
             logger.error(f"Failed to initialize SQLite database: {e}")
+            raise
+            
+    async def _run_bootstrap(self, db):
+        """Run bootstrap SQL to create schema and initial data"""
+        try:
+            logger.info("🔧 Running database bootstrap...")
+            
+            # Read bootstrap SQL file
+            bootstrap_sql_path = Path(__file__).parent.parent.parent.parent / "bootstrap.sql"
+            
+            if not bootstrap_sql_path.exists():
+                logger.warning(f"Bootstrap SQL file not found: {bootstrap_sql_path}")
+                return
+                
+            with open(bootstrap_sql_path, 'r', encoding='utf-8') as file:
+                sql_content = file.read()
+                
+            # Execute bootstrap SQL
+            await self.execute_bootstrap(sql_content)
+            logger.info("✅ Database bootstrap completed successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to run database bootstrap: {e}")
             raise
             
     async def close(self):
@@ -148,31 +178,40 @@ class SQLiteService(DatabaseService):
     # Post operations
     async def get_posts(self, skip: int = 0, limit: int = 10, 
                        author_id: Optional[str] = None,
+                       tag_id: Optional[str] = None,
                        post_type: Optional[str] = None,
                        status: str = "published") -> List[Dict[str, Any]]:
         """Get posts with optional filters"""
         query = """
             SELECT p.*, pt.name as post_type_name, u.username, u.display_name,
-                   u.email, u.avatar_url
+                   u.email, u.avatar_url, pc.content
             FROM posts p
             JOIN post_types pt ON p.post_type_id = pt.id
             JOIN users u ON p.author_id = u.id
+            LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = ?
             WHERE p.status = ? AND p.is_latest = ?
         """
-        params = [status, True]
+        params = [True, status, True]
         
         if author_id:
             query += " AND p.author_id = ?"
             params.append(author_id)
             
         if post_type:
-            query += " AND pt.name = ?"
+            query += " AND p.post_type_id = ?"
             params.append(post_type)
+            
+        if tag_id:
+            query += """ AND EXISTS (
+                SELECT 1 FROM post_tags pt WHERE pt.post_id = p.id AND pt.tag_id = ?
+            )"""
+            params.append(tag_id)
             
         query += " ORDER BY p.created_ts DESC LIMIT ? OFFSET ?"
         params.extend([limit, skip])
         
-        return await self.execute_query(query, tuple(params))
+        results = await self.execute_query(query, tuple(params))
+        return results
         
     async def get_post_by_id(self, post_id: str) -> Optional[Dict[str, Any]]:
         """Get post by ID"""
@@ -194,8 +233,8 @@ class SQLiteService(DatabaseService):
         await self.execute_command(
             """INSERT INTO posts (id, post_type_id, title, feed_content, cover_image_url,
                                 author_id, status, revision, read_time, project_id,
-                                branch_name, git_url, document_type, created_by)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                branch_name, git_url, document_type, created_by, updated_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 post_data['id'], post_data['post_type_id'], post_data['title'],
                 post_data.get('feed_content'), post_data.get('cover_image_url'),
@@ -203,7 +242,8 @@ class SQLiteService(DatabaseService):
                 post_data.get('revision', 0), post_data.get('read_time', 0),
                 post_data.get('project_id'), post_data.get('branch_name'),
                 post_data.get('git_url'), post_data.get('document_type'),
-                post_data.get('created_by', post_data['author_id'])
+                post_data.get('created_by', post_data['author_id']),
+                post_data.get('updated_by', post_data['author_id'])
             )
         )
         
@@ -225,10 +265,11 @@ class SQLiteService(DatabaseService):
     # Tag operations
     async def get_tags(self) -> List[Dict[str, Any]]:
         """Get all active tags"""
-        return await self.execute_query(
+        results = await self.execute_query(
             "SELECT * FROM tag_types WHERE is_active = ? ORDER BY name",
             (True,)
         )
+        return results
         
     async def get_post_tags(self, post_id: str) -> List[Dict[str, Any]]:
         """Get tags for a specific post"""
@@ -298,6 +339,37 @@ class SQLiteService(DatabaseService):
         )
         return discussion_data['id']
         
+    async def associate_tags_with_post(self, post_id: str, tag_names: List[str]) -> bool:
+        """Associate tags with a post"""
+        try:
+            for tag_name in tag_names:
+                # First, ensure the tag exists (create if it doesn't)
+                existing_tag = await self.get_tag_by_name(tag_name)
+                if not existing_tag:
+                    # Create the tag
+                    import uuid
+                    tag_id = str(uuid.uuid4())
+                    await self.create_tag({
+                        'id': tag_id,
+                        'name': tag_name,
+                        'description': f'Auto-created tag: {tag_name}',
+                        'created_by': 'system'
+                    })
+                else:
+                    tag_id = existing_tag['id']
+                
+                # Associate the tag with the post
+                await self.execute_command(
+                    "INSERT OR IGNORE INTO post_tags (post_id, tag_id) VALUES (?, ?)",
+                    (post_id, tag_id)
+                )
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to associate tags with post {post_id}: {e}")
+            return False
+        
     # Analytics operations
     async def log_user_event(self, event_data: Dict[str, Any]) -> str:
         """Log a user event"""
@@ -340,3 +412,131 @@ class SQLiteService(DatabaseService):
             )
         )
         return True
+        
+    # Abstract method implementations (minimal stubs for now)
+    async def get_users(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get list of users with pagination"""
+        results = await self.execute_query(
+            "SELECT * FROM users WHERE is_active = ? ORDER BY created_ts DESC LIMIT ? OFFSET ?",
+            (True, limit, skip)
+        )
+        return results
+        
+    async def create_tag(self, tag_data: Dict[str, Any]) -> str:
+        """Create a new tag"""
+        await self.execute_command(
+            "INSERT INTO tag_types (id, name, description, color, created_by) VALUES (?, ?, ?, ?, ?)",
+            (tag_data['id'], tag_data['name'], tag_data.get('description'), 
+             tag_data.get('color'), tag_data.get('created_by', 'system'))
+        )
+        return tag_data['id']
+        
+    async def get_tag_by_id(self, tag_id: str) -> Optional[Dict[str, Any]]:
+        """Get tag by ID"""
+        results = await self.execute_query(
+            "SELECT * FROM tag_types WHERE id = ? AND is_active = ?",
+            (tag_id, True)
+        )
+        return results[0] if results else None
+        
+    async def get_tag_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """Get tag by name"""
+        results = await self.execute_query(
+            "SELECT * FROM tag_types WHERE name = ? AND is_active = ?",
+            (name, True)
+        )
+        return results[0] if results else None
+        
+    async def update_post(self, post_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update a post"""
+        # Build dynamic update query
+        set_clauses = []
+        params = []
+        
+        for key, value in updates.items():
+            if key in ['title', 'feed_content', 'cover_image_url', 'status', 'updated_by']:
+                set_clauses.append(f"{key} = ?")
+                params.append(value)
+        
+        if not set_clauses:
+            return await self.get_post_by_id(post_id)
+            
+        query = f"UPDATE posts SET {', '.join(set_clauses)}, updated_ts = CURRENT_TIMESTAMP WHERE id = ?"
+        params.append(post_id)
+        
+        await self.execute_command(query, tuple(params))
+        return await self.get_post_by_id(post_id)
+        
+    async def delete_post(self, post_id: str) -> bool:
+        """Delete a post (soft delete)"""
+        await self.execute_command(
+            "UPDATE posts SET is_deleted = ?, deleted_ts = CURRENT_TIMESTAMP WHERE id = ?",
+            (True, post_id)
+        )
+        return True
+        
+    async def create_comment(self, comment_data: Dict[str, Any]) -> str:
+        """Create a new comment"""
+        return await self.create_discussion(comment_data)
+        
+    async def get_comment_by_id(self, comment_id: str) -> Optional[Dict[str, Any]]:
+        """Get comment by ID"""
+        results = await self.execute_query(
+            """SELECT pd.*, u.username, u.display_name, u.avatar_url
+               FROM post_discussions pd
+               JOIN users u ON pd.author_id = u.id
+               WHERE pd.id = ? AND pd.is_deleted = ?""",
+            (comment_id, False)
+        )
+        return results[0] if results else None
+        
+    async def get_comments_by_post(self, post_id: str) -> List[Dict[str, Any]]:
+        """Get comments for a post"""
+        return await self.get_post_discussions(post_id)
+        
+    async def delete_comment(self, comment_id: str) -> bool:
+        """Delete a comment (soft delete)"""
+        await self.execute_command(
+            "UPDATE post_discussions SET is_deleted = ?, deleted_ts = CURRENT_TIMESTAMP WHERE id = ?",
+            (True, comment_id)
+        )
+        return True
+        
+    async def search_posts(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search posts by content"""
+        search_query = f"%{query}%"
+        results = await self.execute_query(
+            """SELECT p.*, pt.name as post_type_name, u.username, u.display_name,
+                      u.email, u.avatar_url, pc.content
+               FROM posts p
+               JOIN post_types pt ON p.post_type_id = pt.id
+               JOIN users u ON p.author_id = u.id
+               LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = ?
+               WHERE (p.title LIKE ? OR p.feed_content LIKE ? OR pc.content LIKE ?)
+                 AND p.status = ? AND p.is_latest = ?
+               ORDER BY p.created_ts DESC LIMIT ?""",
+            (True, search_query, search_query, search_query, 'published', True, limit)
+        )
+        return results
+        
+    async def get_stats(self) -> Dict[str, int]:
+        """Get application statistics"""
+        stats = {}
+        
+        # Get user count
+        user_results = await self.execute_query("SELECT COUNT(*) as count FROM users WHERE is_active = ?", (True,))
+        stats['users'] = user_results[0]['count'] if user_results else 0
+        
+        # Get post count
+        post_results = await self.execute_query("SELECT COUNT(*) as count FROM posts WHERE status = ? AND is_latest = ?", ('published', True))
+        stats['posts'] = post_results[0]['count'] if post_results else 0
+        
+        # Get tag count
+        tag_results = await self.execute_query("SELECT COUNT(*) as count FROM tag_types WHERE is_active = ?", (True,))
+        stats['tags'] = tag_results[0]['count'] if tag_results else 0
+        
+        # Get comment count
+        comment_results = await self.execute_query("SELECT COUNT(*) as count FROM post_discussions WHERE is_deleted = ?", (False,))
+        stats['comments'] = comment_results[0]['count'] if comment_results else 0
+        
+        return stats

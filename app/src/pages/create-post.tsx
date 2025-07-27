@@ -12,7 +12,7 @@ import type { CreatePostData } from '@/types';
 
 const createPostSchema = z.object({
   title: z.string().optional(),
-  content: z.string().min(1, 'Content is required'),
+  content: z.string().optional(),
   tags: z.string().max(100, 'Tags too long'),
   coverImage: z.string().url().optional().or(z.literal('')),
 });
@@ -56,7 +56,7 @@ export default function CreatePost() {
       const postData: CreatePostData = {
         type: activeTab,
         title: activeTab === 'long-form' ? data.title : undefined,
-        content: activeTab === 'long-form' ? markdownContent : data.content,
+        content: activeTab === 'long-form' ? markdownContent : (data.content || ''),
         coverImage: data.coverImage || undefined,
         tags: data.tags.split(',').map(tag => tag.trim()).filter(Boolean),
       };

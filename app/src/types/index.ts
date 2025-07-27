@@ -108,7 +108,7 @@ export interface Comment {
 export interface CreatePostData {
   type: 'long-form' | 'short-form' | 'thoughts';
   title?: string;
-  content: string;
+  content?: string;
   feed_content?: string; // Optional preview content for feed
   coverImage?: string;
   tags: string[];
@@ -138,7 +138,8 @@ export interface PaginationParams {
 }
 
 export interface FeedFilters {
-  type?: 'all' | 'long-form' | 'short-form';
+  type?: 'all' | 'long-form' | 'short-form' | 'thoughts';
   timeframe?: 'today' | 'week' | 'month' | 'year' | 'all';
   following?: boolean;
+  author?: string; // Filter posts by specific author ID
 }

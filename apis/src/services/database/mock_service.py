@@ -4,15 +4,18 @@ Provides in-memory storage for testing and development
 """
 
 import logging
+import aiosqlite
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from uuid import uuid4
+from pathlib import Path
 
 from .base import DatabaseService
 from ...models.user import User
 from ...models.post import Post, PostType, PostStatus
 from ...models.tag import Tag
 from ...models.comment import Comment
+from ...config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +33,118 @@ class MockDatabaseService(DatabaseService):
         self.initialized = False
     
     async def initialize(self) -> None:
-        """Initialize the mock database"""
-        logger.info("✅ Mock database initialized")
+        """Initialize the mock database and load sample data from SQLite"""
+        logger.info("Initializing Mock database with sample data from SQLite")
+        
+        # Load sample data from SQLite if available
+        await self._load_sample_data_from_sqlite()
+        
+        logger.info("✅ Mock database initialized with sample data")
         self.initialized = True
+    
+    async def _load_sample_data_from_sqlite(self) -> None:
+        """Load sample data from SQLite database into memory"""
+        try:
+            db_path = settings.database_url.replace("sqlite:///", "")
+            if db_path.startswith("./"):
+                db_path = Path(db_path).resolve()
+            
+            logger.info(f"🔍 Looking for SQLite database at: {db_path}")
+            
+            if not Path(db_path).exists():
+                logger.warning(f"❌ SQLite database not found at {db_path}, using empty mock data")
+                return
+            
+            logger.info(f"✅ Found SQLite database, loading data...")
+            
+            async with aiosqlite.connect(db_path) as db:
+                # Load users
+                logger.info("Loading users...")
+                async with db.execute("SELECT id, username, display_name, email, bio, location, avatar_url, is_verified FROM users") as cursor:
+                    rows = await cursor.fetchall()
+                    logger.info(f"Found {len(rows)} users in database")
+                    for row in rows:
+                        user = User(
+                            id=row[0],
+                            username=row[1],
+                            display_name=row[2],
+                            email=row[3],
+                            bio=row[4] or "",
+                            location=row[5] or "",
+                            avatar_url=row[6] or "",
+                            is_verified=bool(row[7]),
+                            created_at=datetime.now(timezone.utc),
+                            updated_at=datetime.now(timezone.utc)
+                        )
+                        self.users[user.id] = user
+                        self.users_by_username[user.username] = user.id
+                        logger.info(f"Loaded user: {user.username}")
+                
+                # Load tags
+                logger.info("Loading tags...")
+                async with db.execute("SELECT id, name, description, color, category FROM tag_types") as cursor:
+                    rows = await cursor.fetchall()
+                    logger.info(f"Found {len(rows)} tags in database")
+                    for row in rows:
+                        tag = Tag(
+                            id=row[0],
+                            name=row[1],
+                            description=row[2] or "",
+                            color=row[3] or "#666666",
+                            posts_count=0,  # Will be calculated later
+                            created_at=datetime.now(timezone.utc),
+                            updated_at=datetime.now(timezone.utc)
+                        )
+                        self.tags[tag.id] = tag
+                        self.tags_by_name[tag.name] = tag.id
+                
+                # Load posts with content
+                logger.info("Loading posts...")
+                async with db.execute("""
+                    SELECT p.id, p.post_type_id, p.title, p.feed_content, p.author_id, p.status,
+                           p.created_ts, p.updated_ts, pc.content
+                    FROM posts p
+                    LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = 1
+                    WHERE p.status = 'published'
+                """) as cursor:
+                    rows = await cursor.fetchall()
+                    logger.info(f"Found {len(rows)} posts in database")
+                    for row in rows:
+                        # Map post_type_id to PostType enum
+                        post_type_map = {
+                            'posts': PostType.LONG_FORM,
+                            'thoughts': PostType.THOUGHTS,
+                            'llm-short': PostType.AI_SUMMARY,
+                            'llm-long': PostType.DOCUMENTATION,
+                            'block-diagram': PostType.DIAGRAM,
+                            'code-snippet': PostType.CODE,
+                            'discussion': PostType.DISCUSSION
+                        }
+                        
+                        post_type = post_type_map.get(row[1], PostType.LONG_FORM)
+                        
+                        post = Post(
+                            id=row[0],
+                            type=post_type,
+                            title=row[2],
+                            content=row[8] or row[3],  # Use full content if available, otherwise feed_content
+                            feed_content=row[3],
+                            author_id=row[4],
+                            status=PostStatus.PUBLISHED,
+                            created_at=datetime.fromisoformat(row[6].replace('Z', '+00:00')) if row[6] else datetime.now(timezone.utc),
+                            updated_at=datetime.fromisoformat(row[7].replace('Z', '+00:00')) if row[7] else datetime.now(timezone.utc),
+                            tags=[],  # Will be loaded separately
+                            reactions=[],
+                            comments=[],
+                            stats={'views': 0, 'likes': 0, 'comments': 0}
+                        )
+                        self.posts[post.id] = post
+                        logger.info(f"Loaded post: {post.title}")
+                
+                logger.info(f"🎉 Successfully loaded {len(self.users)} users, {len(self.tags)} tags, {len(self.posts)} posts from SQLite")
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to load sample data from SQLite: {e}", exc_info=True)
     
     async def close(self) -> None:
         """Close the mock database"""
