@@ -84,7 +84,10 @@ class PostPublic(BaseModel):
     author_id: str
     post_type: PostType
     status: PostStatus
-    tags: List[str] = Field(default_factory=list)
+    tags: List[dict] = Field(
+        default_factory=list,
+        description="List of tag objects with id, name, and color"
+    )
     is_document: bool = False
     project_id: Optional[str] = None
     git_url: Optional[str] = None

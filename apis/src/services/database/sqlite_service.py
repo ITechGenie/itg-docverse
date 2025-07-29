@@ -183,8 +183,20 @@ class SQLiteService(DatabaseService):
                        status: str = "published") -> List[Dict[str, Any]]:
         """Get posts with optional filters"""
         query = """
-            SELECT p.*, pt.name as post_type_name, u.username, u.display_name,
-                   u.email, u.avatar_url, pc.content
+            SELECT 
+                p.*, 
+                pt.name AS post_type_name, 
+                u.username, 
+                u.display_name,
+                u.email, 
+                u.avatar_url, 
+                pc.content,
+                (
+                    SELECT GROUP_CONCAT(tt.name, ', ')
+                    FROM post_tags ptg
+                    JOIN tag_types tt ON ptg.tag_id = tt.id
+                    WHERE ptg.post_id = p.id
+                ) AS tags
             FROM posts p
             JOIN post_types pt ON p.post_type_id = pt.id
             JOIN users u ON p.author_id = u.id

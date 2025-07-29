@@ -64,7 +64,10 @@ async def get_posts(
                 'author_id': post['author_id'],
                 'post_type': PostType(post['post_type_id']),  # Convert string to enum
                 'status': PostStatus(post['status']),  # Convert string to enum
-                'tags': [],  # TODO: Fetch associated tags
+                'tags': [
+                    {"id": tag, "name": tag, "color": "#24A890"}
+                    for tag in post.get('tags', '').split(',') if tag.strip()
+                ] if post.get('tags') else [],
                 'is_document': post.get('is_document', False),
                 'project_id': post.get('project_id'),
                 'git_url': post.get('git_url'),
