@@ -68,7 +68,7 @@ export default function Feed() {
           )}
         </h1>
         {!tagName && (
-          <Link to="/#/create">
+          <Link to="/create">
             <Button className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Create Post
@@ -77,12 +77,12 @@ export default function Feed() {
         )}
         {tagName && (
           <div className="flex items-center space-x-2">
-            <Link to="/#/feed">
+            <Link to="/feed">
               <Button variant="outline">
                 Back to Feed
               </Button>
             </Link>
-            <Link to="/#/create">
+            <Link to="/create">
               <Button className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 Create Post

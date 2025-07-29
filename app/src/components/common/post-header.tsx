@@ -79,7 +79,7 @@ export const PostHeader = ({
   const [loadingReactions, setLoadingReactions] = useState(true);
   const [totalReactions, setTotalReactions] = useState(0);
   
-  const avatarUrl = getAvatarUrl(post.author.email || post.author.username, 48);
+  const avatarUrl = getAvatarUrl(post.author.id || post.author.email, 48);
   const formattedDate = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
 
   // Fetch reactions independently
@@ -135,7 +135,7 @@ export const PostHeader = ({
       {/* Row 2: Author Left, Reaction Actions Right */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
-          <Link to={`/profile/${post.author.username}`}>
+          <Link to={`/profile/${post.author.id}`}>
             <Avatar className="w-10 h-10 hover:ring-2 hover:ring-primary transition-all">
               <AvatarImage src={avatarUrl} alt={post.author.displayName} />
               <AvatarFallback>
@@ -145,7 +145,7 @@ export const PostHeader = ({
           </Link>
           <div>
             <Link 
-              to={`/profile/${post.author.username}`}
+              to={`/profile/${post.author.id}`}
               className="font-semibold text-foreground hover:underline"
             >
               {post.author.displayName}

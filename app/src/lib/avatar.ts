@@ -24,11 +24,17 @@ export function getGravatarUrl(
  * @returns Avatar URL
  */
 export function getAvatarUrl(identifier: string, size: number = 80): string {
+  console.log('Generating avatar for:', identifier, 'Size:', size);
   if (identifier.includes('@')) {
     return getGravatarUrl(identifier, size);
   }
   
   // For usernames, create a hash and use it for consistent avatars
   const hash = CryptoJS.MD5(identifier.toLowerCase()).toString();
-  return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=identicon`;
+  return `https://www.gravatar.com/avatar/itg-${hash}?s=${size}&d=identicon`;
 }
+
+// `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`, 
+// `https://api.dicebear.com/7.x/avataaars/svg?seed=${tokenPayload.username || 'user'}`,
+// `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiPost.author_id}`,
+// `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiComment.author_id}`,

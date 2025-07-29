@@ -7,6 +7,7 @@ import {
   ThumbsDown
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getAvatarUrl } from '@/lib/avatar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { api } from '@/lib/api-client';
@@ -174,7 +175,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
         <div className="pb-6 mb-6 border-b border-border">
           <div className="flex items-start space-x-3">
             <Avatar className="w-8 h-8">
-              <AvatarImage src="https://www.gravatar.com/avatar/current-user?d=identicon" />
+              <AvatarImage src={getAvatarUrl(post.author.id, 100)} />
               <AvatarFallback>ME</AvatarFallback>
             </Avatar>
             <div className="flex-1">
@@ -333,217 +334,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
             No comments yet. Be the first to comment!
           </div>
         )}
-
-        {/* Mock Comment Thread Example */}
-        <div className="space-y-8">
-          {/* Top Level Comment */}
-          <div className="relative">
-            <div className="flex items-start space-x-3">
-              <Avatar className="w-8 h-8">
-                <AvatarImage src="https://www.gravatar.com/avatar/mock1?d=identicon" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="font-semibold text-sm">John Doe</span>
-                  <span className="text-xs text-muted-foreground">2 days ago</span>
-                </div>
-                <p className="text-sm mb-3 leading-relaxed text-foreground">Great article! This is exactly what I was looking for. The open source alternatives you mentioned are really helpful.</p>
-                <div className="flex items-center space-x-4 text-xs">
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground">
-                    <ThumbsUp className="w-3 h-3 mr-1" />
-                    <span>6</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground">
-                    <ThumbsDown className="w-3 h-3 mr-1" />
-                    <span>1</span>
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                    onClick={() => handleReply('comment-1', 'John Doe')}
-                  >
-                    Reply
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Nested Reply with Thread Line */}
-            <div className="relative ml-6 mt-4">
-              <div className="absolute left-5 top-0 bottom-0 w-px bg-border"></div>
-              <div className="flex items-start space-x-3 pl-6">
-                <Avatar className="w-6 h-6">
-                  <AvatarImage src="https://www.gravatar.com/avatar/mock2?d=identicon" />
-                  <AvatarFallback>JS</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <span className="font-semibold text-xs">Jane Smith</span>
-                    <span className="text-xs text-muted-foreground">1 day ago</span>
-                  </div>
-                  <p className="text-xs mb-2 leading-relaxed text-foreground">I agree! I've been using some of these tools and they're amazing. Thanks for sharing!</p>
-                  <div className="flex items-center space-x-4 text-xs">
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground hover:text-foreground">
-                      <ThumbsUp className="w-3 h-3 mr-1" />
-                      <span>2</span>
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground hover:text-foreground">
-                      <ThumbsDown className="w-3 h-3 mr-1" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 px-2 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleReply('reply-1', 'Jane Smith')}
-                    >
-                      Reply
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Another Top Level Comment */}
-          <div className="relative">
-            <div className="flex items-start space-x-3">
-              <Avatar className="w-8 h-8">
-                <AvatarImage src="https://www.gravatar.com/avatar/mock3?d=identicon" />
-                <AvatarFallback>MB</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="font-semibold text-sm">Mike Brown</span>
-                  <span className="text-xs text-muted-foreground">1 day ago</span>
-                </div>
-                <p className="text-sm mb-3 leading-relaxed text-foreground">VSCodium has been my go-to editor for the past year. Loving the privacy-focused approach!</p>
-                <div className="flex items-center space-x-4 text-xs">
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground">
-                    <ThumbsUp className="w-3 h-3 mr-1" />
-                    <span>3</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground">
-                    <ThumbsDown className="w-3 h-3 mr-1" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                    onClick={() => handleReply('comment-2', 'Mike Brown')}
-                  >
-                    Reply
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Example of deeper nesting */}
-          <div className="relative">
-            <div className="flex items-start space-x-3">
-              <Avatar className="w-8 h-8">
-                <AvatarImage src="https://www.gravatar.com/avatar/mock4?d=identicon" />
-                <AvatarFallback>AL</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="font-semibold text-sm">Alex Lee</span>
-                  <span className="text-xs text-muted-foreground">12 hours ago</span>
-                </div>
-                <p className="text-sm mb-3 leading-relaxed text-foreground">This is really comprehensive! I've bookmarked it for future reference.</p>
-                <div className="flex items-center space-x-4 text-xs">
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground">
-                    <ThumbsUp className="w-3 h-3 mr-1" />
-                    <span>8</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground">
-                    <ThumbsDown className="w-3 h-3 mr-1" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                    onClick={() => handleReply('comment-3', 'Alex Lee')}
-                  >
-                    Reply
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Multiple nested replies */}
-            <div className="relative ml-6 mt-4">
-              <div className="absolute left-5 top-0 bottom-0 w-px bg-border"></div>
-              <div className="space-y-4 pl-6">
-                {/* First reply */}
-                <div className="flex items-start space-x-3">
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage src="https://www.gravatar.com/avatar/mock5?d=identicon" />
-                    <AvatarFallback>PR</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="font-semibold text-xs">Prakash M</span>
-                      <span className="text-xs text-muted-foreground">8 hours ago</span>
-                    </div>
-                    <p className="text-xs mb-2 leading-relaxed text-foreground">Thanks! I'm glad you found it useful. Let me know if you need any specific tool recommendations.</p>
-                    <div className="flex items-center space-x-4 text-xs">
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground hover:text-foreground">
-                        <ThumbsUp className="w-3 h-3 mr-1" />
-                        <span>4</span>
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground hover:text-foreground">
-                        <ThumbsDown className="w-3 h-3 mr-1" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 px-2 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleReply('reply-2', 'Prakash M')}
-                      >
-                        Reply
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Second reply */}
-                <div className="flex items-start space-x-3">
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage src="https://www.gravatar.com/avatar/mock6?d=identicon" />
-                    <AvatarFallback>SW</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="font-semibold text-xs">Sarah Wilson</span>
-                      <span className="text-xs text-muted-foreground">6 hours ago</span>
-                    </div>
-                    <p className="text-xs mb-2 leading-relaxed text-foreground">Could you do a follow-up post on deployment strategies for these tools?</p>
-                    <div className="flex items-center space-x-4 text-xs">
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground hover:text-foreground">
-                        <ThumbsUp className="w-3 h-3 mr-1" />
-                        <span>1</span>
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground hover:text-foreground">
-                        <ThumbsDown className="w-3 h-3 mr-1" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 px-2 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleReply('reply-3', 'Sarah Wilson')}
-                      >
-                        Reply
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+ 
       </div>
 
       {/* Reply Dialog */}

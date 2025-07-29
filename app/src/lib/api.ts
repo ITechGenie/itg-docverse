@@ -91,7 +91,7 @@ Mattermost is an open-source messaging platform that enables secure team collabo
     tags: [mockTags[2], mockTags[3]],
     createdAt: '2025-07-23T14:20:00Z',
     reactions: [
-      { id: 'r3', type: 'thinking', userId: 'user-4', user: mockUser, createdAt: '2025-07-23T14:30:00Z' },
+      { id: 'r3', type: 'event-thinking', userId: 'user-4', user: mockUser, createdAt: '2025-07-23T14:30:00Z' },
     ],
     comments: [],
     stats: {

@@ -16,6 +16,7 @@ import type {
 import authMeData from '@/mocks/auth-me.json';
 import tagsData from '@/mocks/tags.json';
 import { postsApi } from '@/services/posts-api';
+import {getAvatarUrl} from '@/lib/avatar';
 
 // Configuration flags
 const USE_REAL_API = true;
@@ -234,7 +235,8 @@ export class ApiClient {
             username: tokenPayload.username || 'User',
             displayName: tokenPayload.display_name || tokenPayload.username || 'User',
             email: tokenPayload.email || 'user@docverse.local',
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${tokenPayload.username || 'user'}`,
+            //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${tokenPayload.username || 'user'}`,
+            avatar: getAvatarUrl(tokenPayload.email, 100), // Use avatar utility function
             joinedDate: new Date().toISOString(),
             stats: {
               postsCount: 0,
@@ -332,7 +334,8 @@ export class ApiClient {
         username: 'ITG DocVerse User', // Default for now
         displayName: 'ITG DocVerse User',
         email: 'user@docverse.local',
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiPost.author_id}`,
+        //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiPost.author_id}`,
+        avatar: getAvatarUrl(apiPost.author_id, 100), // Use avatar utility function
         joinedDate: new Date().toISOString(),
         stats: {
           postsCount: 0,
@@ -584,7 +587,8 @@ export class ApiClient {
             username: apiComment.author_id, // TODO: Get real author data
             displayName: apiComment.author_id,
             email: '',
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiComment.author_id}`,
+            //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiComment.author_id}`,
+            avatar: getAvatarUrl(apiComment.author_id, 100), // Use avatar utility function
             joinedDate: new Date().toISOString(),
             stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
           },
@@ -637,7 +641,8 @@ export class ApiClient {
             username: apiComment.author_id, // TODO: Get real author data
             displayName: apiComment.author_id,
             email: '',
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiComment.author_id}`,
+            //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiComment.author_id}`,
+            avatar: getAvatarUrl(apiComment.author_id, 100), // Use avatar utility function
             joinedDate: new Date().toISOString(),
             stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
           },
@@ -718,7 +723,8 @@ export class ApiClient {
             username: tokenPayload.username || username,
             displayName: tokenPayload.display_name || tokenPayload.username || username,
             email: tokenPayload.email || `${username}@docverse.local`,
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+            //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+            avatar: getAvatarUrl(username, 100), // Use avatar utility function
             joinedDate: new Date().toISOString(),
             stats: {
               postsCount: 0,
