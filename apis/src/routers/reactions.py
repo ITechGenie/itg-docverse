@@ -129,3 +129,73 @@ async def get_discussion_reactions(
         return reactions
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching reactions: {str(e)}")
+
+@router.get("/favorites/tags", response_model=Dict[str, List[str]])
+async def get_user_favorite_tags(
+    db: DatabaseService = Depends(get_db_service),
+    user: Dict[str, Any] = Depends(get_current_user_from_middleware)
+):
+    """Get user's favorite tags"""
+    try:
+        user_id = user.get("user_id")
+        
+        # Query to get favorite tag IDs for the user
+        query = """
+        SELECT DISTINCT r.target_id
+        FROM reactions r
+        INNER JOIN event_types et ON r.event_type_id = et.id
+        WHERE r.user_id = ? 
+        AND et.name = 'favorite'
+        AND r.target_type = 'tag'
+        """
+        
+        result = await db.execute_query(query, (user_id,))
+        tag_ids = [row[0] for row in result] if result else []
+        
+        return {"tag_ids": tag_ids}
+    except Exception as e:
+        logger.error(f"Error fetching user favorite tags: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching favorite tags: {str(e)}")
+
+@router.get("/tag/{tag_id}")
+async def get_tag_reactions(
+    tag_id: str,
+    db: DatabaseService = Depends(get_db_service)
+):
+    """Get all reactions for a specific tag"""
+    try:
+        reactions = await db.get_reactions(tag_id, target_type="tag")
+        return [ReactionResponse(**reaction) for reaction in reactions]
+    except Exception as e:
+        logger.error(f"Error fetching tag reactions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching tag reactions: {str(e)}")
+
+@router.post("/tag/{tag_id}/add", response_model=ReactionResponse)
+async def add_reaction_to_tag(
+    tag_id: str,
+    req: ReactionRequest,
+    db: DatabaseService = Depends(get_db_service),
+    user: Dict[str, Any] = Depends(get_current_user_from_middleware)
+):
+    """Add a reaction to a tag"""
+    try:
+        reaction = await db.add_reaction(tag_id, user.get("user_id"), req.reaction_type, target_type="tag")
+        return ReactionResponse(**reaction)
+    except Exception as e:
+        logger.error(f"Error adding reaction to tag: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error adding reaction: {str(e)}")
+
+@router.delete("/tag/{tag_id}/remove")
+async def remove_reaction_from_tag(
+    tag_id: str,
+    req: ReactionRequest,
+    db: DatabaseService = Depends(get_db_service),
+    user: Dict[str, Any] = Depends(get_current_user_from_middleware)
+):
+    """Remove a reaction from a tag"""
+    try:
+        await db.remove_reaction(tag_id, user.get("user_id"), req.reaction_type, target_type="tag")
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Error removing reaction from tag: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error removing reaction: {str(e)}")

@@ -18,6 +18,8 @@ export default function Feed() {
     type: (searchParams.get('type') as FeedFilters['type']) || 'all',
     timeframe: (searchParams.get('timeframe') as FeedFilters['timeframe']) || 'all',
     following: filter === 'following',
+    favoritesPosts: filter === 'favorite-posts',
+    favoriteTags: filter === 'favorite-tags',
   };
 
   useEffect(() => {
@@ -63,6 +65,10 @@ export default function Feed() {
             'Following'
           ) : filter === 'trending' ? (
             'Trending'
+          ) : filter === 'favorite-posts' ? (
+            'Favorite Posts'
+          ) : filter === 'favorite-tags' ? (
+            'Favorite Tags'
           ) : (
             'Community Feed'
           )}

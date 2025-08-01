@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PostHeader } from '@/components/common/post-header';
 import { MarkdownRenderer } from '@/components/common/markdown-renderer';
 import { DiscussionSection } from '@/components/common/discussion-section';
+import { useViewTracker } from '@/hooks/use-view-tracker';
 import { api } from '@/lib/api-client';
 import type { Post, ReactionType } from '@/types';
 
@@ -27,6 +28,18 @@ export default function PostDetail(props: PostDetailProps) {
 
   const post = props.post !== undefined ? props.post : internalPost;
   const loading = props.loading !== undefined ? props.loading : internalLoading;
+
+  // Track view events for this post
+  useViewTracker(post?.id, {
+    delay: 3000, // Track after 3 seconds of viewing
+    metadata: {
+      postType: post?.type,
+      documentType: props.documentType || docType,
+      isDocument: props.isDocument,
+      version: version ? parseInt(version) : undefined,
+      source: 'post-detail-page'
+    }
+  });
 
   useEffect(() => {
     // Skip fetching if props are provided (wrapper component handles it)

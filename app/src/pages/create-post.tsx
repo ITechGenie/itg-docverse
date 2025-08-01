@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,13 +7,14 @@ import MDEditor from '@uiw/react-md-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { TagInput } from '@/components/ui/tag-input';
 import { api } from '@/lib/api-client';
 import type { CreatePostData } from '@/types';
 
 const createPostSchema = z.object({
   title: z.string().optional(),
   content: z.string().optional(),
-  tags: z.string().max(100, 'Tags too long'),
+  tags: z.array(z.string()).max(5, 'Maximum 5 tags allowed'),
   coverImage: z.string().url().optional().or(z.literal('')),
 });
 
@@ -21,18 +22,24 @@ type CreatePostForm = z.infer<typeof createPostSchema>;
 
 export default function CreatePost() {
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Determine post type from route
   const getPostTypeFromRoute = (): 'long-form' | 'short-form' | 'thoughts' => {
-    const path = window.location.hash;
-    if (path.includes('/create/article')) return 'long-form';
-    if (path.includes('/create/thoughts')) return 'thoughts';
+    const pathname = location.pathname;
+    if (pathname.includes('/create/article')) return 'long-form';
+    if (pathname.includes('/create/thoughts')) return 'thoughts';
     return 'long-form'; // default
   };
 
   const [activeTab, setActiveTab] = useState<'long-form' | 'short-form' | 'thoughts'>(getPostTypeFromRoute());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [markdownContent, setMarkdownContent] = useState('');
+
+  // Update tab when route changes
+  useEffect(() => {
+    setActiveTab(getPostTypeFromRoute());
+  }, [location.pathname]);
 
   const {
     register,
@@ -44,7 +51,7 @@ export default function CreatePost() {
     resolver: zodResolver(createPostSchema),
     defaultValues: {
       content: '',
-      tags: '',
+      tags: [],
     },
   });
 
@@ -58,7 +65,7 @@ export default function CreatePost() {
         title: activeTab === 'long-form' ? data.title : undefined,
         content: activeTab === 'long-form' ? markdownContent : (data.content || ''),
         coverImage: data.coverImage || undefined,
-        tags: data.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        tags: data.tags || [],
       };
 
       const response = await api.createPost(postData);
@@ -81,7 +88,10 @@ export default function CreatePost() {
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
         <button
-          onClick={() => setActiveTab('long-form')}
+          onClick={() => {
+            setActiveTab('long-form');
+            navigate('/create/article');
+          }}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'long-form'
               ? 'bg-background text-foreground shadow-sm'
@@ -91,7 +101,10 @@ export default function CreatePost() {
           Article (Markdown)
         </button>
         <button
-          onClick={() => setActiveTab('thoughts')}
+          onClick={() => {
+            setActiveTab('thoughts');
+            navigate('/create/thoughts');
+          }}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'thoughts'
               ? 'bg-background text-foreground shadow-sm'
@@ -162,13 +175,13 @@ export default function CreatePost() {
         </div>
 
         <div>
-          <Input
-            placeholder="Add tags (comma separated, max 5)"
-            {...register('tags')}
+          <TagInput
+            value={watch('tags') || []}
+            onChange={(tags) => setValue('tags', tags)}
+            placeholder="Add tags..."
+            maxTags={5}
+            disabled={isSubmitting}
           />
-          <p className="text-sm text-muted-foreground mt-1">
-            e.g., javascript, react, typescript
-          </p>
           {errors.tags && (
             <p className="text-sm text-destructive mt-1">{errors.tags.message}</p>
           )}

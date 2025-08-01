@@ -142,4 +142,6 @@ export interface FeedFilters {
   timeframe?: 'today' | 'week' | 'month' | 'year' | 'all';
   following?: boolean;
   author?: string; // Filter posts by specific author ID
+  favoritesPosts?: boolean; // Filter to show only favorite posts
+  favoriteTags?: boolean; // Filter to show posts from favorite tags
 }

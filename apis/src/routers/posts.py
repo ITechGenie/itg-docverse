@@ -20,6 +20,88 @@ db_service = DatabaseServiceFactory.create_service()
 # Initialize logger - now just like log4j!
 logger = get_logger("PostsAPI", level="DEBUG", json_format=False)
 
+async def get_favorite_filtered_posts(
+    db: DatabaseService,
+    user_id: str,
+    skip: int = 0,
+    limit: int = 10,
+    author_id: Optional[str] = None,
+    tag_id: Optional[str] = None,
+    post_type: Optional[PostType] = None,
+    status: PostStatus = PostStatus.PUBLISHED,
+    favorites_posts: Optional[bool] = None,
+    favorite_tags: Optional[bool] = None
+) -> List[Dict[str, Any]]:
+    """Get posts filtered by favorites (either favorite posts or posts from favorite tags)"""
+    
+    # Use the same query structure as the normal get_posts method in sqlite_service
+    base_query = """
+    SELECT DISTINCT p.id, p.title, p.author_id, p.post_type_id, p.status,
+           p.project_id, p.git_url, p.created_ts, p.updated_ts,
+           COALESCE(pc.content, p.feed_content, '') as content,
+           GROUP_CONCAT(DISTINCT tt.name, ', ') as tags
+    FROM posts p
+    LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = 1
+    LEFT JOIN post_tags pt ON p.id = pt.post_id
+    LEFT JOIN tag_types tt ON pt.tag_id = tt.id
+    """
+    
+    where_conditions = ["p.status = ?", "p.is_latest = ?"]
+    params = [status.value, True]
+    
+    if favorites_posts:
+        # Join with reactions table to find favorite posts
+        base_query += """
+        INNER JOIN reactions r ON p.id = r.target_id 
+        INNER JOIN event_types et ON r.event_type_id = et.id
+        """
+        where_conditions.append("r.target_type = 'post'")
+        where_conditions.append("r.user_id = ?")
+        where_conditions.append("et.id = 'event-favorite'")
+        params.append(user_id)
+    
+    if favorite_tags:
+        # Join with reactions table to find posts with favorite tags
+        base_query += """
+        INNER JOIN (
+            SELECT DISTINCT pt2.post_id
+            FROM post_tags pt2
+            INNER JOIN reactions r2 ON pt2.tag_id = r2.target_id
+            INNER JOIN event_types et2 ON r2.event_type_id = et2.id
+            WHERE r2.target_type = 'tag' 
+              AND r2.user_id = ?
+              AND et2.id = 'event-favorite'
+        ) fav_tags ON p.id = fav_tags.post_id
+        """
+        params.append(user_id)
+    
+    # Add other filters
+    if author_id:
+        where_conditions.append("p.author_id = ?")
+        params.append(author_id)
+    
+    if tag_id:
+        where_conditions.append("pt.tag_id = ?")
+        params.append(tag_id)
+    
+    if post_type:
+        where_conditions.append("p.post_type_id = ?")
+        params.append(post_type.value)
+    
+    # Build final query
+    if where_conditions:
+        base_query += " WHERE " + " AND ".join(where_conditions)
+    
+    base_query += """
+    GROUP BY p.id, p.title, p.author_id, p.post_type_id, p.status,
+             p.project_id, p.git_url, p.created_ts, p.updated_ts, pc.content, p.feed_content
+    ORDER BY p.created_ts DESC
+    LIMIT ? OFFSET ?
+    """
+    params.extend([limit, skip])
+    
+    return await db.execute_query(base_query, tuple(params))
+
 async def get_db_service() -> DatabaseService:
     """Dependency to get database service"""
     if not hasattr(db_service, 'initialized') or not db_service.initialized:
@@ -33,6 +115,8 @@ async def get_posts(
     author_id: Optional[str] = Query(None, description="Filter by author ID"),
     tag_id: Optional[str] = Query(None, description="Filter by tag ID"),
     post_type: Optional[PostType] = Query(None, description="Filter by post type"),
+    favorites_posts: Optional[bool] = Query(None, description="Filter to show only favorite posts"),
+    favorite_tags: Optional[bool] = Query(None, description="Filter to show posts from favorite tags"),
     current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
     status: PostStatus = Query(PostStatus.PUBLISHED, description="Filter by status"),
     db: DatabaseService = Depends(get_db_service)
@@ -40,16 +124,32 @@ async def get_posts(
     """Get posts with filtering and pagination (requires authentication)"""
     try:
         # Log query parameters - just like log4j!
-        logger.info(f"Fetching posts with params: skip={skip}, limit={limit}, author_id={author_id}, tag_id={tag_id}, post_type={post_type}, status={status}")
+        logger.info(f"Fetching posts with params: skip={skip}, limit={limit}, author_id={author_id}, tag_id={tag_id}, post_type={post_type}, status={status}, favorites_posts={favorites_posts}, favorite_tags={favorite_tags}")
 
-        posts = await db.get_posts(
-            skip=skip,
-            limit=limit,
-            author_id=author_id,
-            tag_id=tag_id,
-            post_type=post_type,
-            status=status
-        )
+        # Handle favorite filtering
+        if favorites_posts or favorite_tags:
+            # We need to implement a custom query for favorites
+            posts = await get_favorite_filtered_posts(
+                db=db,
+                user_id=current_user['user_id'],
+                skip=skip,
+                limit=limit,
+                author_id=author_id,
+                tag_id=tag_id,
+                post_type=post_type,
+                status=status,
+                favorites_posts=favorites_posts,
+                favorite_tags=favorite_tags
+            )
+        else:
+            posts = await db.get_posts(
+                skip=skip,
+                limit=limit,
+                author_id=author_id,
+                tag_id=tag_id,
+                post_type=post_type,
+                status=status
+            )
 
         # Log the resulting posts
         logger.debug(f"Fetched {len(posts)} posts")
@@ -60,15 +160,15 @@ async def get_posts(
             transformed_post = {
                 'id': post['id'],
                 'title': post['title'],
-                'content': post.get('content', ''),
+                'content': post.get('content') or '',  # Ensure content is never None
                 'author_id': post['author_id'],
                 'post_type': PostType(post['post_type_id']),  # Convert string to enum
                 'status': PostStatus(post['status']),  # Convert string to enum
                 'tags': [
-                    {"id": tag, "name": tag, "color": "#24A890"}
+                    {"id": tag.strip(), "name": tag.strip(), "color": "#24A890"}
                     for tag in post.get('tags', '').split(',') if tag.strip()
                 ] if post.get('tags') else [],
-                'is_document': post.get('is_document', False),
+                'is_document': False,  # Default value since not in DB schema
                 'project_id': post.get('project_id'),
                 'git_url': post.get('git_url'),
                 'view_count': 0,  # TODO: Fetch from reactions/stats
@@ -101,12 +201,12 @@ async def get_post(
         transformed_post = {
             'id': post['id'],
             'title': post['title'],
-            'content': post.get('content', ''),
+            'content': post.get('content') or '',  # Ensure content is never None
             'author_id': post['author_id'],
             'post_type': PostType(post['post_type_id']),  # Convert string to enum
             'status': PostStatus(post['status']),  # Convert string to enum
             'tags': [],  # TODO: Fetch associated tags
-            'is_document': post.get('is_document', False),
+            'is_document': False,  # Default value since not in DB schema
             'project_id': post.get('project_id'),
             'git_url': post.get('git_url'),
             'view_count': 0,  # TODO: Fetch from reactions/stats
@@ -192,12 +292,12 @@ async def create_post(
         transformed_post = {
             'id': created_post['id'],
             'title': created_post['title'],
-            'content': created_post.get('content', ''),
+            'content': created_post.get('content') or '',  # Ensure content is never None
             'author_id': created_post['author_id'],
             'post_type': PostType(created_post['post_type_id']),  # Convert string to enum
             'status': PostStatus(created_post['status']),  # Convert string to enum
             'tags': [],  # TODO: Fetch associated tags
-            'is_document': created_post.get('is_document', False),
+            'is_document': False,  # Default value since not in DB schema
             'project_id': created_post.get('project_id'),
             'git_url': created_post.get('git_url'),
             'view_count': 0,  # TODO: Fetch from reactions/stats

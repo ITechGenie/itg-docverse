@@ -124,7 +124,7 @@ export const PostHeader = ({
             <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
           ) : (
             <Link to={`/post/${post.id}`} className="block">
-              <h3 className="text-xl font-bold text-foreground hover:underline line-clamp-2">
+              <h3 className="text-2xl font-bold text-foreground hover:underline line-clamp-2">
                 {post.title}
               </h3>
             </Link>
@@ -146,11 +146,11 @@ export const PostHeader = ({
           <div>
             <Link 
               to={`/profile/${post.author.id}`}
-              className="font-semibold text-foreground hover:underline"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {post.author.displayName}
             </Link>
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
               <time>{formattedDate}</time>
               {post.readTime && (
                 <>

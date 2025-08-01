@@ -12,6 +12,8 @@ const PostDetail = lazy(() => import('@/pages/post-detail'));
 const DocumentDetail = lazy(() => import('@/pages/document-detail'));
 const Profile = lazy(() => import('@/pages/profile'));
 const Tags = lazy(() => import('@/pages/tags'));
+const PopularTags = lazy(() => import('@/pages/popular-tags'));
+const TopContributors = lazy(() => import('@/pages/top-contributors'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 const GitRepos = lazy(() => import('@/pages/git-repos'));
 const Documents = lazy(() => import('@/pages/documents'));
@@ -158,6 +160,21 @@ export default function AppRouter() {
         <Route path="/tags" element={
           <Suspense fallback={<PageLoadingFallback />}>
             <Tags />
+          </Suspense>
+        } />
+        <Route path="/tags/popular" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <PopularTags />
+          </Suspense>
+        } />
+        <Route path="/contributors" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <TopContributors />
+          </Suspense>
+        } />
+        <Route path="/contributors/top" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <TopContributors />
           </Suspense>
         } />
         <Route path="/tags/:tagName" element={

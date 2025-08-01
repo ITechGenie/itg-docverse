@@ -64,6 +64,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             url: "#/feed/following",
           },
           {
+            title: "Favorite Posts",
+            url: "#/feed/favorite-posts",
+          },
+          {
+            title: "Favorite Tags",
+            url: "#/feed/favorite-tags",
+          },
+          {
             title: "Trending",
             url: "#/feed/trending",
           },
@@ -97,7 +105,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           },
           {
             title: "Popular Tags",
-            url: "#/tags",
+            url: "#/tags/popular",
           },
           {
             title: "Top Contributors",

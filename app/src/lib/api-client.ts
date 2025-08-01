@@ -293,6 +293,14 @@ export class ApiClient {
           searchParams.append('author_id', params.author);
         }
 
+        if (params.favoritesPosts) {
+          searchParams.append('favorites_posts', 'true');
+        }
+
+        if (params.favoriteTags) {
+          searchParams.append('favorite_tags', 'true');
+        }
+
         const endpoint = `/posts/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
         const response = await this.apiCall<any[]>(endpoint);
         
@@ -450,9 +458,7 @@ export class ApiClient {
     try {
       if (USE_REAL_API) {
         // First check if user already has this reaction
-        const endpoint = targetType === 'post' 
-          ? `/reactions/post/${targetId}` 
-          : `/reactions/${targetType}/${targetId}`;
+        const endpoint = `/reactions/${targetType}/${targetId}`;
         const reactionsResponse = await this.apiCall<any[]>(endpoint);
         
         if (reactionsResponse.success && reactionsResponse.data) {
@@ -467,22 +473,16 @@ export class ApiClient {
           
           if (userReaction) {
             // Remove existing reaction
-            const removeEndpoint = targetType === 'post' 
-              ? `/reactions/post/${targetId}/remove` 
-              : `/reactions/${targetType}/${targetId}/remove`;
             const removeResponse = await this.apiCall(
-              removeEndpoint,
+              `/reactions/${targetType}/${targetId}/remove`,
               'DELETE',
               { reaction_type: reactionType }
             );
             return { success: removeResponse.success, data: removeResponse.success };
           } else {
             // Add new reaction
-            const addEndpoint = targetType === 'post' 
-              ? `/reactions/post/${targetId}/add` 
-              : `/reactions/${targetType}/${targetId}/add`;
             const addResponse = await this.apiCall(
-              addEndpoint,
+              `/reactions/${targetType}/${targetId}/add`,
               'POST',
               { reaction_type: reactionType }
             );
@@ -505,9 +505,7 @@ export class ApiClient {
   async getReactions(targetId: string, targetType: string = 'post'): Promise<ApiResponse<any[]>> {
     try {
       if (USE_REAL_API) {
-        const endpoint = targetType === 'post' 
-          ? `/reactions/post/${targetId}` 
-          : `/reactions/${targetType}/${targetId}`;
+        const endpoint = `/reactions/${targetType}/${targetId}`;
         return await this.apiCall<any[]>(endpoint);
       } else {
         // Mock reactions
@@ -566,6 +564,465 @@ export class ApiClient {
       console.error('Get tags failed:', error);
       return { success: false, error: 'Failed to load tags' };
     }
+  }
+
+  async searchTags(query: string, limit: number = 10): Promise<ApiResponse<Tag[]>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any[]>(`/tags/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+        if (response.success && response.data) {
+          const transformedTags = response.data.map((apiTag: any) => ({
+            id: apiTag.id,
+            name: apiTag.name,
+            color: apiTag.color || '#3b82f6',
+            postsCount: apiTag.posts_count || 0,
+          }));
+          return { success: true, data: transformedTags };
+        }
+        return response;
+      } else {
+        // Mock search functionality
+        const allTags = tagsData.data;
+        const filteredTags = allTags
+          .filter((tag: any) => tag.name.toLowerCase().includes(query.toLowerCase()))
+          .slice(0, limit);
+        return { success: true, data: filteredTags };
+      }
+    } catch (error) {
+      console.error('Search tags failed:', error);
+      return { success: false, error: 'Failed to search tags' };
+    }
+  }
+
+  async getPopularTags(limit: number = 20): Promise<ApiResponse<Tag[]>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any[]>(`/tags/popular?limit=${limit}`);
+        if (response.success && response.data) {
+          const transformedTags = response.data.map((apiTag: any) => ({
+            id: apiTag.id,
+            name: apiTag.name,
+            description: apiTag.description,
+            color: apiTag.color || '#3b82f6',
+            postsCount: apiTag.posts_count || 0,
+            category: apiTag.category,
+            isActive: apiTag.is_active,
+          }));
+          return { success: true, data: transformedTags };
+        }
+        return response;
+      } else {
+        const sortedTags = [...tagsData.data].sort((a: any, b: any) => b.postsCount - a.postsCount).slice(0, limit);
+        return { success: true, data: sortedTags };
+      }
+    } catch (error) {
+      console.error('Get popular tags failed:', error);
+      return { success: false, error: 'Failed to load popular tags' };
+    }
+  }
+
+  async createTag(tagData: { name: string; description?: string; color?: string; category?: string }): Promise<ApiResponse<Tag>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any>('/tags/', 'POST', tagData);
+        if (response.success && response.data) {
+          const transformedTag = {
+            id: response.data.id,
+            name: response.data.name,
+            description: response.data.description,
+            color: response.data.color || '#3b82f6',
+            postsCount: 0,
+          };
+          return { success: true, data: transformedTag };
+        }
+        return response;
+      } else {
+        // Mock creation
+        const newTag = {
+          id: `tag-${Date.now()}`,
+          name: tagData.name,
+          description: tagData.description || '',
+          color: tagData.color || '#3b82f6',
+          postsCount: 0,
+        };
+        return { success: true, data: newTag };
+      }
+    } catch (error) {
+      console.error('Create tag failed:', error);
+      return { success: false, error: 'Failed to create tag' };
+    }
+  }
+
+  async updateTag(tagId: string, tagData: { name?: string; description?: string; color?: string; category?: string }): Promise<ApiResponse<Tag>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any>(`/tags/${tagId}`, 'PUT', tagData);
+        if (response.success && response.data) {
+          const transformedTag = {
+            id: response.data.id,
+            name: response.data.name,
+            description: response.data.description,
+            color: response.data.color || '#3b82f6',
+            postsCount: response.data.posts_count || 0,
+          };
+          return { success: true, data: transformedTag };
+        }
+        return response;
+      } else {
+        // Mock update
+        const updatedTag = {
+          id: tagId,
+          name: tagData.name || 'Updated Tag',
+          description: tagData.description || '',
+          color: tagData.color || '#3b82f6',
+          postsCount: 0,
+        };
+        return { success: true, data: updatedTag };
+      }
+    } catch (error) {
+      console.error('Update tag failed:', error);
+      return { success: false, error: 'Failed to update tag' };
+    }
+  }
+
+  async deleteTag(tagId: string): Promise<ApiResponse<{ message: string }>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<{ message: string }>(`/tags/${tagId}`, 'DELETE');
+        return response;
+      } else {
+        return { success: true, data: { message: 'Tag deleted successfully' } };
+      }
+    } catch (error) {
+      console.error('Delete tag failed:', error);
+      return { success: false, error: 'Failed to delete tag' };
+    }
+  }
+
+  async getUserFavoriteTags(): Promise<ApiResponse<string[]>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any>('/reactions/favorites/tags');
+        if (response.success && response.data) {
+          return { success: true, data: response.data.tag_ids || [] };
+        }
+        return response;
+      } else {
+        // Mock favorite tags
+        return { success: true, data: [] };
+      }
+    } catch (error) {
+      console.error('Get user favorite tags failed:', error);
+      return { success: false, error: 'Failed to load favorite tags' };
+    }
+  }
+
+  async getPostsByTag(tagId: string, page: number = 1, limit: number = 10): Promise<ApiResponse<{ posts: Post[]; pagination: any; tag: any }>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any>(`/tags/${tagId}/posts?page=${page}&limit=${limit}`);
+        if (response.success && response.data) {
+          const transformedPosts = response.data.posts.map((apiPost: any) => this.transformApiPostToUIPost(apiPost));
+          return { 
+            success: true, 
+            data: {
+              posts: transformedPosts,
+              pagination: response.data.pagination,
+              tag: response.data.tag
+            }
+          };
+        }
+        return response;
+      } else {
+        // Mock implementation
+        const mockPosts = await this.getPosts({ page, limit });
+        return { 
+          success: true, 
+          data: {
+            posts: Array.isArray(mockPosts.data) ? mockPosts.data : [],
+            pagination: { page, limit, total: 0, pages: 0 },
+            tag: { id: tagId, name: 'Mock Tag' }
+          }
+        };
+      }
+    } catch (error) {
+      console.error('Get posts by tag failed:', error);
+      return { success: false, error: 'Failed to load posts by tag' };
+    }
+  }
+
+  // Authors API methods
+  async searchAuthors(query: string, limit: number = 10, minPosts: number = 0): Promise<ApiResponse<any[]>> {
+    try {
+      if (USE_REAL_API) {
+        const params = new URLSearchParams({
+          limit: limit.toString(),
+          offset: '0',
+          min_posts: minPosts.toString(),
+        });
+        if (query) {
+          params.append('q', query);
+        }
+        
+        const response = await this.apiCall<any[]>(`/authors/search?${params}`);
+        if (response.success && response.data) {
+          const transformedAuthors = response.data.map((apiAuthor: any) => ({
+            id: apiAuthor.id,
+            name: apiAuthor.name,
+            email: apiAuthor.email,
+            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.name),
+            bio: apiAuthor.bio,
+            postsCount: apiAuthor.posts_count || 0,
+            firstPostDate: apiAuthor.first_post_date,
+            lastPostDate: apiAuthor.last_post_date,
+            totalViews: apiAuthor.total_views || 0,
+            totalLikes: apiAuthor.total_likes || 0,
+            color: this.generateColorFromString(apiAuthor.name), // Generate a consistent color
+          }));
+          return { success: true, data: transformedAuthors };
+        }
+        return response;
+      } else {
+        // Mock authors data
+        const mockAuthors = [
+          {
+            id: '1',
+            name: 'John Doe',
+            email: 'john@example.com',
+            avatarUrl: getAvatarUrl('John Doe'),
+            bio: 'Senior Developer',
+            postsCount: 15,
+            firstPostDate: '2024-01-01',
+            lastPostDate: '2024-12-01',
+            totalViews: 1500,
+            totalLikes: 200,
+            color: '#3b82f6',
+          },
+          {
+            id: '2',
+            name: 'Jane Smith',
+            email: 'jane@example.com',
+            avatarUrl: getAvatarUrl('Jane Smith'),
+            bio: 'Tech Lead',
+            postsCount: 23,
+            firstPostDate: '2024-01-15',
+            lastPostDate: '2024-12-05',
+            totalViews: 2300,
+            totalLikes: 350,
+            color: '#10b981',
+          }
+        ].filter(author => 
+          author.postsCount >= minPosts && 
+          (!query || author.name.toLowerCase().includes(query.toLowerCase()))
+        ).slice(0, limit);
+        
+        return { success: true, data: mockAuthors };
+      }
+    } catch (error) {
+      console.error('Search authors failed:', error);
+      return { success: false, error: 'Failed to search authors' };
+    }
+  }
+
+  async getTopAuthors(limit: number = 20, sortBy: 'posts' | 'views' | 'likes' = 'posts'): Promise<ApiResponse<any[]>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any[]>(`/authors/top?limit=${limit}&sort_by=${sortBy}`);
+        if (response.success && response.data) {
+          const transformedAuthors = response.data.map((apiAuthor: any) => ({
+            id: apiAuthor.id,
+            name: apiAuthor.name,
+            email: apiAuthor.email,
+            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.name),
+            bio: apiAuthor.bio,
+            postsCount: apiAuthor.posts_count || 0,
+            firstPostDate: apiAuthor.first_post_date,
+            lastPostDate: apiAuthor.last_post_date,
+            totalViews: apiAuthor.total_views || 0,
+            totalLikes: apiAuthor.total_likes || 0,
+            color: this.generateColorFromString(apiAuthor.name),
+          }));
+          return { success: true, data: transformedAuthors };
+        }
+        return response;
+      } else {
+        // Mock top authors
+        const mockAuthors = [
+          {
+            id: '1',
+            name: 'Alice Johnson',
+            email: 'alice@example.com',
+            avatarUrl: getAvatarUrl('Alice Johnson'),
+            bio: 'DevOps Engineer with 8+ years experience',
+            postsCount: 45,
+            firstPostDate: '2023-01-01',
+            lastPostDate: '2024-12-01',
+            totalViews: 4500,
+            totalLikes: 780,
+            color: '#8b5cf6',
+          },
+          {
+            id: '2',
+            name: 'Bob Wilson',
+            email: 'bob@example.com',
+            avatarUrl: getAvatarUrl('Bob Wilson'),
+            bio: 'Full Stack Developer',
+            postsCount: 38,
+            firstPostDate: '2023-03-15',
+            lastPostDate: '2024-11-28',
+            totalViews: 3800,
+            totalLikes: 620,
+            color: '#f59e0b',
+          },
+          {
+            id: '3',
+            name: 'Carol Davis',
+            email: 'carol@example.com',
+            avatarUrl: getAvatarUrl('Carol Davis'),
+            bio: 'Data Scientist & ML Engineer',
+            postsCount: 32,
+            firstPostDate: '2023-05-10',
+            lastPostDate: '2024-12-03',
+            totalViews: 3200,
+            totalLikes: 540,
+            color: '#ef4444',
+          },
+          {
+            id: '4',
+            name: 'David Brown',
+            email: 'david@example.com',
+            avatarUrl: getAvatarUrl('David Brown'),
+            bio: 'Frontend Architect',
+            postsCount: 28,
+            firstPostDate: '2023-02-20',
+            lastPostDate: '2024-11-30',
+            totalViews: 2800,
+            totalLikes: 460,
+            color: '#06b6d4',
+          },
+          {
+            id: '5',
+            name: 'Eva Martinez',
+            email: 'eva@example.com',
+            avatarUrl: getAvatarUrl('Eva Martinez'),
+            bio: 'Backend Engineer & API Specialist',
+            postsCount: 25,
+            firstPostDate: '2023-04-05',
+            lastPostDate: '2024-12-02',
+            totalViews: 2500,
+            totalLikes: 420,
+            color: '#84cc16',
+          }
+        ];
+
+        // Sort by the specified criteria
+        mockAuthors.sort((a, b) => {
+          switch (sortBy) {
+            case 'views':
+              return b.totalViews - a.totalViews;
+            case 'likes':
+              return b.totalLikes - a.totalLikes;
+            default:
+              return b.postsCount - a.postsCount;
+          }
+        });
+
+        return { success: true, data: mockAuthors.slice(0, limit) };
+      }
+    } catch (error) {
+      console.error('Get top authors failed:', error);
+      return { success: false, error: 'Failed to load top authors' };
+    }
+  }
+
+  async getAuthorDetails(authorId: string): Promise<ApiResponse<any>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any>(`/authors/${authorId}`);
+        if (response.success && response.data) {
+          const transformedAuthor = {
+            id: response.data.id,
+            name: response.data.name,
+            email: response.data.email,
+            avatarUrl: response.data.avatar_url || getAvatarUrl(response.data.name),
+            bio: response.data.bio,
+            postsCount: response.data.posts_count || 0,
+            firstPostDate: response.data.first_post_date,
+            lastPostDate: response.data.last_post_date,
+            totalViews: response.data.total_views || 0,
+            totalLikes: response.data.total_likes || 0,
+            color: this.generateColorFromString(response.data.name),
+          };
+          return { success: true, data: transformedAuthor };
+        }
+        return response;
+      } else {
+        // Mock author detail
+        const mockAuthor = {
+          id: authorId,
+          name: 'Mock Author',
+          email: 'mock@example.com',
+          avatarUrl: getAvatarUrl('Mock Author'),
+          bio: 'Mock bio for testing',
+          postsCount: 10,
+          firstPostDate: '2024-01-01',
+          lastPostDate: '2024-12-01',
+          totalViews: 1000,
+          totalLikes: 150,
+          color: '#3b82f6',
+        };
+        return { success: true, data: mockAuthor };
+      }
+    } catch (error) {
+      console.error('Get author details failed:', error);
+      return { success: false, error: 'Failed to load author details' };
+    }
+  }
+
+  async getAuthorPosts(authorId: string, page: number = 1, limit: number = 10): Promise<ApiResponse<{ posts: Post[]; total: number }>> {
+    try {
+      if (USE_REAL_API) {
+        const offset = (page - 1) * limit;
+        const response = await this.apiCall<any>(`/authors/${authorId}/posts?limit=${limit}&offset=${offset}`);
+        if (response.success && response.data) {
+          const transformedPosts = response.data.posts.map((apiPost: any) => this.transformApiPostToUIPost(apiPost));
+          return { 
+            success: true, 
+            data: {
+              posts: transformedPosts,
+              total: response.data.total || transformedPosts.length
+            }
+          };
+        }
+        return response;
+      } else {
+        // Mock posts by author
+        const mockPosts = await this.getPosts({ page, limit });
+        return { 
+          success: true, 
+          data: {
+            posts: Array.isArray(mockPosts.data) ? mockPosts.data.slice(0, 5) : [],
+            total: 5
+          }
+        };
+      }
+    } catch (error) {
+      console.error('Get author posts failed:', error);
+      return { success: false, error: 'Failed to load author posts' };
+    }
+  }
+
+  // Helper method to generate consistent colors from strings
+  private generateColorFromString(str: string): string {
+    const colors = [
+      '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+      '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'
+    ];
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
   }
 
   // Comments APIs
@@ -755,6 +1212,68 @@ export class ApiClient {
       console.error('Login failed:', error);
       const errorMessage = error.response?.data?.detail || 'Login failed';
       return { success: false, error: errorMessage };
+    }
+  }
+
+  // Event tracking APIs
+  async logViewEvent(postId: string, metadata?: Record<string, any>): Promise<ApiResponse<boolean>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any>('/events/view', 'POST', {
+          post_id: postId,
+          metadata
+        });
+        return { success: response.success, data: response.success };
+      } else {
+        // Mock implementation - just log to console in development
+        console.log('Mock view event logged:', { postId, metadata });
+        return { success: true, data: true };
+      }
+    } catch (error) {
+      console.error('Log view event failed:', error);
+      return { success: false, error: 'Failed to log view event' };
+    }
+  }
+
+  async logEvent(eventTypeId: string, targetType?: string, targetId?: string, metadata?: Record<string, any>): Promise<ApiResponse<boolean>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any>('/events/log', 'POST', {
+          event_type_id: eventTypeId,
+          target_type: targetType,
+          target_id: targetId,
+          metadata
+        });
+        return { success: response.success, data: response.success };
+      } else {
+        // Mock implementation - just log to console in development
+        console.log('Mock event logged:', { eventTypeId, targetType, targetId, metadata });
+        return { success: true, data: true };
+      }
+    } catch (error) {
+      console.error('Log event failed:', error);
+      return { success: false, error: 'Failed to log event' };
+    }
+  }
+
+  async getEventTypes(category?: string): Promise<ApiResponse<any[]>> {
+    try {
+      if (USE_REAL_API) {
+        const endpoint = category ? `/events/types?category=${encodeURIComponent(category)}` : '/events/types';
+        return await this.apiCall<any[]>(endpoint);
+      } else {
+        // Mock event types
+        const mockEventTypes = [
+          { id: 'event-view', name: 'view', description: 'Content view', category: 'engagement', icon: '👁️', color: '#95A5A6' },
+          { id: 'event-share', name: 'share', description: 'Content share', category: 'engagement', icon: '📤', color: '#3498DB' },
+          { id: 'event-heart', name: 'heart', description: 'Heart reaction', category: 'reaction', icon: '❤️', color: '#E74C3C' }
+        ];
+        const filtered = category ? mockEventTypes.filter(et => et.category === category) : mockEventTypes;
+        return { success: true, data: filtered };
+      }
+    } catch (error) {
+      console.error('Get event types failed:', error);
+      return { success: false, error: 'Failed to get event types' };
     }
   }
 
