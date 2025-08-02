@@ -454,6 +454,47 @@ export class ApiClient {
     }
   }
 
+  async updatePost(postId: string, data: Partial<CreatePostData>): Promise<ApiResponse<Post>> {
+    try {
+      if (USE_REAL_API) {
+        // Transform UI data to API format
+        const apiData: any = {};
+        if (data.title !== undefined) apiData.title = data.title || undefined;
+        if (data.content !== undefined) apiData.content = data.content || '';
+        if (data.type !== undefined) apiData.post_type = this.mapUIPostTypeToApiType(data.type);
+        if (data.tags !== undefined) apiData.tags = data.tags || [];
+        if (data.coverImage !== undefined) apiData.cover_image_url = data.coverImage;
+
+        const response = await this.apiCall<any>(`/posts/${postId}`, 'PUT', apiData);
+        if (response.success) {
+          const transformedPost = this.transformApiPostToUIPost(response.data);
+          return { success: true, data: transformedPost };
+        }
+        return response;
+      } else {
+        // Mock update - just return a success response
+        const existingPost = await this.getPost(postId);
+        if (existingPost.success && existingPost.data) {
+          const updatedPost = {
+            ...existingPost.data,
+            title: data.title !== undefined ? data.title : existingPost.data.title,
+            content: data.content !== undefined ? data.content : existingPost.data.content,
+            coverImage: data.coverImage !== undefined ? data.coverImage : existingPost.data.coverImage,
+            tags: data.tags !== undefined ? 
+              data.tags.map(tagName => ({ id: tagName, name: tagName, color: '#3b82f6', postsCount: 0 })) : 
+              existingPost.data.tags,
+            updatedAt: new Date().toISOString(),
+          };
+          return { success: true, data: updatedPost };
+        }
+        return { success: false, error: 'Post not found' };
+      }
+    } catch (error) {
+      console.error('Update post failed:', error);
+      return { success: false, error: 'Failed to update post' };
+    }
+  }
+
   async toggleReaction(targetId: string, reactionType: ReactionType, targetType: string = 'post'): Promise<ApiResponse<boolean>> {
     try {
       if (USE_REAL_API) {

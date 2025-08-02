@@ -12,6 +12,7 @@ import uuid
 
 from ..database.connection import get_database_service
 from ..services.database.base import DatabaseService
+from ..middleware.dependencies import get_current_user_from_middleware
 
 
 class EventRequest(BaseModel):
@@ -56,15 +57,11 @@ def extract_client_info(request: Request) -> Dict[str, Any]:
 async def log_event(
     event: EventRequest,
     request: Request,
-    # current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
     db: DatabaseService = Depends(get_db_service)
 ):
     """Log a user event"""
     try:
-        # For now, use a default user ID since auth middleware is commented out
-        # In production, this would come from the authenticated user
-        current_user = {"user_id": "user-itg-docverse"}  # Default user
-        
         client_info = extract_client_info(request)
         
         event_data = {
@@ -98,14 +95,11 @@ async def log_event(
 async def log_view_event(
     view_event: ViewEventRequest,
     request: Request,
-    # current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
     db: DatabaseService = Depends(get_db_service)
 ):
     """Log a post/thought view event (simplified endpoint)"""
     try:
-        # For now, use a default user ID since auth middleware is commented out
-        current_user = {"user_id": "user-itg-docverse"}  # Default user
-        
         client_info = extract_client_info(request)
         
         # Add timestamp and post info to metadata
@@ -189,7 +183,7 @@ async def get_user_events(
     offset: int = Query(0, ge=0),
     event_type: Optional[str] = Query(None, description="Filter by event type"),
     target_type: Optional[str] = Query(None, description="Filter by target type"),
-    # current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
     db: DatabaseService = Depends(get_db_service)
 ):
     """Get user events history"""

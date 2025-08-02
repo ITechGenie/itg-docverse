@@ -337,20 +337,54 @@ async def update_post(
         if not existing_post:
             raise HTTPException(status_code=404, detail="Post not found")
         
-        # Check ownership
-        if existing_post.author_id != current_user.get("user_id"):
+        # Check ownership - existing_post is a dict, not an object
+        if existing_post['author_id'] != current_user.get("user_id"):
             raise HTTPException(status_code=403, detail="Not authorized to update this post")
         
-        updates = {k: v for k, v in post_data.model_dump().items() if v is not None}
+        # Convert PostUpdate model to dict for database update
+        updates = {}
+        if post_data.title is not None:
+            updates['title'] = post_data.title
+        if post_data.content is not None:
+            updates['content'] = post_data.content
+        if post_data.status is not None:
+            updates['status'] = post_data.status.value
+        
+        # Add updated_by field
+        updates['updated_by'] = current_user.get("user_id")
+        
+        logger.debug(f"Updating post {post_id} with data: {updates}")
+        
         updated_post = await db.update_post(post_id, updates)
         
         if not updated_post:
-            raise HTTPException(status_code=404, detail="Post not found")
+            raise HTTPException(status_code=404, detail="Post not found after update")
         
-        return PostPublic(**updated_post.model_dump())
+        # Transform database fields to match PostPublic model
+        transformed_post = {
+            'id': updated_post['id'],
+            'title': updated_post['title'],
+            'content': updated_post.get('content') or '',
+            'author_id': updated_post['author_id'],
+            'post_type': PostType(updated_post['post_type_id']),
+            'status': PostStatus(updated_post['status']),
+            'tags': [],  # TODO: Fetch associated tags
+            'is_document': False,
+            'project_id': updated_post.get('project_id'),
+            'git_url': updated_post.get('git_url'),
+            'view_count': 0,
+            'like_count': 0,
+            'comment_count': 0,
+            'created_at': updated_post['created_ts'],
+            'updated_at': updated_post['updated_ts'],
+            'published_at': None
+        }
+        
+        return PostPublic(**transformed_post)
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error updating post: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error updating post: {str(e)}")
 
 @router.delete("/{post_id}")
@@ -366,8 +400,8 @@ async def delete_post(
         if not existing_post:
             raise HTTPException(status_code=404, detail="Post not found")
         
-        # Check ownership
-        if existing_post.author_id != current_user.get("user_id"):
+        # Check ownership - existing_post is a dict, not an object
+        if existing_post['author_id'] != current_user.get("user_id"):
             raise HTTPException(status_code=403, detail="Not authorized to delete this post")
         
         success = await db.delete_post(post_id)

@@ -32,7 +32,7 @@ async def get_users(
     """Get users with pagination (requires authentication)"""
     try:
         users = await db.get_users(skip=skip, limit=limit)
-        return [UserPublic(**user.model_dump()) for user in users]
+        return [UserPublic(**user) for user in users]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching users: {str(e)}")
 
@@ -47,7 +47,7 @@ async def get_user(
         user = await db.get_user_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        return UserPublic(**user.model_dump())
+        return UserPublic(**user)
     except HTTPException:
         raise
     except Exception as e:
@@ -64,7 +64,7 @@ async def get_user_by_username(
         user = await db.get_user_by_username(username)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        return UserPublic(**user.model_dump())
+        return UserPublic(**user)
     except HTTPException:
         raise
     except Exception as e:

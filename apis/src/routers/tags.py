@@ -364,7 +364,7 @@ async def get_tag(
         tag = await db.get_tag_by_id(tag_id)
         if not tag:
             raise HTTPException(status_code=404, detail="Tag not found")
-        return TagPublic(**tag.model_dump())
+        return TagPublic(**tag)
     except HTTPException:
         raise
     except Exception as e:
@@ -381,7 +381,7 @@ async def get_tag_by_name(
         tag = await db.get_tag_by_name(tag_name)
         if not tag:
             raise HTTPException(status_code=404, detail="Tag not found")
-        return TagPublic(**tag.model_dump())
+        return TagPublic(**tag)
     except HTTPException:
         raise
     except Exception as e:

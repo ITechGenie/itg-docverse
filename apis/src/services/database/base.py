@@ -34,18 +34,18 @@ class DatabaseService(ABC):
         pass
     
     @abstractmethod
-    async def get_user_by_id(self, user_id: str) -> Optional[User]:
-        """Get user by ID"""
+    async def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by ID (returns Dict for compatibility)"""
         pass
     
     @abstractmethod
-    async def get_user_by_username(self, username: str) -> Optional[User]:
-        """Get user by username"""
+    async def get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+        """Get user by username (returns Dict for compatibility)"""
         pass
     
     @abstractmethod
-    async def get_users(self, skip: int = 0, limit: int = 10) -> List[User]:
-        """Get list of users with pagination"""
+    async def get_users(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get list of users with pagination (returns List of Dict for compatibility)"""
         pass
     
     # ============================================
@@ -58,18 +58,18 @@ class DatabaseService(ABC):
         pass
     
     @abstractmethod
-    async def get_tag_by_id(self, tag_id: str) -> Optional[Tag]:
-        """Get tag by ID"""
+    async def get_tag_by_id(self, tag_id: str) -> Optional[Dict[str, Any]]:
+        """Get tag by ID (returns Dict for compatibility)"""
         pass
     
     @abstractmethod
-    async def get_tag_by_name(self, name: str) -> Optional[Tag]:
-        """Get tag by name"""
+    async def get_tag_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """Get tag by name (returns Dict for compatibility)"""
         pass
     
     @abstractmethod
-    async def get_tags(self) -> List[Tag]:
-        """Get all tags"""
+    async def get_tags(self) -> List[Dict[str, Any]]:
+        """Get all tags (returns List of Dict for compatibility)"""
         pass
     
     # ============================================
@@ -82,8 +82,8 @@ class DatabaseService(ABC):
         pass
     
     @abstractmethod
-    async def get_post_by_id(self, post_id: str) -> Optional[Post]:
-        """Get post by ID"""
+    async def get_post_by_id(self, post_id: str) -> Optional[Dict[str, Any]]:
+        """Get post by ID (returns Dict for compatibility)"""
         pass
     
     @abstractmethod
@@ -95,8 +95,8 @@ class DatabaseService(ABC):
         tag_id: Optional[str] = None,
         post_type: Optional[PostType] = None,
         status: PostStatus = PostStatus.PUBLISHED
-    ) -> List[Post]:
-        """Get posts with filtering and pagination"""
+    ) -> List[Dict[str, Any]]:
+        """Get posts with filtering and pagination (returns List of Dict for compatibility)"""
         pass
     
     @abstractmethod
@@ -138,8 +138,8 @@ class DatabaseService(ABC):
     # ============================================
     
     @abstractmethod
-    async def search_posts(self, query: str, limit: int = 10) -> List[Post]:
-        """Search posts by content"""
+    async def search_posts(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search posts by content (returns List of Dict for compatibility)"""
         pass
     
     # ============================================
@@ -149,4 +149,94 @@ class DatabaseService(ABC):
     @abstractmethod
     async def get_stats(self) -> Dict[str, int]:
         """Get application statistics"""
+        pass
+    
+    # ============================================
+    # REACTION OPERATIONS  
+    # ============================================
+    
+    @abstractmethod
+    async def add_reaction(self, target_id: str, user_id: str, reaction_type: str, target_type: str = 'post') -> Dict[str, Any]:
+        """Add a reaction to a post, discussion, or tag"""
+        pass
+    
+    @abstractmethod
+    async def remove_reaction(self, target_id: str, user_id: str, reaction_type: str, target_type: str = 'post') -> bool:
+        """Remove a reaction from a post, discussion, or tag"""
+        pass
+    
+    @abstractmethod
+    async def get_reactions(self, target_id: str, target_type: str = 'post') -> List[Dict[str, Any]]:
+        """Get reactions for a target (post, discussion, tag)"""
+        pass
+    
+    @abstractmethod
+    async def get_post_reactions(self, post_id: str) -> List[Dict[str, Any]]:
+        """Get reactions for a post"""
+        pass
+    
+    @abstractmethod
+    async def get_discussion_reactions(self, discussion_id: str) -> List[Dict[str, Any]]:
+        """Get reactions for a discussion/comment"""
+        pass
+    
+    # ============================================
+    # EVENT LOGGING OPERATIONS
+    # ============================================
+    
+    @abstractmethod
+    async def log_user_event(self, event_data: Dict[str, Any]) -> str:
+        """Log a user event"""
+        pass
+    
+    # ============================================
+    # DATABASE OPERATIONS
+    # ============================================
+    
+    @abstractmethod
+    async def ping(self) -> bool:
+        """Check database connectivity"""
+        pass
+    
+    @abstractmethod
+    async def execute_bootstrap(self, sql_content: str) -> bool:
+        """Execute bootstrap SQL script"""
+        pass
+    
+    @abstractmethod
+    async def execute_query(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
+        """Execute a query and return results"""
+        pass
+    
+    @abstractmethod
+    async def execute_command(self, command: str, params: tuple = ()) -> bool:
+        """Execute a command (INSERT, UPDATE, DELETE)"""
+        pass
+    
+    # ============================================
+    # TAG ASSOCIATION OPERATIONS
+    # ============================================
+    
+    @abstractmethod
+    async def associate_tags_with_post(self, post_id: str, tag_names: List[str]) -> bool:
+        """Associate tags with a post"""
+        pass
+    
+    @abstractmethod
+    async def get_post_tags(self, post_id: str) -> List[Dict[str, Any]]:
+        """Get tags for a specific post"""
+        pass
+    
+    # ============================================
+    # DISCUSSION/COMMENT OPERATIONS
+    # ============================================
+    
+    @abstractmethod
+    async def get_post_discussions(self, post_id: str) -> List[Dict[str, Any]]:
+        """Get discussions for a post"""
+        pass
+    
+    @abstractmethod
+    async def create_discussion(self, discussion_data: Dict[str, Any]) -> str:
+        """Create a new discussion/comment"""
         pass

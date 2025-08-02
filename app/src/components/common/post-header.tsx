@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getAvatarUrl } from '@/lib/avatar';
 import { api } from '@/lib/api-client';
+import { useAuth } from '@/contexts/auth-context';
 import type { Post, ReactionType } from '@/types';
 
 const HeartPlusIcon = ({ className }: { className?: string }) => (
@@ -78,6 +79,7 @@ export const PostHeader = ({
   const [reactions, setReactions] = useState<any[]>([]);
   const [loadingReactions, setLoadingReactions] = useState(true);
   const [totalReactions, setTotalReactions] = useState(0);
+  const { user: currentUser } = useAuth();
   
   const avatarUrl = getAvatarUrl(post.author.id || post.author.email, 48);
   const formattedDate = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
@@ -212,10 +214,8 @@ export const PostHeader = ({
           >
             <Bookmark className={`w-4 h-4 ${(() => {
               // Check if current user has favorited this post
-              // TODO: Get current user ID from context/auth
-              const currentUserId = 'itg-docverse'; // Mock current user
-              const userHasFavorited = reactions.some(r => 
-                r.reaction_type === 'event-favorite' && r.user_id === currentUserId
+              const userHasFavorited = currentUser && reactions.some(r => 
+                r.reaction_type === 'event-favorite' && r.user_id === currentUser.id
               );
               return userHasFavorited ? 'fill-current text-yellow-500' : '';
             })()} `} />
@@ -302,31 +302,32 @@ export const PostHeader = ({
             </div>
           )}
           {/* Show edit and version buttons if current user is the author */}
-          {post.author.id === 'user-1' && ( // Mock current user ID
-            <div className="flex items-center space-x-2">
-                {onViewVersions && (
+          {currentUser && post.author.id === currentUser.id && (
+              <div className="flex items-center space-x-2">
+                  {onViewVersions && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs flex items-center space-x-1"
+                    onClick={onViewVersions}
+                    title="View all versions"
+                  >
+                    <History className="w-3 h-3" />
+                    <span>Versions</span>
+                  </Button>
+                )}
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   className="text-xs flex items-center space-x-1"
-                  onClick={onViewVersions}
-                  title="View all versions"
+                  onClick={onEdit}
+                  title="Edit this post"
                 >
-                  <History className="w-3 h-3" />
-                  <span>Versions</span>
+                  <Edit3 className="w-3 h-3" />
+                  <span>Edit</span>
                 </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs flex items-center space-x-1"
-                onClick={onEdit}
-              >
-                <Edit3 className="w-3 h-3" />
-                <span>Edit</span>
-              </Button>
-              
-            </div>
+                
+              </div>
           )}
         </div>
       </div>

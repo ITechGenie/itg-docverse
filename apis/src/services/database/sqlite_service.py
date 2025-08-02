@@ -431,19 +431,39 @@ class SQLiteService(DatabaseService):
     # Analytics operations
     async def log_user_event(self, event_data: Dict[str, Any]) -> str:
         """Log a user event"""
-        await self.execute_command(
-            """INSERT INTO user_events 
-               (id, user_id, event_type_id, target_type, target_id, session_id,
-                ip_address, user_agent, metadata)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                event_data['id'], event_data['user_id'], event_data['event_type_id'],
-                event_data.get('target_type'), event_data.get('target_id'),
-                event_data.get('session_id'), event_data.get('ip_address'),
-                event_data.get('user_agent'), json.dumps(event_data.get('metadata', {}))
+        try:
+            # Validate that user exists
+            user = await self.get_user_by_id(event_data['user_id'])
+            if not user:
+                logger.error(f"User not found: {event_data['user_id']}")
+                raise ValueError(f"User not found: {event_data['user_id']}")
+            
+            # Validate that event type exists
+            event_type_result = await self.execute_query(
+                "SELECT id FROM event_types WHERE id = ?",
+                (event_data['event_type_id'],)
             )
-        )
-        return event_data['id']
+            if not event_type_result:
+                logger.error(f"Event type not found: {event_data['event_type_id']}")
+                raise ValueError(f"Event type not found: {event_data['event_type_id']}")
+            
+            await self.execute_command(
+                """INSERT INTO user_events 
+                   (id, user_id, event_type_id, target_type, target_id, session_id,
+                    ip_address, user_agent, metadata)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    event_data['id'], event_data['user_id'], event_data['event_type_id'],
+                    event_data.get('target_type'), event_data.get('target_id'),
+                    event_data.get('session_id'), event_data.get('ip_address'),
+                    event_data.get('user_agent'), json.dumps(event_data.get('metadata', {}))
+                )
+            )
+            return event_data['id']
+            
+        except Exception as e:
+            logger.error(f"Failed to log user event: {e}")
+            raise
         
     # Statistics operations
     async def get_user_stats(self, user_id: str) -> Optional[Dict[str, Any]]:
