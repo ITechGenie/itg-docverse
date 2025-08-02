@@ -457,6 +457,18 @@ export class ApiClient {
   async toggleReaction(targetId: string, reactionType: ReactionType, targetType: string = 'post'): Promise<ApiResponse<boolean>> {
     try {
       if (USE_REAL_API) {
+        // Special case for tag favorites - use the dedicated endpoint
+        if (targetType === 'tag' && reactionType === 'event-favorite') {
+          const response = await this.apiCall<{success: boolean, is_favorited: boolean}>(
+            `/reactions/tag/${targetId}/toggle-favorite`,
+            'POST'
+          );
+          return { 
+            success: response.success, 
+            data: response.success ? response.data?.is_favorited : false 
+          };
+        }
+        
         // First check if user already has this reaction
         const endpoint = `/reactions/${targetType}/${targetId}`;
         const reactionsResponse = await this.apiCall<any[]>(endpoint);

@@ -36,14 +36,17 @@ async def get_favorite_filtered_posts(
     
     # Use the same query structure as the normal get_posts method in sqlite_service
     base_query = """
-    SELECT DISTINCT p.id, p.title, p.author_id, p.post_type_id, p.status,
+    SELECT p.id, p.title, p.author_id, p.post_type_id, p.status,
            p.project_id, p.git_url, p.created_ts, p.updated_ts,
            COALESCE(pc.content, p.feed_content, '') as content,
-           GROUP_CONCAT(DISTINCT tt.name, ', ') as tags
+           (
+               SELECT GROUP_CONCAT(tt.name, ', ')
+               FROM post_tags ptg
+               JOIN tag_types tt ON ptg.tag_id = tt.id
+               WHERE ptg.post_id = p.id
+           ) AS tags
     FROM posts p
     LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = 1
-    LEFT JOIN post_tags pt ON p.id = pt.post_id
-    LEFT JOIN tag_types tt ON pt.tag_id = tt.id
     """
     
     where_conditions = ["p.status = ?", "p.is_latest = ?"]
@@ -81,7 +84,7 @@ async def get_favorite_filtered_posts(
         params.append(author_id)
     
     if tag_id:
-        where_conditions.append("pt.tag_id = ?")
+        where_conditions.append("EXISTS (SELECT 1 FROM post_tags pt WHERE pt.post_id = p.id AND pt.tag_id = ?)")
         params.append(tag_id)
     
     if post_type:
@@ -93,8 +96,6 @@ async def get_favorite_filtered_posts(
         base_query += " WHERE " + " AND ".join(where_conditions)
     
     base_query += """
-    GROUP BY p.id, p.title, p.author_id, p.post_type_id, p.status,
-             p.project_id, p.git_url, p.created_ts, p.updated_ts, pc.content, p.feed_content
     ORDER BY p.created_ts DESC
     LIMIT ? OFFSET ?
     """

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Tag as TagIcon, Edit, Trash2, ExternalLink, Sparkles, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +43,7 @@ export const TagCloud: React.FC<TagCloudProps> = ({
 }) => {
   const [hoveredTag, setHoveredTag] = useState<string | null>(null);
   const [sparklePositions, setSparklePositions] = useState<Array<{x: number, y: number, delay: number}>>([]);
+  const favoriteClickTimeoutRef = useRef<{ [key: string]: boolean }>({});
 
   // Generate random sparkle positions
   useEffect(() => {
@@ -165,15 +166,41 @@ export const TagCloud: React.FC<TagCloudProps> = ({
 
   const handleFavoriteClick = async (tag: TagCloudItem, event: React.MouseEvent) => {
     event.stopPropagation();
+    event.preventDefault();
+    
+    // Debounce mechanism to prevent double clicks
+    if (favoriteClickTimeoutRef.current[tag.id]) {
+      console.log('Debounced duplicate click for tag:', tag.id);
+      return;
+    }
+    
+    favoriteClickTimeoutRef.current[tag.id] = true;
+    
+    // Clear the debounce flag after 1 second
+    setTimeout(() => {
+      favoriteClickTimeoutRef.current[tag.id] = false;
+    }, 1000);
+    
+    console.log('handleFavoriteClick called for tag:', tag.id, 'current favorited:', tag.isFavorited);
+    
     try {
-      // Toggle favorite status using the existing reaction API
-      const response = await api.toggleReaction(tag.id, 'event-favorite', 'tag');
-      if (response.success) {
-        // Notify parent component to update the tag's favorite status
-        onTagFavorite?.(tag.id, !tag.isFavorited);
+      if (onTagFavorite) {
+        // If parent provides onTagFavorite callback, let the parent handle the API call
+        console.log('Delegating to parent onTagFavorite callback');
+        onTagFavorite(tag.id, !tag.isFavorited);
+      } else {
+        // If no parent callback, handle the API call ourselves
+        console.log('Handling API call in TagCloud component');
+        const response = await api.toggleReaction(tag.id, 'event-favorite', 'tag');
+        console.log('Toggle reaction response:', response);
       }
     } catch (error) {
       console.error('Failed to toggle tag favorite:', error);
+    } finally {
+      // Clear the debounce flag on completion (in case of quick error)
+      setTimeout(() => {
+        favoriteClickTimeoutRef.current[tag.id] = false;
+      }, 100);
     }
   };
 

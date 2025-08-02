@@ -17,6 +17,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { useEffect, useState } from "react"
+import { findNavigationItem } from "@/config/navigation"
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -48,35 +49,8 @@ export default function Layout({ children }: LayoutProps) {
     // Use the current path state instead of reading from location directly
     const path = currentPath;
     
-    switch (path) {
-      case '/':
-      case '/feed':
-        return { section: 'Community', page: 'Feed' };
-      case '/create':
-        return { section: 'Content', page: 'Create Post' };
-      case '/create/article':
-        return { section: 'Content', page: 'Write Article' };
-      case '/create/thoughts':
-        return { section: 'Content', page: 'Quick Thoughts' };
-      case '/dashboard':
-        return { section: 'Overview', page: 'Dashboard' };
-      case '/tags':
-        return { section: 'Discovery', page: 'Tags' };
-      case '/profile':
-        return { section: 'Account', page: 'My Profile' };
-      default:
-        if (path.startsWith('/post/')) {
-          return { section: 'Community', page: 'Post Detail' };
-        }
-        if (path.startsWith('/profile/')) {
-          return { section: 'Community', page: 'User Profile' };
-        }
-        if (path.startsWith('/tags/')) {
-          const tagName = path.split('/')[2];
-          return { section: 'Discovery', page: `#${tagName}` };
-        }
-        return { section: 'ITG', page: 'Docverse' };
-    }
+    // Use the centralized navigation helper which already returns { section, page }
+    return findNavigationItem(path);
   };
 
   const breadcrumbs = getBreadcrumbs();
@@ -96,12 +70,12 @@ export default function Layout({ children }: LayoutProps) {
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
                   <BreadcrumbLink href="/">
-                    {breadcrumbs.section}
+                    {breadcrumbs?.section || 'ITG'}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>{breadcrumbs.page}</BreadcrumbPage>
+                  <BreadcrumbPage>{breadcrumbs?.page || 'Docverse'}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>

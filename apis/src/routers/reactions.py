@@ -157,6 +157,69 @@ async def get_user_favorite_tags(
         logger.error(f"Error fetching user favorite tags: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching favorite tags: {str(e)}")
 
+@router.post("/tag/{tag_id}/toggle-favorite")
+async def toggle_tag_favorite(
+    tag_id: str,
+    db: DatabaseService = Depends(get_db_service),
+    user: Dict[str, Any] = Depends(get_current_user_from_middleware)
+):
+    """Toggle favorite status for a tag (convenience endpoint that handles both reactions and events)"""
+    try:
+        import uuid
+        user_id = user.get("user_id")
+        
+        logger.info(f"Toggle favorite called for tag {tag_id} by user {user_id}")
+        
+        # Check if user already has this reaction
+        existing_reactions = await db.get_reactions(tag_id, target_type="tag")
+        user_reaction = None
+        
+        logger.debug(f"Found {len(existing_reactions)} existing reactions for tag {tag_id}")
+        
+        for reaction in existing_reactions:
+            if reaction['user_id'] == user_id and reaction['reaction_type'] == 'event-favorite':
+                user_reaction = reaction
+                break
+        
+        if user_reaction:
+            logger.info(f"Removing existing favorite for tag {tag_id} by user {user_id}")
+            # Remove the favorite
+            success = await db.remove_reaction(tag_id, user_id, 'event-favorite', target_type="tag")
+            if success:
+                # Log the unfavorite event
+                event_data = {
+                    'id': str(uuid.uuid4()),
+                    'user_id': user_id,
+                    'event_type_id': 'event-favorite',
+                    'target_type': 'tag',
+                    'target_id': tag_id,
+                    'metadata': {'action': 'remove'}
+                }
+                await db.log_user_event(event_data)
+            logger.info(f"Favorite removed for tag {tag_id}, success: {success}")
+            return {"success": success, "is_favorited": False}
+        else:
+            logger.info(f"Adding new favorite for tag {tag_id} by user {user_id}")
+            # Add the favorite
+            reaction = await db.add_reaction(tag_id, user_id, 'event-favorite', target_type="tag")
+            if reaction:
+                # Log the favorite event
+                event_data = {
+                    'id': str(uuid.uuid4()),
+                    'user_id': user_id,
+                    'event_type_id': 'event-favorite',
+                    'target_type': 'tag',
+                    'target_id': tag_id,
+                    'metadata': {'action': 'add'}
+                }
+                await db.log_user_event(event_data)
+            logger.info(f"Favorite added for tag {tag_id}, reaction: {reaction}")
+            return {"success": True, "is_favorited": True}
+            
+    except Exception as e:
+        logger.error(f"Error toggling tag favorite: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error toggling tag favorite: {str(e)}")
+
 @router.get("/tag/{tag_id}")
 async def get_tag_reactions(
     tag_id: str,
@@ -165,7 +228,8 @@ async def get_tag_reactions(
     """Get all reactions for a specific tag"""
     try:
         reactions = await db.get_reactions(tag_id, target_type="tag")
-        return [ReactionResponse(**reaction) for reaction in reactions]
+        logger.debug(f"Found {len(reactions)} reactions for tag {tag_id}: {reactions}")
+        return reactions
     except Exception as e:
         logger.error(f"Error fetching tag reactions: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching tag reactions: {str(e)}")
