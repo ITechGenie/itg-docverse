@@ -527,7 +527,19 @@ class SQLiteService(DatabaseService):
         
     async def update_post(self, post_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update a post"""
-        # Build dynamic update query
+        # Handle content update separately (goes to posts_content table)
+        if 'content' in updates:
+            content = updates.pop('content')  # Remove from updates dict
+            
+            # Update the current content in posts_content table
+            await self.execute_command(
+                """UPDATE posts_content 
+                   SET content = ? 
+                   WHERE post_id = ? AND is_current = ?""",
+                (content, post_id, True)
+            )
+        
+        # Build dynamic update query for posts table
         set_clauses = []
         params = []
         
@@ -536,13 +548,12 @@ class SQLiteService(DatabaseService):
                 set_clauses.append(f"{key} = ?")
                 params.append(value)
         
-        if not set_clauses:
-            return await self.get_post_by_id(post_id)
-            
-        query = f"UPDATE posts SET {', '.join(set_clauses)}, updated_ts = CURRENT_TIMESTAMP WHERE id = ?"
-        params.append(post_id)
+        # Update posts table if there are fields to update
+        if set_clauses:
+            query = f"UPDATE posts SET {', '.join(set_clauses)}, updated_ts = CURRENT_TIMESTAMP WHERE id = ?"
+            params.append(post_id)
+            await self.execute_command(query, tuple(params))
         
-        await self.execute_command(query, tuple(params))
         return await self.get_post_by_id(post_id)
         
     async def delete_post(self, post_id: str) -> bool:
