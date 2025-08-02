@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "data": {
+    "id": "user-1",
+    "username": "prakashm88",
+    "displayName": "Prakash M",
+    "email": "prakash@example.com",
+    "bio": "Full Stack Developer | Tech Enthusiast | Open Source Contributor",
+    "location": "Bangalore, India",
+    "website": "https://prakash.dev",
+    "joinedDate": "2024-01-15T00:00:00Z",
+    "stats": {
+      "postsCount": 42,
+      "commentsCount": 128,
+      "tagsFollowed": 15
+    },
+    "badges": [
+      {
+        "id": "badge-1",
+        "name": "Early Adopter",
+        "description": "One of the first users",
+        "icon": "🌟",
+        "color": "gold"
+      }
+    ]
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEiLCJ1c2VybmFtZSI6InByYWthc2htODgiLCJpYXQiOjE2OTcwNzMyMDB9.mockjwttoken"
+}

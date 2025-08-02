@@ -1,0 +1,277 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "post-1",
+      "type": "long-form",
+      "title": "12 Open Source Alternatives to Popular Software (For Developers)",
+      "feed_content": "Discover powerful open-source alternatives to popular development tools that can enhance your productivity while keeping costs down.",
+      "coverImage": "https://picsum.photos/800/400?random=1",
+      "author": {
+        "id": "user-1",
+        "username": "prakashm88",
+        "displayName": "Prakash M",
+        "email": "prakash@example.com",
+        "joinedDate": "2024-01-15T08:00:00Z",
+        "stats": {
+          "postsCount": 25,
+          "commentsCount": 120,
+          "tagsFollowed": 8
+        }
+      },
+      "tags": [
+        { "id": "tag-1", "name": "opensource", "color": "#4ecdc4", "postsCount": 45 },
+        { "id": "tag-2", "name": "webdev", "color": "#ff6b6b", "postsCount": 128 },
+        { "id": "tag-3", "name": "developer", "color": "#45b7d1", "postsCount": 89 },
+        { "id": "tag-4", "name": "opensourced", "color": "#4ecdc4", "postsCount": 32 },
+        { "id": "tag-5", "name": "webdevd", "color": "#ff6b6b", "postsCount": 76 },
+        { "id": "tag-6", "name": "developerd", "color": "#45b7d1", "postsCount": 54 }
+      ],
+      "createdAt": "2025-07-22T10:30:00Z",
+      "updatedAt": "2025-07-22T10:35:00Z",
+      "readTime": 6,
+      "reactions": [
+        { "id": "r1", "type": "event-heart", "userId": "user-2", "createdAt": "2025-07-22T11:00:00Z" },
+        { "id": "r2", "type": "event-unicorn", "userId": "user-3", "createdAt": "2025-07-22T11:30:00Z" }
+      ],
+      "comments": [],
+      "stats": {
+        "views": 1234,
+        "totalReactions": 169,
+        "totalComments": 35
+      },
+      "status": "published",
+      "revision": 2,
+      "isLatest": true
+    },
+    
+    {
+      "id": "post-3",
+      "type": "long-form",
+      "title": "Building Scalable React Applications with Clean Architecture",
+      "feed_content": "Learn how to apply Clean Architecture principles to React development for building scalable, maintainable applications.",
+      "coverImage": "https://picsum.photos/800/400?random=3",
+      "author": {
+        "id": "user-2",
+        "username": "sarah_dev",
+        "displayName": "Sarah Johnson",
+        "email": "sarah@example.com"
+      },
+      "tags": [
+        { "id": "tag-5", "name": "react", "color": "#61dafb" },
+        { "id": "tag-6", "name": "architecture", "color": "#9b59b6" },
+        { "id": "tag-4", "name": "typescript", "color": "#3178c6" }
+      ],
+      "createdAt": "2025-07-24T09:15:00Z",
+      "readTime": 8,
+      "reactions": [
+        { "id": "r4", "type": "event-heart", "userId": "user-1", "createdAt": "2025-07-24T09:30:00Z" },
+        { "id": "r5", "type": "event-fire", "userId": "user-3", "createdAt": "2025-07-24T10:00:00Z" },
+        { "id": "r6", "type": "event-favorite", "userId": "user-5", "createdAt": "2025-07-24T11:00:00Z" }
+      ],
+      "comments": [],
+      "stats": {
+        "views": 892,
+        "totalReactions": 45,
+        "totalComments": 12
+      },
+      "status": "published",
+      "revision": 1,
+      "isLatest": true
+    },
+    {
+      "id": "doc-1",
+      "type": "long-form",
+      "title": "Short Summary - Project payment-gateway-api",
+      "feed_content": "Generated short summary for payment gateway API project including architecture overview and key endpoints.",
+      "author": {
+        "id": "user-1",
+        "username": "prakashm88",
+        "displayName": "Prakash M",
+        "email": "prakash@example.com",
+        "joinedDate": "2024-01-15T08:00:00Z",
+        "stats": {
+          "postsCount": 25,
+          "commentsCount": 120,
+          "tagsFollowed": 8
+        }
+      },
+      "tags": [
+        { "id": "tag-doc", "name": "documentation", "color": "#3B82F6", "postsCount": 15 },
+        { "id": "tag-api", "name": "api", "color": "#10B981", "postsCount": 28 }
+      ],
+      "createdAt": "2025-07-27T14:30:00Z",
+      "updatedAt": "2025-07-27T14:35:00Z",
+      "readTime": 4,
+      "reactions": [],
+      "comments": [],
+      "stats": {
+        "views": 89,
+        "totalReactions": 12,
+        "totalComments": 3
+      },
+      "status": "draft",
+      "revision": 0,
+      "isLatest": true,
+      "documentMeta": {
+        "isDocument": true,
+        "projectId": "payment-gateway-api",
+        "branchName": "main",
+        "gitUrl": "https://gitlab.com/company/payment-gateway-api.git",
+        "indexedDate": "2025-07-27T14:00:00Z",
+        "documentType": "llm-short"
+      }
+    },
+    {
+      "id": "thoughts-3282347",
+      "type": "thoughts",
+      "title": "#thoughts - 3282347",
+      "content": "Just discovered that React's useCallback and useMemo hooks can actually hurt performance if overused. The memoization itself has overhead, so only use them when you're actually preventing expensive calculations or reference equality issues.",
+      "feed_content": "Just discovered that React's useCallback and useMemo hooks can actually hurt performance if overused. The memoization itself has overhead, so only use them when you're actually preventing expensive calculations or reference equality issues.",
+      "author": {
+        "id": "user-1",
+        "username": "prakashm88",
+        "displayName": "Prakash M",
+        "email": "prakash@example.com",
+        "joinedDate": "2024-01-15T08:00:00Z",
+        "stats": {
+          "postsCount": 25,
+          "commentsCount": 120,
+          "tagsFollowed": 8
+        }
+      },
+      "tags": [
+        { "id": "tag-2", "name": "webdev", "color": "#ff6b6b", "postsCount": 128 },
+        { "id": "tag-react", "name": "react", "color": "#61DAFB", "postsCount": 85 }
+      ],
+      "createdAt": "2025-01-25T10:30:00Z",
+      "updatedAt": "2025-01-25T10:30:00Z",
+      "readTime": 1,
+      "reactions": [
+        { "type": "like", "count": 8, "userReacted": false },
+        { "type": "insightful", "count": 3, "userReacted": true }
+      ],
+      "comments": [
+        {
+          "id": "comment-t1-1",
+          "author": {
+            "id": "user-2",
+            "displayName": "Sarah Dev",
+            "username": "sarahdev"
+          },
+          "content": "This is so true! I spent hours optimizing with useMemo only to find it made things slower.",
+          "createdAt": "2025-01-25T11:00:00Z",
+          "reactions": [
+            { "type": "like", "count": 2, "userReacted": false }
+          ]
+        }
+      ],
+      "stats": {
+        "views": 156,
+        "totalReactions": 11,
+        "totalComments": 1
+      },
+      "status": "published",
+      "revision": 0,
+      "isLatest": true
+    },
+    {
+      "id": "thoughts-5471829",
+      "type": "thoughts",
+      "title": "#thoughts - 5471829",
+      "content": "CSS Grid is for 2D layouts (rows AND columns), Flexbox is for 1D layouts (either row OR column). Stop trying to force flexbox to do grid's job! \n\nGrid: Page layouts, card grids, complex forms\nFlexbox: Navigation bars, centering items, space distribution",
+      "feed_content": "CSS Grid is for 2D layouts (rows AND columns), Flexbox is for 1D layouts (either row OR column). Stop trying to force flexbox to do grid's job!",
+      "author": {
+        "id": "user-1",
+        "username": "prakashm88",
+        "displayName": "Prakash M",
+        "email": "prakash@example.com",
+        "joinedDate": "2024-01-15T08:00:00Z",
+        "stats": {
+          "postsCount": 25,
+          "commentsCount": 120,
+          "tagsFollowed": 8
+        }
+      },
+      "tags": [
+        { "id": "tag-css", "name": "css", "color": "#1572B6", "postsCount": 67 },
+        { "id": "tag-2", "name": "webdev", "color": "#ff6b6b", "postsCount": 128 }
+      ],
+      "createdAt": "2025-01-24T15:45:00Z",
+      "updatedAt": "2025-01-24T15:45:00Z",
+      "readTime": 1,
+      "reactions": [
+        { "type": "like", "count": 15, "userReacted": true },
+        { "type": "helpful", "count": 7, "userReacted": false }
+      ],
+      "comments": [],
+      "stats": {
+        "views": 234,
+        "totalReactions": 22,
+        "totalComments": 0
+      },
+      "status": "published",
+      "revision": 0,
+      "isLatest": true
+    },
+    {
+      "id": "thoughts-8392647",
+      "type": "thoughts",
+      "title": "#thoughts - 8392647",
+      "content": "TypeScript tip: Use `satisfies` operator instead of type assertion when you want both type checking AND inference. \n\n```ts\n// Bad: loses inference\nconst config = { theme: 'dark', port: 3000 } as Config;\n\n// Good: keeps inference + type safety  \nconst config = { theme: 'dark', port: 3000 } satisfies Config;\n```",
+      "feed_content": "TypeScript tip: Use `satisfies` operator instead of type assertion when you want both type checking AND inference.",
+      "author": {
+        "id": "user-1",
+        "username": "prakashm88",
+        "displayName": "Prakash M",
+        "email": "prakash@example.com",
+        "joinedDate": "2024-01-15T08:00:00Z",
+        "stats": {
+          "postsCount": 25,
+          "commentsCount": 120,
+          "tagsFollowed": 8
+        }
+      },
+      "tags": [
+        { "id": "tag-ts", "name": "typescript", "color": "#3178C6", "postsCount": 92 },
+        { "id": "tag-2", "name": "webdev", "color": "#ff6b6b", "postsCount": 128 }
+      ],
+      "createdAt": "2025-01-23T09:15:00Z",
+      "updatedAt": "2025-01-23T09:15:00Z",
+      "readTime": 1,
+      "reactions": [
+        { "type": "like", "count": 24, "userReacted": false },
+        { "type": "insightful", "count": 12, "userReacted": true }
+      ],
+      "comments": [
+        {
+          "id": "comment-t3-1",
+          "author": {
+            "id": "user-3",
+            "displayName": "Mike TS",
+            "username": "mikots"
+          },
+          "content": "Mind blown! I've been using `as` everywhere. Thanks for this!",
+          "createdAt": "2025-01-23T10:00:00Z",
+          "reactions": [
+            { "type": "like", "count": 5, "userReacted": false }
+          ]
+        }
+      ],
+      "stats": {
+        "views": 445,
+        "totalReactions": 36,
+        "totalComments": 1
+      },
+      "status": "published",
+      "revision": 0,
+      "isLatest": true
+    }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 1,
+    "totalItems": 6,
+    "itemsPerPage": 10
+  }
+}
