@@ -17,7 +17,6 @@ export default function Feed() {
   const filters: FeedFilters = {
     type: (searchParams.get('type') as FeedFilters['type']) || 'all',
     timeframe: (searchParams.get('timeframe') as FeedFilters['timeframe']) || 'all',
-    following: filter === 'following',
     favoritesPosts: filter === 'favorite-posts',
     favoriteTags: filter === 'favorite-tags',
   };
@@ -61,14 +60,12 @@ export default function Feed() {
                 #{tagName}
               </Badge>
             </div>
-          ) : filter === 'following' ? (
-            'Following'
           ) : filter === 'trending' ? (
             'Trending'
           ) : filter === 'favorite-posts' ? (
             'Favorite Posts'
           ) : filter === 'favorite-tags' ? (
-            'Favorite Tags'
+            'Tagged Favorites'
           ) : (
             'Community Feed'
           )}

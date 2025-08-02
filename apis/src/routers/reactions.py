@@ -138,24 +138,81 @@ async def get_user_favorite_tags(
     """Get user's favorite tags"""
     try:
         user_id = user.get("user_id")
+        logger.debug(f"Fetching favorite tags for user: {user_id}")
         
-        # Query to get favorite tag IDs for the user
+        # Query to get favorite tag IDs for the user from reactions table (current state)
         query = """
         SELECT DISTINCT r.target_id
         FROM reactions r
         INNER JOIN event_types et ON r.event_type_id = et.id
         WHERE r.user_id = ? 
-        AND et.name = 'favorite'
+        AND et.id = 'event-favorite'
         AND r.target_type = 'tag'
         """
         
+        logger.debug(f"Executing query: {query}")
         result = await db.execute_query(query, (user_id,))
-        tag_ids = [row[0] for row in result] if result else []
+        logger.debug(f"Query result: {result}")
+        
+        # Handle both dictionary and tuple result formats
+        tag_ids = []
+        if result:
+            for row in result:
+                if isinstance(row, dict):
+                    tag_ids.append(row['target_id'])
+                else:
+                    tag_ids.append(row[0])
+        
+        logger.debug(f"Favorite tag IDs found: {tag_ids}")
         
         return {"tag_ids": tag_ids}
     except Exception as e:
         logger.error(f"Error fetching user favorite tags: {str(e)}")
+        logger.error(f"Exception type: {type(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching favorite tags: {str(e)}")
+
+@router.get("/debug/user-reactions")
+async def debug_user_reactions(
+    db: DatabaseService = Depends(get_db_service),
+    user: Dict[str, Any] = Depends(get_current_user_from_middleware)
+):
+    """Debug endpoint to check user's events and reactions"""
+    try:
+        user_id = user.get("user_id")
+        
+        # Get all user_events for this user (where favorites are stored)
+        events_query = "SELECT * FROM user_events WHERE user_id = ? LIMIT 10"
+        user_events = await db.execute_query(events_query, (user_id,))
+        
+        # Get all reactions for this user
+        reactions_query = "SELECT * FROM reactions WHERE user_id = ? LIMIT 10"
+        user_reactions = await db.execute_query(reactions_query, (user_id,))
+        
+        # Get all event types
+        et_query = "SELECT * FROM event_types"
+        event_types = await db.execute_query(et_query)
+        
+        # Get favorite tag reactions specifically (current state)
+        favorite_tags_query = """
+        SELECT r.target_id, r.created_ts
+        FROM reactions r
+        INNER JOIN event_types et ON r.event_type_id = et.id
+        WHERE r.user_id = ? 
+        AND et.id = 'event-favorite'
+        AND r.target_type = 'tag'
+        """
+        favorite_tags = await db.execute_query(favorite_tags_query, (user_id,))
+        
+        return {
+            "user_id": user_id,
+            "user_events": user_events if user_events else [],
+            "user_reactions": user_reactions if user_reactions else [],
+            "event_types": event_types if event_types else [],
+            "favorite_tags": favorite_tags if favorite_tags else []
+        }
+    except Exception as e:
+        logger.error(f"Debug error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/tag/{tag_id}/toggle-favorite")
 async def toggle_tag_favorite(

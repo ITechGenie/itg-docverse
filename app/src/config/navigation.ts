@@ -60,17 +60,12 @@ export const navigationConfig: NavigationConfig = {
           section: "Community",
         },
         {
-          title: "Following",
-          url: "#/feed/following",
-          section: "Community",
-        },
-        {
           title: "Favorite Posts",
           url: "#/feed/favorite-posts",
           section: "Community",
         },
         {
-          title: "Favorite Tags",
+          title: "Tagged Favorites",
           url: "#/feed/favorite-tags",
           section: "Community",
         },
@@ -113,8 +108,18 @@ export const navigationConfig: NavigationConfig = {
           section: "Community",
         },
         {
+          title: "All Tags",
+          url: "#/tags",
+          section: "Discovery",
+        },
+        {
           title: "Popular Tags",
           url: "#/tags/popular",
+          section: "Discovery",
+        },
+        {
+          title: "My Favorite Tags",
+          url: "#/tags/favorites",
           section: "Discovery",
         },
         {

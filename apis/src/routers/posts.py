@@ -50,7 +50,7 @@ async def get_favorite_filtered_posts(
     """
     
     where_conditions = ["p.status = ?", "p.is_latest = ?"]
-    params = [status.value, True]
+    params = []
     
     if favorites_posts:
         # Join with reactions table to find favorite posts
@@ -78,6 +78,9 @@ async def get_favorite_filtered_posts(
         """
         params.append(user_id)
     
+    # Add the status and is_latest parameters after the subquery parameters
+    params.extend([status.value, True])
+    
     # Add other filters
     if author_id:
         where_conditions.append("p.author_id = ?")
@@ -101,7 +104,13 @@ async def get_favorite_filtered_posts(
     """
     params.extend([limit, skip])
     
-    return await db.execute_query(base_query, tuple(params))
+    logger.debug(f"Executing favorite query: {base_query}")
+    logger.debug(f"With parameters: {params}")
+    
+    results = await db.execute_query(base_query, tuple(params))
+    logger.debug(f"Query returned {len(results) if results else 0} results")
+    
+    return results
 
 async def get_db_service() -> DatabaseService:
     """Dependency to get database service"""

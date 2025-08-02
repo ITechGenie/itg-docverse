@@ -13,6 +13,7 @@ const DocumentDetail = lazy(() => import('@/pages/document-detail'));
 const Profile = lazy(() => import('@/pages/profile'));
 const Tags = lazy(() => import('@/pages/tags'));
 const PopularTags = lazy(() => import('@/pages/popular-tags'));
+const FavoriteTags = lazy(() => import('@/pages/favorite-tags'));
 const TopContributors = lazy(() => import('@/pages/top-contributors'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 const GitRepos = lazy(() => import('@/pages/git-repos'));
@@ -165,6 +166,11 @@ export default function AppRouter() {
         <Route path="/tags/popular" element={
           <Suspense fallback={<PageLoadingFallback />}>
             <PopularTags />
+          </Suspense>
+        } />
+        <Route path="/tags/favorites" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <FavoriteTags />
           </Suspense>
         } />
         <Route path="/contributors" element={

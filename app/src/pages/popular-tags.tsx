@@ -24,6 +24,7 @@ interface TagFormData {
 export default function PopularTags() {
   const navigate = useNavigate();
   const [tags, setTags] = useState<TagStats[]>([]);
+  const [favoriteTags, setFavoriteTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'cloud' | 'grid'>('cloud');
@@ -37,6 +38,7 @@ export default function PopularTags() {
 
   useEffect(() => {
     loadTags();
+    loadFavoriteTags();
   }, []);
 
   const loadTags = async () => {
@@ -50,6 +52,17 @@ export default function PopularTags() {
       console.error('Failed to load tags:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadFavoriteTags = async () => {
+    try {
+      const response = await api.getUserFavoriteTags();
+      if (response.success && response.data) {
+        setFavoriteTags(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load favorite tags:', error);
     }
   };
 
@@ -120,6 +133,13 @@ export default function PopularTags() {
               : tag
           )
         );
+        
+        // Update favorite tags list
+        if (isFavorited) {
+          setFavoriteTags(prev => [...prev, tagId]);
+        } else {
+          setFavoriteTags(prev => prev.filter(id => id !== tagId));
+        }
       }
     } catch (error) {
       console.error('Failed to toggle tag favorite:', error);
@@ -143,10 +163,15 @@ export default function PopularTags() {
     });
   };
 
-  const filteredTags = tags.filter(tag =>
-    tag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tag.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTags = tags
+    .map(tag => ({
+      ...tag,
+      isFavorited: favoriteTags.includes(tag.id)
+    }))
+    .filter(tag =>
+      tag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tag.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   const colorOptions = [
     '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
