@@ -4,7 +4,7 @@ Handles JWT token generation, validation, and user authentication
 """
 
 import jwt
-import redis
+import redis.asyncio as redis
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any

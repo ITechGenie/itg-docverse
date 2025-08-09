@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MapPin, Calendar, ExternalLink, Edit } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getAvatarUrl } from '@/lib/avatar';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api-client';
 import PostCard from '@/components/post-card';
 import type { User, Post } from '@/types';
@@ -16,43 +16,11 @@ import type { User, Post } from '@/types';
 export default function Profile() {
   const { username } = useParams<{ username?: string }>();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
-
-  // Mock user data - in real app, fetch from API
-  const mockUser: User = {
-    id: 'user-1',
-    username: username || 'prakashm88',
-    displayName: username === 'prakashm88' ? 'Prakash M' : 'Demo User',
-    email: `${username || 'prakash'}@example.com`,
-    bio: 'Full Stack Developer | Tech Enthusiast | Open Source Contributor | Building amazing web experiences with React, TypeScript, and Node.js',
-    location: 'Bangalore, India',
-    website: 'https://prakash.dev',
-    joinedDate: '2024-01-15T00:00:00Z',
-    stats: {
-      postsCount: 42,
-      commentsCount: 128,
-      tagsFollowed: 15,
-    },
-    badges: [
-      {
-        id: 'badge-1',
-        name: 'Early Adopter',
-        description: 'One of the first users',
-        icon: '🌟',
-        color: 'gold'
-      },
-      {
-        id: 'badge-2',
-        name: 'Top Contributor',
-        description: 'Consistently helpful community member',
-        icon: '🏆',
-        color: 'blue'
-      }
-    ]
-  };
 
   useEffect(() => {
     loadProfile();
@@ -68,9 +36,39 @@ export default function Profile() {
   const loadProfile = async () => {
     setLoading(true);
     try {
-      // In real app, fetch user profile from API
-      // const response = await api.getUserProfile(username || currentUser?.username);
-      setProfileUser(mockUser);
+      if (!username) {
+        // Show current user's profile
+        setProfileUser(currentUser);
+      } else {
+        // Try to load another user's profile by username
+        try {
+          const response = await api.getUserByUsername(username);
+          if (response.success && response.data) {
+            setProfileUser(response.data);
+          } else {
+            // Fallback to mock user if not found
+            const mockUser: User = {
+              id: 'user-unknown',
+              username: username,
+              displayName: username.charAt(0).toUpperCase() + username.slice(1),
+              email: `${username}@example.com`,
+              bio: 'User profile not found in database',
+              location: 'Unknown',
+              joinedDate: '2024-01-15T00:00:00Z',
+              stats: {
+                postsCount: 0,
+                commentsCount: 0,
+                tagsFollowed: 0,
+              },
+            };
+            setProfileUser(mockUser);
+          }
+        } catch (error) {
+          console.error('Failed to load user profile:', error);
+          // Use current user as fallback
+          setProfileUser(currentUser);
+        }
+      }
     } catch (error) {
       console.error('Failed to load profile:', error);
     } finally {
@@ -133,14 +131,14 @@ export default function Profile() {
     );
   }
 
-  const avatarUrl = getAvatarUrl(displayUser.email || displayUser.username, 96);
+  const avatarUrl = getAvatarUrl(displayUser.id || displayUser.email, 96);
   const joinedDate = new Date(displayUser.joinedDate).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long'
   });
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div className="w-full   mx-auto space-y-6">
       {/* Profile Header */}
       <Card>
         <CardHeader>
@@ -215,7 +213,11 @@ export default function Profile() {
             </div>
 
             {isOwnProfile && (
-              <Button variant="outline" className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                className="flex items-center space-x-2"
+                onClick={() => navigate('/profile/edit')}
+              >
                 <Edit className="w-4 h-4" />
                 <span>Edit Profile</span>
               </Button>
@@ -249,45 +251,47 @@ export default function Profile() {
       <Separator />
 
       {/* Posts Section */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">Recent Posts</h2>
-        </CardHeader>
-        <CardContent>
-          {postsLoading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="space-y-4 p-4 border border-border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <Skeleton className="w-10 h-10 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
+      <div className="space-y-6">
+        <h2 className="text-3xl font-bold tracking-tight">Recent Posts</h2>
+        
+        {postsLoading ? (
+          <div className="space-y-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="space-y-4 p-6 border border-border rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <Skeleton className="w-10 h-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
                   </div>
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-16 w-full" />
                 </div>
-              ))}
-            </div>
-          ) : userPosts.length > 0 ? (
-            <div className="space-y-4">
-              {userPosts.map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No posts yet. {isOwnProfile ? 'Share your first post!' : `${displayUser.displayName} hasn't posted anything yet.`}</p>
-              {isOwnProfile && (
-                <Link to="/#/create">
-                  <Button className="mt-4">Create Your First Post</Button>
-                </Link>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-16 w-full" />
+                <div className="flex space-x-2">
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-6 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : userPosts.length > 0 ? (
+          <div className="space-y-6">
+            {userPosts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No posts yet. {isOwnProfile ? 'Share your first post!' : `${displayUser.displayName} hasn't posted anything yet.`}</p>
+            {isOwnProfile && (
+              <Link to="/#/create">
+                <Button className="mt-4">Create Your First Post</Button>
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

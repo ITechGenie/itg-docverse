@@ -431,19 +431,39 @@ class SQLiteService(DatabaseService):
     # Analytics operations
     async def log_user_event(self, event_data: Dict[str, Any]) -> str:
         """Log a user event"""
-        await self.execute_command(
-            """INSERT INTO user_events 
-               (id, user_id, event_type_id, target_type, target_id, session_id,
-                ip_address, user_agent, metadata)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                event_data['id'], event_data['user_id'], event_data['event_type_id'],
-                event_data.get('target_type'), event_data.get('target_id'),
-                event_data.get('session_id'), event_data.get('ip_address'),
-                event_data.get('user_agent'), json.dumps(event_data.get('metadata', {}))
+        try:
+            # Validate that user exists
+            user = await self.get_user_by_id(event_data['user_id'])
+            if not user:
+                logger.error(f"User not found: {event_data['user_id']}")
+                raise ValueError(f"User not found: {event_data['user_id']}")
+            
+            # Validate that event type exists
+            event_type_result = await self.execute_query(
+                "SELECT id FROM event_types WHERE id = ?",
+                (event_data['event_type_id'],)
             )
-        )
-        return event_data['id']
+            if not event_type_result:
+                logger.error(f"Event type not found: {event_data['event_type_id']}")
+                raise ValueError(f"Event type not found: {event_data['event_type_id']}")
+            
+            await self.execute_command(
+                """INSERT INTO user_events 
+                   (id, user_id, event_type_id, target_type, target_id, session_id,
+                    ip_address, user_agent, metadata)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    event_data['id'], event_data['user_id'], event_data['event_type_id'],
+                    event_data.get('target_type'), event_data.get('target_id'),
+                    event_data.get('session_id'), event_data.get('ip_address'),
+                    event_data.get('user_agent'), json.dumps(event_data.get('metadata', {}))
+                )
+            )
+            return event_data['id']
+            
+        except Exception as e:
+            logger.error(f"Failed to log user event: {e}")
+            raise
         
     # Statistics operations
     async def get_user_stats(self, user_id: str) -> Optional[Dict[str, Any]]:
@@ -507,7 +527,19 @@ class SQLiteService(DatabaseService):
         
     async def update_post(self, post_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update a post"""
-        # Build dynamic update query
+        # Handle content update separately (goes to posts_content table)
+        if 'content' in updates:
+            content = updates.pop('content')  # Remove from updates dict
+            
+            # Update the current content in posts_content table
+            await self.execute_command(
+                """UPDATE posts_content 
+                   SET content = ? 
+                   WHERE post_id = ? AND is_current = ?""",
+                (content, post_id, True)
+            )
+        
+        # Build dynamic update query for posts table
         set_clauses = []
         params = []
         
@@ -516,13 +548,12 @@ class SQLiteService(DatabaseService):
                 set_clauses.append(f"{key} = ?")
                 params.append(value)
         
-        if not set_clauses:
-            return await self.get_post_by_id(post_id)
-            
-        query = f"UPDATE posts SET {', '.join(set_clauses)}, updated_ts = CURRENT_TIMESTAMP WHERE id = ?"
-        params.append(post_id)
+        # Update posts table if there are fields to update
+        if set_clauses:
+            query = f"UPDATE posts SET {', '.join(set_clauses)}, updated_ts = CURRENT_TIMESTAMP WHERE id = ?"
+            params.append(post_id)
+            await self.execute_command(query, tuple(params))
         
-        await self.execute_command(query, tuple(params))
         return await self.get_post_by_id(post_id)
         
     async def delete_post(self, post_id: str) -> bool:

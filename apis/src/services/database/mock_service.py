@@ -5,6 +5,9 @@ Provides in-memory storage for testing and development
 
 import logging
 import aiosqlite
+import json
+import random
+import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from uuid import uuid4
@@ -30,6 +33,11 @@ class MockDatabaseService(DatabaseService):
         self.posts: Dict[str, Post] = {}
         self.comments: Dict[str, Comment] = {}
         self.comments_by_post: Dict[str, List[str]] = {}
+        # Add reaction and event structures
+        self.reactions: Dict[str, Dict[str, Any]] = {}
+        self.user_events: Dict[str, Dict[str, Any]] = {}
+        self.event_types: Dict[str, Dict[str, Any]] = {}
+        self.post_tags: Dict[str, List[str]] = {}  # post_id -> list of tag_ids
         self.initialized = False
     
     async def initialize(self) -> None:
@@ -151,6 +159,15 @@ class MockDatabaseService(DatabaseService):
         logger.info("Mock database closed")
         self.initialized = False
     
+    async def ping(self) -> bool:
+        """Check database connectivity (always True for mock)"""
+        return True
+    
+    async def execute_bootstrap(self, sql_content: str) -> bool:
+        """Execute bootstrap SQL script (no-op for mock)"""
+        logger.info("Mock bootstrap executed (no-op)")
+        return True
+    
     # ============================================
     # USER OPERATIONS
     # ============================================
@@ -170,21 +187,48 @@ class MockDatabaseService(DatabaseService):
         logger.info(f"Created user: {user.username}")
         return user
     
-    async def get_user_by_id(self, user_id: str) -> Optional[User]:
-        """Get user by ID"""
-        return self.users.get(user_id)
-    
-    async def get_user_by_username(self, username: str) -> Optional[User]:
-        """Get user by username"""
-        user_id = self.users_by_username.get(username)
-        if user_id:
-            return self.users.get(user_id)
+    # SQLite-compatible methods that return Dict format
+    async def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by ID (SQLite-compatible format)"""
+        user = self.users.get(user_id)
+        if user:
+            return {
+                'id': user.id,
+                'username': user.username,
+                'display_name': user.display_name,
+                'email': user.email,
+                'bio': user.bio,
+                'location': user.location,
+                'avatar_url': user.avatar_url,
+                'is_verified': user.is_verified,
+                'is_active': True
+            }
         return None
     
-    async def get_users(self, skip: int = 0, limit: int = 10) -> List[User]:
-        """Get list of users with pagination"""
-        users = list(self.users.values())
-        return users[skip:skip + limit]
+    async def get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+        """Get user by username (SQLite-compatible format)"""
+        user_id = self.users_by_username.get(username)
+        if user_id:
+            return await self.get_user_by_id(user_id)
+        return None
+    
+    async def get_users(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get list of users with pagination (returns List of Dict for compatibility)"""
+        users = list(self.users.values())[skip:skip + limit]
+        result = []
+        for user in users:
+            result.append({
+                'id': user.id,
+                'username': user.username,
+                'display_name': user.display_name,
+                'email': user.email,
+                'bio': user.bio,
+                'location': user.location,
+                'avatar_url': user.avatar_url,
+                'is_verified': user.is_verified,
+                'is_active': True
+            })
+        return result
     
     # ============================================
     # TAG OPERATIONS
@@ -205,20 +249,44 @@ class MockDatabaseService(DatabaseService):
         logger.info(f"Created tag: {tag.name}")
         return tag
     
-    async def get_tag_by_id(self, tag_id: str) -> Optional[Tag]:
-        """Get tag by ID"""
-        return self.tags.get(tag_id)
-    
-    async def get_tag_by_name(self, name: str) -> Optional[Tag]:
-        """Get tag by name"""
-        tag_id = self.tags_by_name.get(name)
-        if tag_id:
-            return self.tags.get(tag_id)
+    async def get_tag_by_id(self, tag_id: str) -> Optional[Dict[str, Any]]:
+        """Get tag by ID (returns Dict for compatibility)"""
+        tag = self.tags.get(tag_id)
+        if tag:
+            return {
+                'id': tag.id,
+                'name': tag.name,
+                'description': tag.description,
+                'color': tag.color,
+                'posts_count': tag.posts_count,
+                'is_active': True,
+                'created_at': tag.created_at.isoformat() if tag.created_at else None,
+                'updated_at': tag.updated_at.isoformat() if tag.updated_at else None
+            }
         return None
     
-    async def get_tags(self) -> List[Tag]:
-        """Get all tags"""
-        return list(self.tags.values())
+    async def get_tag_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """Get tag by name (returns Dict for compatibility)"""
+        tag_id = self.tags_by_name.get(name)
+        if tag_id:
+            return await self.get_tag_by_id(tag_id)
+        return None
+    
+    async def get_tags(self) -> List[Dict[str, Any]]:
+        """Get all tags (returns List of Dict for compatibility)"""
+        tags = []
+        for tag in self.tags.values():
+            tags.append({
+                'id': tag.id,
+                'name': tag.name,
+                'description': tag.description,
+                'color': tag.color,
+                'posts_count': tag.posts_count,
+                'is_active': True,
+                'created_at': tag.created_at.isoformat() if tag.created_at else None,
+                'updated_at': tag.updated_at.isoformat() if tag.updated_at else None
+            })
+        return tags
     
     # ============================================
     # POST OPERATIONS
@@ -412,3 +480,213 @@ class MockDatabaseService(DatabaseService):
             'tags': len(self.tags),
             'comments': len(self.comments)
         }
+    
+    # ============================================
+    # REACTION OPERATIONS
+    # ============================================
+    
+    async def add_reaction(self, target_id: str, user_id: str, reaction_type: str, target_type: str = 'post') -> Dict[str, Any]:
+        """Add a reaction to a post, discussion, or tag"""
+        reaction_id = str(uuid.uuid4())
+        
+        # Create the reaction
+        reaction = {
+            'id': reaction_id,
+            'target_id': target_id,
+            'target_type': target_type,
+            'user_id': user_id,
+            'reaction_type': reaction_type,
+            'event_type_id': reaction_type,
+            'created_ts': datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Store the reaction (use composite key to ensure uniqueness per user/target/type)
+        reaction_key = f"{target_id}:{user_id}:{reaction_type}:{target_type}"
+        self.reactions[reaction_key] = reaction
+        
+        logger.info(f"Added reaction: {reaction_type} to {target_type} {target_id} by user {user_id}")
+        return reaction
+    
+    async def remove_reaction(self, target_id: str, user_id: str, reaction_type: str, target_type: str = 'post') -> bool:
+        """Remove a reaction from a post, discussion, or tag"""
+        reaction_key = f"{target_id}:{user_id}:{reaction_type}:{target_type}"
+        
+        if reaction_key in self.reactions:
+            del self.reactions[reaction_key]
+            logger.info(f"Removed reaction: {reaction_type} from {target_type} {target_id} by user {user_id}")
+            return True
+        
+        return False
+    
+    async def get_reactions(self, target_id: str, target_type: str = 'post') -> List[Dict[str, Any]]:
+        """Get reactions for a target (post, discussion, tag)"""
+        reactions = []
+        
+        for reaction in self.reactions.values():
+            if reaction['target_id'] == target_id and reaction['target_type'] == target_type:
+                # Add user info
+                user = self.users.get(reaction['user_id'])
+                if user:
+                    reaction_with_user = reaction.copy()
+                    reaction_with_user.update({
+                        'username': user.username,
+                        'display_name': user.display_name
+                    })
+                    reactions.append(reaction_with_user)
+        
+        return reactions
+    
+    async def get_post_reactions(self, post_id: str) -> List[Dict[str, Any]]:
+        """Get reactions for a post"""
+        return await self.get_reactions(post_id, 'post')
+    
+    async def get_discussion_reactions(self, discussion_id: str) -> List[Dict[str, Any]]:
+        """Get reactions for a discussion/comment"""
+        return await self.get_reactions(discussion_id, 'discussion')
+    
+    # ============================================
+    # EVENT LOGGING OPERATIONS
+    # ============================================
+    
+    async def log_user_event(self, event_data: Dict[str, Any]) -> str:
+        """Log a user event"""
+        event_id = event_data.get('id', str(uuid.uuid4()))
+        
+        event = {
+            'id': event_id,
+            'user_id': event_data['user_id'],
+            'event_type_id': event_data['event_type_id'],
+            'target_type': event_data.get('target_type'),
+            'target_id': event_data.get('target_id'),
+            'metadata': event_data.get('metadata', {}),
+            'created_ts': datetime.now(timezone.utc).isoformat()
+        }
+        
+        self.user_events[event_id] = event
+        logger.info(f"Logged user event: {event_data['event_type_id']} for user {event_data['user_id']}")
+        return event_id
+    
+    # ============================================
+    # DATABASE QUERY OPERATIONS
+    # ============================================
+    
+    async def execute_query(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
+        """Execute a query and return results (mock implementation)"""
+        # This is a simplified mock - in a real implementation you'd parse SQL
+        # For now, we'll handle specific queries that are commonly used
+        
+        if "SELECT DISTINCT r.target_id FROM reactions r" in query and "event-favorite" in query:
+            # This is the favorite tags query
+            user_id = params[0] if params else None
+            if user_id:
+                favorite_tags = []
+                for reaction in self.reactions.values():
+                    if (reaction['user_id'] == user_id and 
+                        reaction['reaction_type'] == 'event-favorite' and 
+                        reaction['target_type'] == 'tag'):
+                        favorite_tags.append({'target_id': reaction['target_id']})
+                return favorite_tags
+        
+        # For other queries, return empty result
+        logger.warning(f"Mock execute_query not implemented for: {query[:100]}...")
+        return []
+    
+    async def execute_command(self, command: str, params: tuple = ()) -> bool:
+        """Execute a command (INSERT, UPDATE, DELETE) (mock implementation)"""
+        logger.warning(f"Mock execute_command not implemented for: {command[:100]}...")
+        return True
+    
+    # ============================================
+    # TAG ASSOCIATION OPERATIONS
+    # ============================================
+    
+    async def associate_tags_with_post(self, post_id: str, tag_names: List[str]) -> bool:
+        """Associate tags with a post"""
+        try:
+            if post_id not in self.post_tags:
+                self.post_tags[post_id] = []
+            
+            for tag_name in tag_names:
+                # Find or create tag
+                tag = await self.get_tag_by_name(tag_name)
+                if not tag:
+                    # Create new tag
+                    tag = Tag(
+                        id=f"tag-{uuid4()}",
+                        name=tag_name,
+                        description="",
+                        color="#666666",
+                        posts_count=0
+                    )
+                    await self.create_tag(tag)
+                
+                # Associate with post
+                if tag.id not in self.post_tags[post_id]:
+                    self.post_tags[post_id].append(tag.id)
+            
+            logger.info(f"Associated {len(tag_names)} tags with post {post_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to associate tags with post: {e}")
+            return False
+    
+    async def get_post_tags(self, post_id: str) -> List[Dict[str, Any]]:
+        """Get tags for a specific post"""
+        tag_ids = self.post_tags.get(post_id, [])
+        tags = []
+        
+        for tag_id in tag_ids:
+            tag = self.tags.get(tag_id)
+            if tag:
+                tags.append({
+                    'id': tag.id,
+                    'name': tag.name,
+                    'description': tag.description,
+                    'color': tag.color,
+                    'is_active': True
+                })
+        
+        return tags
+    
+    # ============================================
+    # DISCUSSION/COMMENT OPERATIONS
+    # ============================================
+    
+    async def get_post_discussions(self, post_id: str) -> List[Dict[str, Any]]:
+        """Get discussions for a post"""
+        # Convert comments to discussion format
+        comments = await self.get_comments_by_post(post_id)
+        discussions = []
+        
+        for comment in comments:
+            discussion = {
+                'id': comment.id,
+                'post_id': comment.post_id,
+                'author_id': comment.author_id,
+                'content': comment.content,
+                'username': 'mock_user',
+                'display_name': 'Mock User',
+                'avatar_url': '',
+                'created_ts': comment.created_at.isoformat(),
+                'is_deleted': False,
+                'thread_path': '',
+                'thread_level': 0
+            }
+            discussions.append(discussion)
+        
+        return discussions
+    
+    async def create_discussion(self, discussion_data: Dict[str, Any]) -> str:
+        """Create a new discussion/comment"""
+        # Convert discussion to comment format
+        comment = Comment(
+            id=discussion_data.get('id', f"comment-{uuid4()}"),
+            post_id=discussion_data['post_id'],
+            author_id=discussion_data['author_id'],
+            content=discussion_data['content'],
+            parent_id=discussion_data.get('parent_discussion_id')
+        )
+        
+        created_comment = await self.create_comment(comment)
+        return created_comment.id

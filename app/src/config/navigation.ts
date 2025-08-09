@@ -147,7 +147,7 @@ export const navigationConfig: NavigationConfig = {
         },
       ],
     },
-    {
+/*    {
       title: "Analytics",
       url: "#/dashboard",
       icon: BarChart3,
@@ -169,7 +169,7 @@ export const navigationConfig: NavigationConfig = {
           section: "Overview",
         },
       ],
-    },
+    }, */
   ],
   projects: [
     {
@@ -180,7 +180,7 @@ export const navigationConfig: NavigationConfig = {
     },
     {
       name: "Favorites",
-      url: "#/favorites",
+      url: "#/feed/favorite-posts",
       icon: Star,
       section: "Account",
     },

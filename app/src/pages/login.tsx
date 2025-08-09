@@ -90,9 +90,14 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 pt-4 border-t text-center text-sm text-muted-foreground">
-            <p>Test credentials:</p>
-            <p>Username: <code className="bg-muted px-1 py-0.5 rounded">admin</code></p>
-            <p>Password: <code className="bg-muted px-1 py-0.5 rounded">admin</code></p>
+            <p>Available usernames (use same as password):</p>
+            <div className="mt-2 space-y-1">
+              <p><code className="bg-muted px-1 py-0.5 rounded">prakashm88</code></p>
+              <p><code className="bg-muted px-1 py-0.5 rounded">sarah_dev</code></p>
+              <p><code className="bg-muted px-1 py-0.5 rounded">mike_backend</code></p>
+              <p><code className="bg-muted px-1 py-0.5 rounded">admin</code></p>
+              <p><code className="bg-muted px-1 py-0.5 rounded">itg-docverse</code></p>
+            </div>
           </div>
         </CardContent>
       </Card>

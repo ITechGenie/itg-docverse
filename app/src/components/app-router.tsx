@@ -11,6 +11,7 @@ const CreatePost = lazy(() => import('@/pages/create-post'));
 const PostDetail = lazy(() => import('@/pages/post-detail'));
 const DocumentDetail = lazy(() => import('@/pages/document-detail'));
 const Profile = lazy(() => import('@/pages/profile'));
+const EditProfile = lazy(() => import('@/pages/edit-profile'));
 const Tags = lazy(() => import('@/pages/tags'));
 const PopularTags = lazy(() => import('@/pages/popular-tags'));
 const FavoriteTags = lazy(() => import('@/pages/favorite-tags'));
@@ -156,6 +157,11 @@ export default function AppRouter() {
         <Route path="/profile/:username?" element={
           <Suspense fallback={<PageLoadingFallback />}>
             <Profile />
+          </Suspense>
+        } />
+        <Route path="/profile/edit" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <EditProfile />
           </Suspense>
         } />
         <Route path="/tags" element={
