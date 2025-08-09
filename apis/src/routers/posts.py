@@ -50,7 +50,7 @@ async def get_favorite_filtered_posts(
     """
     
     where_conditions = ["p.status = ?", "p.is_latest = ?"]
-    params = []
+    params = [status.value, True]
     
     if favorites_posts:
         # Join with reactions table to find favorite posts
@@ -58,7 +58,7 @@ async def get_favorite_filtered_posts(
         INNER JOIN reactions r ON p.id = r.target_id 
         INNER JOIN event_types et ON r.event_type_id = et.id
         """
-        where_conditions.append("r.target_type = 'post'")
+        where_conditions.append("r.target_type in ('post','thoughts')")
         where_conditions.append("r.user_id = ?")
         where_conditions.append("et.id = 'event-favorite'")
         params.append(user_id)
@@ -78,8 +78,7 @@ async def get_favorite_filtered_posts(
         """
         params.append(user_id)
     
-    # Add the status and is_latest parameters after the subquery parameters
-    params.extend([status.value, True])
+    # Add other filters (status and is_latest are already added above)
     
     # Add other filters
     if author_id:

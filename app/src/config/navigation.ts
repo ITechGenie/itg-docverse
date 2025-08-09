@@ -147,7 +147,7 @@ export const navigationConfig: NavigationConfig = {
         },
       ],
     },
-    {
+/*    {
       title: "Analytics",
       url: "#/dashboard",
       icon: BarChart3,
@@ -169,7 +169,7 @@ export const navigationConfig: NavigationConfig = {
           section: "Overview",
         },
       ],
-    },
+    }, */
   ],
   projects: [
     {
