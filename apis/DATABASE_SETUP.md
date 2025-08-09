@@ -53,7 +53,7 @@ apis/
 ```bash
 # .env
 DATABASE_TYPE=sqlite
-DATABASE_URL=sqlite:///./itg_docverse.db
+DATABASE_URL=sqlite:///./itg_docuverse.db
 ```
 
 ### **Switch to Redis:**
@@ -67,7 +67,7 @@ REDIS_URL=redis://localhost:6379/0
 ```bash
 # .env
 DATABASE_TYPE=postgresql
-DATABASE_URL=postgresql://username:password@localhost:5432/itg_docverse
+DATABASE_URL=postgresql://username:password@localhost:5432/itg_docuverse
 ```
 
 ## 🚀 **Quick Start Commands**

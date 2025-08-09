@@ -21,7 +21,7 @@ import {getAvatarUrl} from '@/lib/avatar';
 // Configuration flags
 const USE_REAL_API = true;
 const API_BASE_URL = '/apis';
-const TOKEN_STORAGE_KEY = 'itg_docverse_token';
+const TOKEN_STORAGE_KEY = 'itg_docuverse_token';
 
 export class ApiClient {
   private client: AxiosInstance;
@@ -29,7 +29,7 @@ export class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: USE_REAL_API ? '/apis' : '/api',
-      timeout: 10000,
+      timeout: 30000, // 30 seconds timeout for API calls
     });
 
         // Request interceptor to add auth token

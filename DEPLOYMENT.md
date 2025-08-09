@@ -11,7 +11,7 @@
 
 2. **Run the container:**
    ```bash
-   docker run -p 8000:8000 -v $(pwd)/data:/api/itg_docverse.db ghcr.io/itechgenie/itg-docverse:latest
+   docker run -p 8000:8000 -v $(pwd)/data:/api/itg_docuverse.db ghcr.io/itechgenie/itg-docverse:latest
    ```
 
 3. **Access the application:**
@@ -57,7 +57,7 @@ Available tags:
 
 ## Volumes
 
-- Mount `/api/itg_docverse.db` to persist your database
+- Mount `/api/itg_docuverse.db` to persist your database
 
 ## Features Included
 

@@ -53,7 +53,7 @@ class MockDatabaseService(DatabaseService):
     async def _load_sample_data_from_sqlite(self) -> None:
         """Load sample data from SQLite database into memory"""
         try:
-            db_path = settings.database_url.replace("sqlite:///", "")
+            db_path = settings.sqlite_path
             if db_path.startswith("./"):
                 db_path = Path(db_path).resolve()
             

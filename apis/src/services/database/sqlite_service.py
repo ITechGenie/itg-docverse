@@ -19,10 +19,9 @@ class SQLiteService(DatabaseService):
     """SQLite database service implementation"""
     
     def __init__(self):
-        self.db_path = settings.database_url.replace("sqlite:///", "")
-        if self.db_path.startswith("./"):
-            self.db_path = Path(self.db_path).resolve()
-        self.connection = None
+        """Initialize SQLite service"""
+        self.db_path = settings.sqlite_path  # Use sqlite_path directly
+        self.connection: Optional[aiosqlite.Connection] = None
         
     async def initialize(self):
         """Initialize SQLite database connection"""

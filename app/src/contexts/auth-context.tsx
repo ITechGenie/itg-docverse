@@ -24,8 +24,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_STORAGE_KEY = 'itg_docverse_token';
-const USER_STORAGE_KEY = 'itg_docverse_user';
+const TOKEN_STORAGE_KEY = 'itg_docuverse_token';
+const USER_STORAGE_KEY = 'itg_docuverse_user';
 
 // Create API client instance
 const apiClient = new ApiClient();

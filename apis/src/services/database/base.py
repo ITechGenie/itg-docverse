@@ -93,14 +93,14 @@ class DatabaseService(ABC):
         limit: int = 10, 
         author_id: Optional[str] = None,
         tag_id: Optional[str] = None,
-        post_type: Optional[PostType] = None,
-        status: PostStatus = PostStatus.PUBLISHED
+        post_type: Optional[str] = None,
+        status: str = "published"
     ) -> List[Dict[str, Any]]:
         """Get posts with filtering and pagination (returns List of Dict for compatibility)"""
         pass
     
     @abstractmethod
-    async def update_post(self, post_id: str, updates: Dict[str, Any]) -> Optional[Post]:
+    async def update_post(self, post_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update a post"""
         pass
     

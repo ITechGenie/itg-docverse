@@ -360,12 +360,36 @@ class RedisService(DatabaseService):
             logger.error(f"Failed to create post: {e}")
             raise
     
-    async def get_post_by_id(self, post_id: str) -> Optional[Post]:
+    async def get_post_by_id(self, post_id: str) -> Optional[Dict[str, Any]]:
         """Get post by ID"""
         try:
             post_key = f"post:{post_id}"
             post_data = await self.redis_client.get(post_key)
-            return self._deserialize_model(post_data, Post)
+            post_obj = self._deserialize_model(post_data, Post)
+            
+            if post_obj:
+                # Convert Post object to dictionary format like SQLite service
+                return {
+                    'id': post_obj.id,
+                    'title': post_obj.title,
+                    'content': post_obj.content,
+                    'author_id': post_obj.author_id,
+                    'post_type_id': post_obj.post_type.value,  # Convert enum to string
+                    'status': post_obj.status.value,  # Convert enum to string
+                    'project_id': post_obj.project_id,
+                    'git_url': post_obj.git_url,
+                    'created_ts': post_obj.created_ts,
+                    'updated_ts': post_obj.updated_ts,
+                    'cover_image_url': post_obj.cover_image_url,
+                    'feed_content': post_obj.feed_content,
+                    'revision': post_obj.revision,
+                    'read_time': post_obj.read_time,
+                    'branch_name': post_obj.branch_name,
+                    'document_type': post_obj.document_type,
+                    'created_by': post_obj.created_by,
+                    'updated_by': post_obj.updated_by
+                }
+            return None
         except Exception as e:
             logger.error(f"Failed to get post {post_id}: {e}")
             return None
@@ -376,13 +400,13 @@ class RedisService(DatabaseService):
         limit: int = 10, 
         author_id: Optional[str] = None,
         tag_id: Optional[str] = None,
-        post_type: Optional[PostType] = None,
-        status: PostStatus = PostStatus.PUBLISHED
+        post_type: Optional[str] = None,
+        status: str = "published"
     ) -> List[Dict[str, Any]]:
         """Get posts with filtering and pagination"""
         try:
             # Start with all posts of the requested status
-            post_ids = await self.redis_client.smembers(f"posts:by_status:{status.value}")
+            post_ids = await self.redis_client.smembers(f"posts:by_status:{status}")
             
             # Apply filters
             if author_id:
@@ -394,38 +418,31 @@ class RedisService(DatabaseService):
                 post_ids = post_ids.intersection(tag_posts)
             
             if post_type:
-                type_posts = await self.redis_client.smembers(f"posts:by_type:{post_type.value}")
+                type_posts = await self.redis_client.smembers(f"posts:by_type:{post_type}")
                 post_ids = post_ids.intersection(type_posts)
             
-            # Convert to list and sort by date (newest first)
+            # Convert to list and get post data
             post_list = []
             for post_id in post_ids:
                 if post_id != "initialized":
-                    post = await self.get_post_by_id(post_id)
-                    if post:
-                        # Convert Post object to dictionary for compatibility
-                        post_dict = {
-                            'id': post.id,
-                            'title': post.title,
-                            'content': post.content,
-                            'author_id': post.author_id,
-                            'post_type_id': post.post_type.value,  # Convert enum to string
-                            'status': post.status.value,  # Convert enum to string  
-                            'tags': ','.join(post.tags) if post.tags else '',  # Join tags as comma-separated string
-                            'is_document': post.is_document,
-                            'project_id': post.project_id,
-                            'git_url': post.git_url,
-                            'view_count': post.view_count,
-                            'like_count': post.like_count,
-                            'comment_count': post.comment_count,
-                            'created_ts': post.created_at.isoformat(),  # Convert datetime to string
-                            'updated_ts': post.updated_at.isoformat(),  # Convert datetime to string
-                            'published_at': post.published_at.isoformat() if post.published_at else None
-                        }
+                    post_dict = await self.get_post_by_id(post_id)
+                    if post_dict:
+                        # Add tags as comma-separated string (like SQLite format)
+                        tag_ids = await self.redis_client.smembers(f"post:tags:{post_id}")
+                        if tag_ids:
+                            tag_names = []
+                            for tag_id_item in tag_ids:
+                                tag = await self.get_tag_by_id(tag_id_item)
+                                if tag:
+                                    tag_names.append(tag['name'])
+                            post_dict['tags'] = ', '.join(tag_names)
+                        else:
+                            post_dict['tags'] = ''
+                        
                         post_list.append(post_dict)
             
-            # Sort by created_at descending (using the timestamp string)
-            post_list.sort(key=lambda p: p['created_ts'], reverse=True)
+            # Sort by created_ts descending (newest first)
+            post_list.sort(key=lambda p: p.get('created_ts', ''), reverse=True)
             
             # Apply pagination
             return post_list[skip:skip + limit]
@@ -434,27 +451,32 @@ class RedisService(DatabaseService):
             logger.error(f"Failed to get posts: {e}")
             return []
     
-    async def update_post(self, post_id: str, updates: Dict[str, Any]) -> Optional[Post]:
+    async def update_post(self, post_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update a post"""
         try:
-            post = await self.get_post_by_id(post_id)
-            if not post:
+            # Get the current post as Post object for updating
+            post_key = f"post:{post_id}"
+            post_data = await self.redis_client.get(post_key)
+            post_obj = self._deserialize_model(post_data, Post)
+            
+            if not post_obj:
                 return None
             
             # Apply updates
             for key, value in updates.items():
-                if hasattr(post, key):
-                    setattr(post, key, value)
+                if hasattr(post_obj, key):
+                    setattr(post_obj, key, value)
             
             # Update timestamp
-            post.updated_at = datetime.now(timezone.utc)
+            post_obj.updated_at = datetime.now(timezone.utc)
             
             # Save updated post
-            post_key = f"post:{post_id}"
-            await self.redis_client.set(post_key, self._serialize_model(post))
+            await self.redis_client.set(post_key, self._serialize_model(post_obj))
             
             logger.info(f"Updated post: {post_id}")
-            return post
+            
+            # Return updated post as dictionary (like get_post_by_id)
+            return await self.get_post_by_id(post_id)
             
         except Exception as e:
             logger.error(f"Failed to update post {post_id}: {e}")
@@ -463,21 +485,22 @@ class RedisService(DatabaseService):
     async def delete_post(self, post_id: str) -> bool:
         """Delete a post"""
         try:
-            post = await self.get_post_by_id(post_id)
-            if not post:
+            post_dict = await self.get_post_by_id(post_id)
+            if not post_dict:
                 return False
             
             # Remove from all indexes
             await self.redis_client.srem("indexes:posts", post_id)
             await self.redis_client.zrem("posts:by_date", post_id)
-            await self.redis_client.srem(f"posts:by_author:{post.author_id}", post_id)
-            await self.redis_client.srem(f"posts:by_status:{post.status.value}", post_id)
-            await self.redis_client.srem(f"posts:by_type:{post.post_type.value}", post_id)
+            await self.redis_client.srem(f"posts:by_author:{post_dict['author_id']}", post_id)
+            await self.redis_client.srem(f"posts:by_status:{post_dict['status']}", post_id)
+            await self.redis_client.srem(f"posts:by_type:{post_dict['post_type_id']}", post_id)
             
             # Remove tag associations
-            if post.tags:
-                for tag_id in post.tags:
-                    await self.redis_client.srem(f"posts:by_tag:{tag_id}", post_id)
+            tag_ids = await self.redis_client.smembers(f"post:tags:{post_id}")
+            for tag_id in tag_ids:
+                await self.redis_client.srem(f"posts:by_tag:{tag_id}", post_id)
+            await self.redis_client.delete(f"post:tags:{post_id}")
             
             # Delete the post data
             await self.redis_client.delete(f"post:{post_id}")
@@ -721,8 +744,8 @@ class RedisService(DatabaseService):
                     user = await self.get_user_by_id(reaction['user_id'])
                     if user:
                         reaction.update({
-                            'username': user.username,
-                            'display_name': user.display_name
+                            'username': user['username'],
+                            'display_name': user['display_name']
                         })
                     
                     reactions.append(reaction)
@@ -901,9 +924,9 @@ class RedisService(DatabaseService):
                     'post_id': comment.post_id,
                     'author_id': comment.author_id,
                     'content': comment.content,
-                    'username': user.username if user else 'unknown',
-                    'display_name': user.display_name if user else 'Unknown User',
-                    'avatar_url': user.avatar_url if user else '',
+                    'username': user['username'] if user else 'unknown',
+                    'display_name': user['display_name'] if user else 'Unknown User',
+                    'avatar_url': user['avatar_url'] if user else '',
                     'created_ts': comment.created_at.isoformat(),
                     'is_deleted': False,
                     'thread_path': '',
