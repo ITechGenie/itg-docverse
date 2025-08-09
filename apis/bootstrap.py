@@ -165,7 +165,7 @@ These open source alternatives not only save money but also give you more contro
 
 What are your favorite open source developer tools? Let me know in the comments!""",
                 author_id="user-1",
-                post_type=PostType.LONG_FORM,
+                post_type=PostType.POSTS,
                 status=PostStatus.PUBLISHED,
                 tags=[tag_lookup["opensource"], tag_lookup["webdev"], tag_lookup["developer"]],
                 view_count=245,
@@ -315,7 +315,7 @@ Clean Architecture provides a solid foundation for building scalable React appli
 
 What architectural patterns do you use in your React projects?""",
                 author_id="user-2",
-                post_type=PostType.LONG_FORM,
+                post_type=PostType.POSTS,
                 status=PostStatus.PUBLISHED,
                 tags=[tag_lookup["react"], tag_lookup["webdev"], tag_lookup["developer"]],
                 view_count=312,
@@ -374,7 +374,7 @@ npm start
 
 Repository: https://gitlab.com/company/payment-gateway-api.git""",
                 author_id="user-1",
-                post_type=PostType.LONG_FORM,
+                post_type=PostType.LLM_SHORT,
                 status=PostStatus.DRAFT,
                 tags=[tag_lookup["documentation"], tag_lookup["api"]],
                 is_document=True,

@@ -30,6 +30,7 @@ class RedisService(DatabaseService):
         self._connection_params = {
             'host': settings.redis_host,
             'port': settings.redis_port,
+            'username': 'default',  # Add username for Redis Cloud
             'password': settings.redis_password,
             'db': settings.redis_db,
             'decode_responses': True,
@@ -377,7 +378,7 @@ class RedisService(DatabaseService):
         tag_id: Optional[str] = None,
         post_type: Optional[PostType] = None,
         status: PostStatus = PostStatus.PUBLISHED
-    ) -> List[Post]:
+    ) -> List[Dict[str, Any]]:
         """Get posts with filtering and pagination"""
         try:
             # Start with all posts of the requested status
@@ -402,10 +403,29 @@ class RedisService(DatabaseService):
                 if post_id != "initialized":
                     post = await self.get_post_by_id(post_id)
                     if post:
-                        post_list.append(post)
+                        # Convert Post object to dictionary for compatibility
+                        post_dict = {
+                            'id': post.id,
+                            'title': post.title,
+                            'content': post.content,
+                            'author_id': post.author_id,
+                            'post_type_id': post.post_type.value,  # Convert enum to string
+                            'status': post.status.value,  # Convert enum to string  
+                            'tags': ','.join(post.tags) if post.tags else '',  # Join tags as comma-separated string
+                            'is_document': post.is_document,
+                            'project_id': post.project_id,
+                            'git_url': post.git_url,
+                            'view_count': post.view_count,
+                            'like_count': post.like_count,
+                            'comment_count': post.comment_count,
+                            'created_ts': post.created_at.isoformat(),  # Convert datetime to string
+                            'updated_ts': post.updated_at.isoformat(),  # Convert datetime to string
+                            'published_at': post.published_at.isoformat() if post.published_at else None
+                        }
+                        post_list.append(post_dict)
             
-            # Sort by created_at descending
-            post_list.sort(key=lambda p: p.created_at, reverse=True)
+            # Sort by created_at descending (using the timestamp string)
+            post_list.sort(key=lambda p: p['created_ts'], reverse=True)
             
             # Apply pagination
             return post_list[skip:skip + limit]

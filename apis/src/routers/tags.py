@@ -349,7 +349,7 @@ async def get_tags(
     """Get all tags (requires authentication)"""
     try:
         tags = await db.get_tags()
-        return [TagPublic(**tag.model_dump()) for tag in tags]
+        return [TagPublic(**tag) for tag in tags]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching tags: {str(e)}")
 
