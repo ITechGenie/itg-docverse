@@ -21,39 +21,6 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
 
-  // Mock user data - in real app, fetch from API
-  const mockUser: User = {
-    id: 'user-1',
-    username: username || 'prakashm88',
-    displayName: username === 'prakashm88' ? 'Prakash M' : 'Demo User',
-    email: `${username || 'prakash'}@example.com`,
-    bio: 'Full Stack Developer | Tech Enthusiast | Open Source Contributor | Building amazing web experiences with React, TypeScript, and Node.js',
-    location: 'Bangalore, India',
-    website: 'https://prakash.dev',
-    joinedDate: '2024-01-15T00:00:00Z',
-    stats: {
-      postsCount: 42,
-      commentsCount: 128,
-      tagsFollowed: 15,
-    },
-    badges: [
-      {
-        id: 'badge-1',
-        name: 'Early Adopter',
-        description: 'One of the first users',
-        icon: '🌟',
-        color: 'gold'
-      },
-      {
-        id: 'badge-2',
-        name: 'Top Contributor',
-        description: 'Consistently helpful community member',
-        icon: '🏆',
-        color: 'blue'
-      }
-    ]
-  };
-
   useEffect(() => {
     loadProfile();
   }, [username]);
@@ -68,9 +35,39 @@ export default function Profile() {
   const loadProfile = async () => {
     setLoading(true);
     try {
-      // In real app, fetch user profile from API
-      // const response = await api.getUserProfile(username || currentUser?.username);
-      setProfileUser(mockUser);
+      if (!username) {
+        // Show current user's profile
+        setProfileUser(currentUser);
+      } else {
+        // Try to load another user's profile by username
+        try {
+          const response = await api.getUserByUsername(username);
+          if (response.success && response.data) {
+            setProfileUser(response.data);
+          } else {
+            // Fallback to mock user if not found
+            const mockUser: User = {
+              id: 'user-unknown',
+              username: username,
+              displayName: username.charAt(0).toUpperCase() + username.slice(1),
+              email: `${username}@example.com`,
+              bio: 'User profile not found in database',
+              location: 'Unknown',
+              joinedDate: '2024-01-15T00:00:00Z',
+              stats: {
+                postsCount: 0,
+                commentsCount: 0,
+                tagsFollowed: 0,
+              },
+            };
+            setProfileUser(mockUser);
+          }
+        } catch (error) {
+          console.error('Failed to load user profile:', error);
+          // Use current user as fallback
+          setProfileUser(currentUser);
+        }
+      }
     } catch (error) {
       console.error('Failed to load profile:', error);
     } finally {

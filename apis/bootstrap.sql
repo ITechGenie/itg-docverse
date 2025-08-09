@@ -356,12 +356,12 @@ INSERT OR IGNORE INTO tag_types (id, name, description, color, category) VALUES
 
 -- Insert dummy user data
 INSERT OR IGNORE INTO users (id, username, display_name, email, bio, location, website, created_by) VALUES
-('user-1', 'prakashm88', 'Prakash M', 'prakash@example.com', 'Full Stack Developer | Tech Enthusiast | Open Source Contributor', 'Bangalore, India', 'https://prakash.dev', 'system'),
-('user-2', 'sarah_dev', 'Sarah Johnson', 'sarah@example.com', 'Frontend Developer | React Specialist | UI/UX Enthusiast', 'San Francisco, USA', 'https://sarahdev.com', 'system'),
-('user-3', 'mike_backend', 'Mike Chen', 'mike@example.com', 'Backend Engineer | Python & Go | Distributed Systems', 'Toronto, Canada', NULL, 'system'),
-('user-system', 'system', 'System', 'system@itgdocverse.com', 'System user for automated actions', 'Cloud', NULL, 'system'),
-('itg-docverse', 'ITG DocVerse User', 'ITG DocVerse User', 'user@itgdocverse.com', 'Default user for ITG DocVerse hackathon', 'ITG Office', NULL, 'system'),
-('user-admin', 'admin', 'System Administrator', 'admin@itgdocverse.com', 'System Administrator for ITG DocVerse', 'ITG Office', NULL, 'system');
+('ac2402cf-9a84-46a5-8484-d32400e7a18d', 'prakashm88', 'Prakash M', 'prakash@example.com', 'Full Stack Developer | Tech Enthusiast | Open Source Contributor', 'Bangalore, India', 'https://prakash.dev', 'system'),
+('75765941-6b90-4acf-8b4d-6937329d9c08', 'sarah_dev', 'Sarah Johnson', 'sarah@example.com', 'Frontend Developer | React Specialist | UI/UX Enthusiast', 'San Francisco, USA', 'https://sarahdev.com', 'system'),
+('0492735d-ac0d-4e41-808a-199e19c0f3ac', 'mike_backend', 'Mike Chen', 'mike@example.com', 'Backend Engineer | Python & Go | Distributed Systems', 'Toronto, Canada', NULL, 'system'),
+('ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'system', 'System', 'system@itgdocverse.com', 'System user for automated actions', 'Cloud', NULL, 'system'),
+('d5d03fb7-d966-4f0c-a534-5b2c77097965', 'itg-docverse', 'ITG DocVerse User', 'user@itgdocverse.com', 'Default user for ITG DocVerse hackathon', 'ITG Office', NULL, 'system'),
+('61aa7084-a14f-48ee-ac75-6645e2ad9ec4', 'admin', 'System Administrator', 'admin@itgdocverse.com', 'System Administrator for ITG DocVerse', 'ITG Office', NULL, 'system');
 
 -- Initialize user stats
 INSERT OR IGNORE INTO user_stats (user_id, posts_count, comments_count, tags_followed) VALUES

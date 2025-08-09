@@ -220,34 +220,25 @@ export class ApiClient {
   async getCurrentUser(): Promise<ApiResponse<User & { token?: string }>> {
     try {
       if (USE_REAL_API) {
-        // Ensure we have a valid token
-        const authResult = await this.ensureAuthenticated();
-        if (!authResult.success) {
-          return { success: false, error: authResult.error };
+        // Get token from storage
+        const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+        if (!token) {
+          return { success: false, error: 'No authentication token found' };
         }
         
-        const token = authResult.data!;
-        
         try {
-          const tokenPayload = this.parseJwtPayload(token);
-          const user: User & { token?: string } = {
-            id: tokenPayload.user_id || tokenPayload.sub || 'user',
-            username: tokenPayload.username || 'User',
-            displayName: tokenPayload.display_name || tokenPayload.username || 'User',
-            email: tokenPayload.email || 'user@docverse.local',
-            //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${tokenPayload.username || 'user'}`,
-            avatar: getAvatarUrl(tokenPayload.email, 100), // Use avatar utility function
-            joinedDate: new Date().toISOString(),
-            stats: {
-              postsCount: 0,
-              commentsCount: 0,
-              tagsFollowed: 0,
-            },
-            token: token,
-          };
-          return { success: true, data: user };
-        } catch (error) {
-          return { success: false, error: 'Invalid token format' };
+          // Call the /me endpoint to get full user data
+          const response = await axios.get(`${API_BASE_URL}/public/me?token=${token}`);
+          
+          if (response.data && response.data.success) {
+            return { success: true, data: response.data.data };
+          }
+          
+          return { success: false, error: 'Failed to get user data' };
+        } catch (error: any) {
+          // If token is invalid, remove it
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          return { success: false, error: 'Authentication failed' };
         }
       } else {
         const response = await this.mockApiCall<User & { token?: string }>('/auth/me');
@@ -262,6 +253,35 @@ export class ApiClient {
     } catch (error) {
       console.error('Get current user failed:', error);
       return { success: false, error: 'Failed to get user information' };
+    }
+  }
+
+  async getUserByUsername(username: string): Promise<ApiResponse<User>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<User>(`/users/username/${username}`, 'GET');
+        return response;
+      } else {
+        // Mock implementation
+        const mockUser: User = {
+          id: 'user-1',
+          username: username,
+          displayName: username.charAt(0).toUpperCase() + username.slice(1),
+          email: `${username}@example.com`,
+          bio: 'Mock user profile',
+          location: 'Mock Location',
+          joinedDate: '2024-01-15T00:00:00Z',
+          stats: {
+            postsCount: 0,
+            commentsCount: 0,
+            tagsFollowed: 0,
+          },
+        };
+        return { success: true, data: mockUser };
+      }
+    } catch (error) {
+      console.error('Get user by username failed:', error);
+      return { success: false, error: 'Failed to get user by username' };
     }
   }
 
@@ -1226,15 +1246,31 @@ export class ApiClient {
         });
 
         if (response.data && response.data.access_token) {
-          // Decode JWT to get user info
-          const tokenPayload = this.parseJwtPayload(response.data.access_token);
+          // Store token
+          const token = response.data.access_token;
+          localStorage.setItem(TOKEN_STORAGE_KEY, token);
+          
+          // Get full user data using the new /me endpoint
+          const userResponse = await this.getCurrentUser();
+          if (userResponse.success && userResponse.data) {
+            const { token: userToken, ...user } = userResponse.data;
+            return {
+              success: true,
+              data: {
+                token,
+                user,
+              },
+            };
+          }
+          
+          // Fallback - decode JWT to get basic user info
+          const tokenPayload = this.parseJwtPayload(token);
           const user: User = {
-            id: tokenPayload.user_id || tokenPayload.sub || 'user',
+            id: tokenPayload.user_id || 'user',
             username: tokenPayload.username || username,
             displayName: tokenPayload.display_name || tokenPayload.username || username,
             email: tokenPayload.email || `${username}@docverse.local`,
-            //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
-            avatar: getAvatarUrl(username, 100), // Use avatar utility function
+            avatar: getAvatarUrl(tokenPayload.email || username, 100),
             joinedDate: new Date().toISOString(),
             stats: {
               postsCount: 0,
@@ -1246,7 +1282,7 @@ export class ApiClient {
           return {
             success: true,
             data: {
-              token: response.data.access_token,
+              token,
               user,
             },
           };
