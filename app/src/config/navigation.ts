@@ -180,7 +180,7 @@ export const navigationConfig: NavigationConfig = {
     },
     {
       name: "Favorites",
-      url: "#/favorites",
+      url: "#/feed/favorite-posts",
       icon: Star,
       section: "Account",
     },

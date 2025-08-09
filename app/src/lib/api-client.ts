@@ -259,7 +259,28 @@ export class ApiClient {
   async getUserByUsername(username: string): Promise<ApiResponse<User>> {
     try {
       if (USE_REAL_API) {
-        const response = await this.apiCall<User>(`/users/username/${username}`, 'GET');
+        const response = await this.apiCall<any>(`/users/username/${username}`, 'GET');
+        if (response.success && response.data) {
+          // Transform backend user data to frontend User type
+          const backendUser = response.data;
+          const user: User = {
+            id: backendUser.id,
+            username: backendUser.username,
+            displayName: backendUser.display_name,
+            email: `${backendUser.username}@itgdocverse.com`, // Email not exposed in public API
+            bio: backendUser.bio || '',
+            location: backendUser.location || '',
+            website: backendUser.website || '',
+            avatar: backendUser.avatar_url || getAvatarUrl(backendUser.username, 100),
+            joinedDate: backendUser.created_at,
+            stats: {
+              postsCount: backendUser.post_count || 0,
+              commentsCount: backendUser.comment_count || 0,
+              tagsFollowed: 0, // Not available in backend yet
+            },
+          };
+          return { success: true, data: user };
+        }
         return response;
       } else {
         // Mock implementation

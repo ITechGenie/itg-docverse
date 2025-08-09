@@ -47,7 +47,28 @@ async def get_user(
         user = await db.get_user_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        return UserPublic(**user)
+        
+        # Get user stats
+        user_stats = await db.get_user_stats(user['id'])
+        if not user_stats:
+            user_stats = {"posts_count": 0, "comments_count": 0, "tags_followed": 0}
+        
+        # Build the response with stats
+        user_response = {
+            "id": user['id'],
+            "username": user['username'],
+            "display_name": user['display_name'],
+            "bio": user.get('bio', ''),
+            "location": user.get('location', ''),
+            "website": user.get('website', ''),
+            "avatar_url": user.get('avatar_url', ''),
+            "post_count": user_stats.get('posts_count', 0),
+            "comment_count": user_stats.get('comments_count', 0),
+            "is_verified": user.get('is_verified', False),
+            "created_at": user['created_ts']
+        }
+        
+        return UserPublic(**user_response)
     except HTTPException:
         raise
     except Exception as e:
@@ -64,7 +85,28 @@ async def get_user_by_username(
         user = await db.get_user_by_username(username)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        return UserPublic(**user)
+        
+        # Get user stats
+        user_stats = await db.get_user_stats(user['id'])
+        if not user_stats:
+            user_stats = {"posts_count": 0, "comments_count": 0, "tags_followed": 0}
+        
+        # Build the response with stats
+        user_response = {
+            "id": user['id'],
+            "username": user['username'],
+            "display_name": user['display_name'],
+            "bio": user.get('bio', ''),
+            "location": user.get('location', ''),
+            "website": user.get('website', ''),
+            "avatar_url": user.get('avatar_url', ''),
+            "post_count": user_stats.get('posts_count', 0),
+            "comment_count": user_stats.get('comments_count', 0),
+            "is_verified": user.get('is_verified', False),
+            "created_at": user['created_ts']
+        }
+        
+        return UserPublic(**user_response)
     except HTTPException:
         raise
     except Exception as e:
