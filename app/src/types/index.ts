@@ -92,14 +92,24 @@ export type ReactionType =
 export interface Comment {
   id: string;
   content: string;
-  author: User;
-  postId: string;
-  parentId?: string; // For nested comments
-  createdAt: string;
+  post_id: string;
+  author_id: string;
+  author_name?: string;
+  author_username?: string;
+  parent_id?: string; // For nested comments (renamed from parentId)
+  like_count: number;
+  is_edited: boolean;
+  created_at: string; // renamed from createdAt
+  updated_at: string; // renamed from updatedAt
+  // Keep these for backward compatibility if needed
+  author?: User;
+  postId?: string;
+  parentId?: string;
+  createdAt?: string;
   updatedAt?: string;
-  reactions: Reaction[];
+  reactions?: Reaction[];
   replies?: Comment[];
-  stats: {
+  stats?: {
     totalReactions: number;
     totalReplies: number;
   };

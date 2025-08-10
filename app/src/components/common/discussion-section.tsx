@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Heart, 
   MessageCircle, 
@@ -20,6 +21,7 @@ interface DiscussionSectionProps {
 }
 
 export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSectionProps) => {
+  const navigate = useNavigate();
   const [showReplyDialog, setShowReplyDialog] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -29,6 +31,11 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
   const [submittingComment, setSubmittingComment] = useState(false);
   const [commentReactions, setCommentReactions] = useState<Record<string, any[]>>({});
   const { user: currentUser } = useAuth();
+
+  // Handle navigation to user profile
+  const handleUserClick = (userId: string) => {
+    navigate(`/profile/${userId}`);
+  };
 
   // Fetch comments on component mount
   useEffect(() => {
@@ -211,22 +218,31 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
         ) : comments.length > 0 ? (
           <div className="space-y-6">
             {comments
-              .filter(comment => !comment.parentId) // Show only top-level comments first
-              .map((comment) => (
+              .filter(comment => !comment.parent_id) // Show only top-level comments first
+              .map((comment) => {
+                const authorName = comment.author_name || comment.author?.displayName || comment.author_username || 'Unknown User';
+                const authorAvatar = getAvatarUrl(comment.author_id || comment.author?.id || 'default', 32);
+                
+                return (
                 <div key={comment.id}>
                   {/* Top-level comment */}
                   <div className="flex items-start space-x-3">
                     <Avatar className="w-8 h-8">
-                      <AvatarImage src={comment.author.avatar} />
+                      <AvatarImage src={authorAvatar} />
                       <AvatarFallback>
-                        {comment.author.displayName.split(' ').map(n => n[0]).join('')}
+                        {authorName.split(' ').map(n => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
-                        <span className="font-semibold text-sm">{comment.author.displayName}</span>
+                        <button 
+                          onClick={() => handleUserClick(comment.author_username || comment.author?.id || '')}
+                          className="font-semibold text-sm text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                        >
+                          {authorName}
+                        </button>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(comment.createdAt).toLocaleDateString()}
+                          {new Date(comment.created_at || comment.createdAt || '').toLocaleDateString()}
                         </span>
                       </div>
                       <p className="text-sm mb-3 leading-relaxed text-foreground">{comment.content}</p>
@@ -259,7 +275,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                           variant="ghost" 
                           size="sm" 
                           className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleReply(comment.id, comment.author.displayName)}
+                          onClick={() => handleReply(comment.id, authorName)}
                         >
                           Reply
                         </Button>
@@ -269,22 +285,31 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
 
                   {/* Nested replies */}
                   {comments
-                    .filter(reply => reply.parentId === comment.id)
-                    .map((reply) => (
+                    .filter(reply => reply.parent_id === comment.id)
+                    .map((reply) => {
+                      const replyAuthorName = reply.author_name || reply.author?.displayName || reply.author_username || 'Unknown User';
+                      const replyAuthorAvatar = getAvatarUrl(reply.author_id || reply.author?.id || 'default', 32);
+                      
+                      return (
                       <div key={reply.id} className="ml-11 mt-4 relative">
                         <div className="absolute left-0 top-0 bottom-0 w-px bg-border"></div>
                         <div className="flex items-start space-x-3 pl-4">
                           <Avatar className="w-6 h-6">
-                            <AvatarImage src={reply.author.avatar} />
+                            <AvatarImage src={replyAuthorAvatar} />
                             <AvatarFallback>
-                              {reply.author.displayName.split(' ').map(n => n[0]).join('')}
+                              {replyAuthorName.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
-                              <span className="font-semibold text-xs">{reply.author.displayName}</span>
+                              <button 
+                                onClick={() => handleUserClick(reply.author_username || reply.author?.id || '')}
+                                className="font-semibold text-xs text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                              >
+                                {replyAuthorName}
+                              </button>
                               <span className="text-xs text-muted-foreground">
-                                {new Date(reply.createdAt).toLocaleDateString()}
+                                {new Date(reply.created_at || reply.createdAt || '').toLocaleDateString()}
                               </span>
                             </div>
                             <p className="text-xs mb-2 leading-relaxed text-foreground">{reply.content}</p>
@@ -325,9 +350,11 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                 </div>
-              ))}
+                );
+              })}
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
