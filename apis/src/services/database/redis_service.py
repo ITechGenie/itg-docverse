@@ -365,33 +365,44 @@ class RedisService(DatabaseService):
         try:
             post_key = f"post:{post_id}"
             post_data = await self.redis_client.get(post_key)
-            post_obj = self._deserialize_model(post_data, Post)
             
-            if post_obj:
-                # Convert Post object to dictionary format like SQLite service
+            if not post_data:
+                logger.warning(f"No data found for post {post_id}")
+                return None
+
+            # Try to parse as raw JSON first (simpler approach)
+            import json
+            try:
+                post_dict = json.loads(post_data)
+                logger.info(f"✅ Successfully parsed JSON for post {post_id}")
+                
+                # Return dictionary format directly from JSON
                 return {
-                    'id': post_obj.id,
-                    'title': post_obj.title,
-                    'content': post_obj.content,
-                    'author_id': post_obj.author_id,
-                    'post_type_id': post_obj.post_type.value,  # Convert enum to string
-                    'status': post_obj.status.value,  # Convert enum to string
-                    'project_id': post_obj.project_id,
-                    'git_url': post_obj.git_url,
-                    'created_ts': post_obj.created_ts,
-                    'updated_ts': post_obj.updated_ts,
-                    'cover_image_url': post_obj.cover_image_url,
-                    'feed_content': post_obj.feed_content,
-                    'revision': post_obj.revision,
-                    'read_time': post_obj.read_time,
-                    'branch_name': post_obj.branch_name,
-                    'document_type': post_obj.document_type,
-                    'created_by': post_obj.created_by,
-                    'updated_by': post_obj.updated_by
+                    'id': post_dict.get('id'),
+                    'title': post_dict.get('title'),
+                    'content': post_dict.get('content'),
+                    'author_id': post_dict.get('author_id'),
+                    'post_type_id': post_dict.get('post_type'),  # Use raw value
+                    'status': post_dict.get('status'),  # Use raw value
+                    'project_id': post_dict.get('project_id'),
+                    'git_url': post_dict.get('git_url'),
+                    'created_ts': post_dict.get('created_at'),  # Use raw timestamp
+                    'updated_ts': post_dict.get('updated_at'),  # Use raw timestamp
+                    'cover_image_url': post_dict.get('cover_image_url'),
+                    'feed_content': post_dict.get('feed_content'),
+                    'revision': post_dict.get('revision', 0),
+                    'read_time': post_dict.get('read_time', 0),
+                    'branch_name': post_dict.get('branch_name'),
+                    'document_type': post_dict.get('document_type'),
+                    'created_by': post_dict.get('created_by', post_dict.get('author_id')),
+                    'updated_by': post_dict.get('updated_by', post_dict.get('author_id'))
                 }
-            return None
+            except Exception as json_error:
+                logger.error(f"❌ Failed to parse JSON for post {post_id}: {json_error}")
+                return None
+            
         except Exception as e:
-            logger.error(f"Failed to get post {post_id}: {e}")
+            logger.error(f"❌ Failed to get post {post_id}: {e}")
             return None
     
     async def get_posts(
@@ -405,41 +416,49 @@ class RedisService(DatabaseService):
     ) -> List[Dict[str, Any]]:
         """Get posts with filtering and pagination"""
         try:
+            # Normalize enums coming from the router (it passes PostStatus/PostType)
+            status_value = getattr(status, "value", status)
+            post_type_value = getattr(post_type, "value", post_type) if post_type else None
+
             # Start with all posts of the requested status
-            post_ids = await self.redis_client.smembers(f"posts:by_status:{status}")
+            status_key = f"posts:by_status:{status_value}"
+            post_ids = await self.redis_client.smembers(status_key)
+            logger.info(f"📊 Redis get_posts: status_key={status_key}, found {len(post_ids)} post IDs")
             
             # Apply filters
             if author_id:
                 author_posts = await self.redis_client.smembers(f"posts:by_author:{author_id}")
-                post_ids = post_ids.intersection(author_posts)
+                post_ids = post_ids & author_posts  # Use set intersection operator
+                logger.info(f"📊 After author filter: {len(post_ids)} posts")
             
             if tag_id:
-                tag_posts = await self.redis_client.smembers(f"posts:by_tag:{tag_id}")
-                post_ids = post_ids.intersection(tag_posts)
+                tag_posts = await self.redis_client.smembers(f"tag:posts:{tag_id}")
+                post_ids = post_ids & tag_posts  # Use set intersection operator
+                logger.info(f"📊 After tag filter: {len(post_ids)} posts")
             
-            if post_type:
-                type_posts = await self.redis_client.smembers(f"posts:by_type:{post_type}")
-                post_ids = post_ids.intersection(type_posts)
+            if post_type_value:
+                type_posts = await self.redis_client.smembers(f"posts:by_type:{post_type_value}")
+                post_ids = post_ids & type_posts  # Use set intersection operator
+                logger.info(f"📊 After type filter: {len(post_ids)} posts")
             
             # Convert to list and get post data
             post_list = []
             for post_id in post_ids:
                 if post_id != "initialized":
-                    post_dict = await self.get_post_by_id(post_id)
-                    if post_dict:
-                        # Add tags as comma-separated string (like SQLite format)
-                        tag_ids = await self.redis_client.smembers(f"post:tags:{post_id}")
-                        if tag_ids:
-                            tag_names = []
-                            for tag_id_item in tag_ids:
-                                tag = await self.get_tag_by_id(tag_id_item)
-                                if tag:
-                                    tag_names.append(tag['name'])
-                            post_dict['tags'] = ', '.join(tag_names)
+                    try:
+                        post_dict = await self.get_post_by_id(post_id)
+                        if post_dict:
+                            # Keep tags empty for now; name lookup can be added later
+                            post_dict['tags'] = post_dict.get('tags', '') or ''
+                            post_list.append(post_dict)
+                            logger.info(f"📊 Added post {post_id} to result")
                         else:
-                            post_dict['tags'] = ''
-                        
-                        post_list.append(post_dict)
+                            logger.warning(f"📊 get_post_by_id returned None for {post_id}")
+                    except Exception as e:
+                        logger.error(f"📊 Error processing post {post_id}: {e}")
+                        continue
+            
+            logger.info(f"📊 Final result: {len(post_list)} posts returned")
             
             # Sort by created_ts descending (newest first)
             post_list.sort(key=lambda p: p.get('created_ts', ''), reverse=True)
@@ -448,7 +467,9 @@ class RedisService(DatabaseService):
             return post_list[skip:skip + limit]
             
         except Exception as e:
-            logger.error(f"Failed to get posts: {e}")
+            logger.error(f"❌ get_posts failed: {e}")
+            import traceback
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
             return []
     
     async def update_post(self, post_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -809,7 +830,123 @@ class RedisService(DatabaseService):
     async def execute_query(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
         """Execute a query and return results (Redis implementation)"""
         try:
-            # Handle specific queries that are commonly used
+            # Emulate favorites filtering queries from posts router
+            if ("FROM posts p" in query and "event-favorite" in query and
+                ("INNER JOIN reactions r ON p.id = r.target_id" in query or "SELECT DISTINCT pt2.post_id" in query)):
+                import json
+                # Extract params: [status, is_latest, (maybe user_id), (optional filters...), limit, skip]
+                params_list = list(params) if params else []
+                if len(params_list) < 2:
+                    return []
+                status_value = getattr(params_list[0], "value", params_list[0])
+                limit = params_list[-2] if len(params_list) >= 2 else 10
+                skip = params_list[-1] if len(params_list) >= 1 else 0
+
+                # Determine which favorite filters are requested
+                use_fav_posts = "INNER JOIN reactions r ON p.id = r.target_id" in query
+                use_fav_tags = "SELECT DISTINCT pt2.post_id" in query and "reactions r2" in query
+
+                # Parse additional filters and identify user_id/author_id/tag_id/post_type
+                user_id = None
+                author_id = None
+                tag_id = None
+                post_type_value = None
+                for val in params_list[2:-2]:
+                    if isinstance(val, str):
+                        if val in ("posts", "thoughts"):
+                            post_type_value = val
+                        elif val.startswith("tag-"):
+                            tag_id = val
+                        elif "-" in val and len(val) >= 30:  # heuristic for UUIDs
+                            if not user_id:
+                                user_id = val
+                            elif not author_id:
+                                author_id = val
+
+                # Start with posts by status
+                post_ids = await self.redis_client.smembers(f"posts:by_status:{status_value}")
+                if not isinstance(post_ids, set):
+                    post_ids = set(post_ids or [])
+
+                # Compute favorite post IDs
+                if (use_fav_posts or use_fav_tags) and user_id:
+                    reaction_ids = await self.redis_client.smembers(f"reactions:user:{user_id}")
+                else:
+                    reaction_ids = set()
+
+                if use_fav_posts and user_id:
+                    fav_post_ids = set()
+                    for rid in reaction_ids:
+                        data = await self.redis_client.get(f"reaction:{rid}")
+                        if not data:
+                            continue
+                        try:
+                            reaction = json.loads(data)
+                        except Exception:
+                            continue
+                        if (reaction.get('reaction_type') == 'event-favorite' and 
+                            reaction.get('target_type') in ('post', 'thoughts')):
+                            fav_post_ids.add(reaction.get('target_id'))
+                    post_ids = post_ids & fav_post_ids
+
+                if use_fav_tags and user_id:
+                    fav_tag_ids = set()
+                    for rid in reaction_ids:
+                        data = await self.redis_client.get(f"reaction:{rid}")
+                        if not data:
+                            continue
+                        try:
+                            reaction = json.loads(data)
+                        except Exception:
+                            continue
+                        if (reaction.get('reaction_type') == 'event-favorite' and 
+                            reaction.get('target_type') == 'tag'):
+                            fav_tag_ids.add(reaction.get('target_id'))
+                    tag_post_ids = set()
+                    for tid in fav_tag_ids:
+                        posts_for_tag = await self.redis_client.smembers(f"tag:posts:{tid}")
+                        if posts_for_tag:
+                            if not isinstance(posts_for_tag, set):
+                                posts_for_tag = set(posts_for_tag)
+                            tag_post_ids |= posts_for_tag
+                    post_ids = post_ids & tag_post_ids
+
+                # Apply additional filters
+                if author_id:
+                    author_posts = await self.redis_client.smembers(f"posts:by_author:{author_id}")
+                    post_ids = post_ids & author_posts
+                if tag_id:
+                    tag_posts = await self.redis_client.smembers(f"tag:posts:{tag_id}")
+                    post_ids = post_ids & tag_posts
+                if post_type_value:
+                    type_posts = await self.redis_client.smembers(f"posts:by_type:{post_type_value}")
+                    post_ids = post_ids & type_posts
+
+                # Build post dicts
+                posts: List[Dict[str, Any]] = []
+                for pid in post_ids:
+                    if pid == "initialized":
+                        continue
+                    post = await self.get_post_by_id(pid)
+                    if post:
+                        # Add tag names CSV to match sqlite 'tags' column
+                        try:
+                            tag_ids = await self.redis_client.smembers(f"post:tags:{pid}")
+                            tag_names = []
+                            for tid in tag_ids or []:
+                                tag = await self.get_tag_by_id(tid)
+                                if tag:
+                                    tag_names.append(tag.name)
+                            post['tags'] = ", ".join(sorted(tag_names)) if tag_names else ''
+                        except Exception:
+                            post['tags'] = ''
+                        posts.append(post)
+
+                # Sort and paginate
+                posts.sort(key=lambda p: p.get('created_ts', ''), reverse=True)
+                return posts[skip:skip+limit]
+
+            # Existing special case: favorite tags list
             if "SELECT DISTINCT r.target_id FROM reactions r" in query and "event-favorite" in query:
                 # This is the favorite tags query
                 user_id = params[0] if params else None

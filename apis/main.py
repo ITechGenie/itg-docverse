@@ -168,25 +168,33 @@ async def health_check():
         }
 
 # Mount static files (React app)
-app_path = Path("app")
-if app_path.exists():
-    app.mount("/static", StaticFiles(directory="app", html=True), name="static")
+static_dir = Path(__file__).resolve().parent / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir), html=True), name="static")
+    
+    # Serve index.html at root
+    @app.get("/", include_in_schema=False)
+    async def serve_root():
+        index_file = static_dir / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+        return {"error": "Frontend not built. Place index.html under the 'static' folder."}
     
     # Serve React app for all non-API routes
-    @app.get("/{full_path:path}")
+    @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_react_app(request: Request, full_path: str):
         """
-        Serve React app for all routes that don't start with /api
+        Serve React app for all routes that don't start with /apis
         This enables client-side routing to work properly
         """
-        if full_path.startswith("api/"):
+        if full_path.startswith("apis/") or full_path.startswith("api/"):
             raise HTTPException(status_code=404, detail="API endpoint not found")
         
-        index_file = app_path / "index.html"
+        index_file = static_dir / "index.html"
         if index_file.exists():
             return FileResponse(index_file)
         else:
-            return {"error": "Frontend not built. Run the deploy script first."}
+            return {"error": "Frontend not built. Place index.html under the 'static' folder."}
 
 if __name__ == "__main__":
     import uvicorn

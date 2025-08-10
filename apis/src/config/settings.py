@@ -32,7 +32,7 @@ class Settings(BaseModel):
     postgres_password: str = "password"
     
     # SQLite Configuration
-    sqlite_path: str = "./docverse.db"
+    sqlite_path: str = "./itg_docuverse.db"
     
     # JWT Configuration
     jwt_secret_key: str = "itg-docverse-default-jwt-secret-change-in-production"
@@ -79,31 +79,34 @@ class Settings(BaseModel):
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings instance with environment variables"""
-    # Load from environment variables
+    # Create a default Settings instance to get the default values
+    defaults = Settings()
+    
+    # Load from environment variables, using class defaults as fallback
     settings_data = {
-        "database_type": os.getenv("DATABASE_TYPE", "mock"),
-        "redis_host": os.getenv("REDIS_HOST", "localhost"),
-        "redis_port": int(os.getenv("REDIS_PORT", 6379)),
-        "redis_username": os.getenv("REDIS_USERNAME", "default"),
-        "redis_password": os.getenv("REDIS_PASSWORD", ""),
-        "redis_db": int(os.getenv("REDIS_DB", 0)),
-        "postgres_host": os.getenv("POSTGRES_HOST", "localhost"),
-        "postgres_port": int(os.getenv("POSTGRES_PORT", 5432)),
-        "postgres_db": os.getenv("POSTGRES_DB", "itg_docuverse"),
-        "postgres_user": os.getenv("POSTGRES_USER", "postgres"),
-        "postgres_password": os.getenv("POSTGRES_PASSWORD", "password"),
-        "sqlite_path": os.getenv("SQLITE_PATH", "./itg_docuverse.db"),
-        "jwt_secret_key": os.getenv("JWT_SECRET_KEY", "your-super-secret-jwt-key-change-this-in-production"),
-        "jwt_algorithm": os.getenv("JWT_ALGORITHM", "HS256"),
-        "jwt_access_token_expire_minutes": int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 30)),
-        "app_name": os.getenv("APP_NAME", "ITG DocVerse API"),
-        "app_version": os.getenv("APP_VERSION", "1.0.0"),
-        "debug": os.getenv("DEBUG", "True").lower() == "true",
-        "cors_origins": ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
-        "host": os.getenv("HOST", "0.0.0.0"),
-        "port": int(os.getenv("PORT", 8000)),
-        "max_file_size": int(os.getenv("MAX_FILE_SIZE", 10485760)),
-        "upload_dir": os.getenv("UPLOAD_DIR", "./uploads"),
+        "database_type": os.getenv("DATABASE_TYPE", defaults.database_type),
+        "redis_host": os.getenv("REDIS_HOST", defaults.redis_host),
+        "redis_port": int(os.getenv("REDIS_PORT", defaults.redis_port)),
+        "redis_username": os.getenv("REDIS_USERNAME", defaults.redis_username),
+        "redis_password": os.getenv("REDIS_PASSWORD", defaults.redis_password),
+        "redis_db": int(os.getenv("REDIS_DB", defaults.redis_db)),
+        "postgres_host": os.getenv("POSTGRES_HOST", defaults.postgres_host),
+        "postgres_port": int(os.getenv("POSTGRES_PORT", defaults.postgres_port)),
+        "postgres_db": os.getenv("POSTGRES_DB", defaults.postgres_db),
+        "postgres_user": os.getenv("POSTGRES_USER", defaults.postgres_user),
+        "postgres_password": os.getenv("POSTGRES_PASSWORD", defaults.postgres_password),
+        "sqlite_path": os.getenv("SQLITE_PATH", defaults.sqlite_path),
+        "jwt_secret_key": os.getenv("JWT_SECRET_KEY", defaults.jwt_secret_key),
+        "jwt_algorithm": os.getenv("JWT_ALGORITHM", defaults.jwt_algorithm),
+        "jwt_access_token_expire_minutes": int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", defaults.jwt_access_token_expire_minutes)),
+        "app_name": os.getenv("APP_NAME", defaults.app_name),
+        "app_version": os.getenv("APP_VERSION", defaults.app_version),
+        "debug": os.getenv("DEBUG", str(defaults.debug)).lower() == "true",
+        "cors_origins": defaults.cors_origins,  # Use class default directly
+        "host": os.getenv("HOST", defaults.host),
+        "port": int(os.getenv("PORT", defaults.port)),
+        "max_file_size": int(os.getenv("MAX_FILE_SIZE", defaults.max_file_size)),
+        "upload_dir": os.getenv("UPLOAD_DIR", defaults.upload_dir),
     }
     return Settings(**settings_data)
 
