@@ -1,47 +1,45 @@
 #!/usr/bin/env python3
 """
-ITG DocVerse Database Bootstrap Script
-Creates initial sample data for the application
+ITG DocVerse Bootstrap Data
+Single source of truth for all bootstrap data across all database backends
 """
 
-import asyncio
-import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Any
-
-from src.services.database.factory import DatabaseServiceFactory
-from src.models.post import Post, PostType, PostStatus
+from src.models.post import PostType, PostStatus
 from src.models.user import User
 from src.models.tag import Tag
 from src.models.comment import Comment
-from src.config.settings import settings
+from src.models.post import Post
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class DatabaseBootstrap:
-    """Bootstrap the database with initial sample data"""
+class BootstrapData:
+    """Centralized bootstrap data for all database backends"""
     
-    def __init__(self):
-        self.db_service = DatabaseServiceFactory.create_service()
-    
-    async def initialize(self):
-        """Initialize the database connection"""
-        await self.db_service.initialize()
-        logger.info("Database service initialized")
-    
-    async def create_sample_users(self) -> List[User]:
-        """Create sample users"""
-        logger.info("Creating sample users...")
-        
-        users = [
+    @staticmethod
+    def get_users() -> List[User]:
+        """Get sample users - same data as bootstrap.sql"""
+        return [
             User(
-                id="user-1",
+                id="61aa7084-a14f-48ee-ac75-6645e2ad9ec4",
+                username="admin",
+                display_name="System Administrator",
+                email="admin@itgdocverse.com",
+                password_hash="$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewFI47Q/8X2.ov8u",  # 'admin'
+                bio="System administrator with full access to all features",
+                location="ITG Office",
+                website="",
+                avatar_url="",
+                post_count=0,
+                comment_count=0,
+                created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+                updated_at=datetime(2024, 1, 1, tzinfo=timezone.utc)
+            ),
+            User(
+                id="ac2402cf-9a84-46a5-8484-d32400e7a18d",
                 username="prakashm88",
                 display_name="Prakash M",
                 email="prakash@example.com",
-                password_hash="$2b$12$hashed_password_here",  # In real app, hash the password
+                password_hash="$2b$12$hashed_password_here",
                 bio="Full Stack Developer | Tech Enthusiast | Open Source Contributor",
                 location="Bangalore, India",
                 website="https://prakash.dev",
@@ -52,14 +50,14 @@ class DatabaseBootstrap:
                 updated_at=datetime(2024, 1, 15, tzinfo=timezone.utc)
             ),
             User(
-                id="user-2",
+                id="75765941-6b90-4acf-8b4d-6937329d9c08",
                 username="sarah_dev",
                 display_name="Sarah Johnson",
                 email="sarah@example.com",
                 password_hash="$2b$12$hashed_password_here",
-                bio="Frontend Developer | React Enthusiast | UI/UX Designer",
+                bio="Frontend Developer | React Specialist | UI/UX Enthusiast",
                 location="San Francisco, USA",
-                website="",
+                website="https://sarahdev.com",
                 avatar_url="",
                 post_count=15,
                 comment_count=89,
@@ -67,13 +65,13 @@ class DatabaseBootstrap:
                 updated_at=datetime(2024, 2, 1, tzinfo=timezone.utc)
             ),
             User(
-                id="user-3",
-                username="mike_ts",
-                display_name="Mike TS",
+                id="0492735d-ac0d-4e41-808a-199e19c0f3ac",
+                username="mike_backend",
+                display_name="Mike Chen",
                 email="mike@example.com",
                 password_hash="$2b$12$hashed_password_here",
-                bio="Backend Developer | TypeScript Expert | Node.js Specialist",
-                location="London, UK",
+                bio="Backend Engineer | Python & Go | Distributed Systems",
+                location="Toronto, Canada",
                 website="",
                 avatar_url="",
                 post_count=8,
@@ -82,46 +80,28 @@ class DatabaseBootstrap:
                 updated_at=datetime(2024, 2, 15, tzinfo=timezone.utc)
             )
         ]
-        
-        created_users = []
-        for user in users:
-            created_user = await self.db_service.create_user(user)
-            created_users.append(created_user)
-            logger.info(f"Created user: {user.username}")
-        
-        return created_users
     
-    async def create_sample_tags(self) -> List[Tag]:
-        """Create sample tags"""
-        logger.info("Creating sample tags...")
-        
-        tags = [
-            Tag(id="tag-1", name="opensource", color="#4ecdc4", description="Open source projects and contributions"),
-            Tag(id="tag-2", name="webdev", color="#ff6b6b", description="Web development topics"),
-            Tag(id="tag-3", name="developer", color="#45b7d1", description="Developer tools and practices"),
-            Tag(id="tag-4", name="typescript", color="#3178C6", description="TypeScript programming language"),
-            Tag(id="tag-5", name="react", color="#61DAFB", description="React framework and ecosystem"),
-            Tag(id="tag-6", name="css", color="#1572B6", description="CSS styling and layouts"),
-            Tag(id="tag-7", name="documentation", color="#3B82F6", description="Documentation and technical writing"),
-            Tag(id="tag-8", name="api", color="#10B981", description="API design and development")
+    @staticmethod
+    def get_tags() -> List[Tag]:
+        """Get sample tags - same data as bootstrap.sql"""
+        return [
+            Tag(id="tag-react", name="react", display_name="React", color="#61dafb", description="React library for building UIs"),
+            Tag(id="tag-webdev", name="webdev", display_name="Web Development", color="#ff6b6b", description="Web Development"),
+            Tag(id="tag-opensource", name="opensource", display_name="Open Source", color="#4ecdc4", description="Open Source Software"),
+            Tag(id="tag-typescript", name="typescript", display_name="TypeScript", color="#3178c6", description="TypeScript superset of JavaScript"),
+            Tag(id="tag-css", name="css", display_name="CSS", color="#1572B6", description="Cascading Style Sheets"),
+            Tag(id="tag-documentation", name="documentation", display_name="Documentation", color="#3B82F6", description="Technical documentation"),
+            Tag(id="tag-api", name="api", display_name="API", color="#10B981", description="Application Programming Interface"),
+            Tag(id="tag-javascript", name="javascript", display_name="Javascript", color="#f7df1e", description="JavaScript programming language")
         ]
-        
-        created_tags = []
-        for tag in tags:
-            created_tag = await self.db_service.create_tag(tag)
-            created_tags.append(created_tag)
-            logger.info(f"Created tag: {tag.name}")
-        
-        return created_tags
     
-    async def create_sample_posts(self, users: List[User], tags: List[Tag]) -> List[Post]:
-        """Create sample posts"""
-        logger.info("Creating sample posts...")
-        
+    @staticmethod
+    def get_posts(users: List[User], tags: List[Tag]) -> List[Post]:
+        """Get sample posts - same data as bootstrap.sql"""
         # Create tag lookup
         tag_lookup = {tag.name: tag.id for tag in tags}
         
-        posts = [
+        return [
             Post(
                 id="post-1",
                 title="12 Open Source Alternatives to Popular Software (For Developers)",
@@ -164,10 +144,10 @@ Universal database tool for developers and database administrators.
 These open source alternatives not only save money but also give you more control over your development environment. Many of them have thriving communities and are actively maintained.
 
 What are your favorite open source developer tools? Let me know in the comments!""",
-                author_id="user-1",
+                author_id="ac2402cf-9a84-46a5-8484-d32400e7a18d",  # prakashm88
                 post_type=PostType.POSTS,
                 status=PostStatus.PUBLISHED,
-                tags=[tag_lookup["opensource"], tag_lookup["webdev"], tag_lookup["developer"]],
+                tags=[tag_lookup["opensource"], tag_lookup["webdev"]],
                 view_count=245,
                 like_count=18,
                 comment_count=7,
@@ -175,46 +155,46 @@ What are your favorite open source developer tools? Let me know in the comments!
                 updated_at=datetime(2025, 1, 26, 10, 0, tzinfo=timezone.utc)
             ),
             Post(
-                id="thoughts-3282347",
-                title="#thoughts - 3282347",
-                content="Just discovered that React's useCallback and useMemo hooks can actually hurt performance if overused. The memoization overhead can be more expensive than just recreating the function/value, especially for simple computations. Profile first, optimize second! 🚀",
-                author_id="user-1",
+                id="thoughts-react-best-practices",
+                title="React Best Practices for 2025",
+                content="Just discovered some amazing React patterns that are game-changers for performance! useCallback and useMemo are powerful but can hurt performance if overused. The key is understanding when NOT to use them. #react #webdev",
+                author_id="75765941-6b90-4acf-8b4d-6937329d9c08",
                 post_type=PostType.THOUGHTS,
                 status=PostStatus.PUBLISHED,
                 tags=[tag_lookup["react"], tag_lookup["webdev"]],
                 view_count=89,
                 like_count=12,
                 comment_count=3,
-                created_at=datetime(2025, 1, 25, 10, 30, tzinfo=timezone.utc),
-                updated_at=datetime(2025, 1, 25, 10, 30, tzinfo=timezone.utc)
+                created_at=datetime(2025, 1, 31, 15, 45, tzinfo=timezone.utc),
+                updated_at=datetime(2025, 1, 31, 15, 45, tzinfo=timezone.utc)
             ),
             Post(
-                id="thoughts-5471829",
-                title="#thoughts - 5471829",
-                content="CSS Grid is for 2D layouts (rows AND columns), Flexbox is for 1D layouts (either row OR column). Stop trying to force Flexbox to do Grid's job! 😅 Each tool has its purpose and excels in different scenarios.",
-                author_id="user-1",
+                id="thoughts-css-layouts",
+                title="CSS Grid vs Flexbox",
+                content="Quick reminder: CSS Grid is for 2D layouts (rows AND columns), Flexbox is for 1D layouts (either row OR column). Stop trying to force Flexbox into Grid's job! #css #webdev",
+                author_id="75765941-6b90-4acf-8b4d-6937329d9c08",
                 post_type=PostType.THOUGHTS,
                 status=PostStatus.PUBLISHED,
                 tags=[tag_lookup["css"], tag_lookup["webdev"]],
                 view_count=156,
                 like_count=21,
                 comment_count=5,
-                created_at=datetime(2025, 1, 24, 15, 45, tzinfo=timezone.utc),
-                updated_at=datetime(2025, 1, 24, 15, 45, tzinfo=timezone.utc)
+                created_at=datetime(2025, 1, 29, 16, 30, tzinfo=timezone.utc),
+                updated_at=datetime(2025, 1, 29, 16, 30, tzinfo=timezone.utc)
             ),
             Post(
-                id="thoughts-8392647",
-                title="#thoughts - 8392647",
-                content="TypeScript tip: Use `satisfies` operator instead of type assertion when you want to ensure a value matches a type but still preserve its literal type. Game changer for configuration objects! 💡",
-                author_id="user-1",
+                id="thoughts-typescript-tips",
+                title="TypeScript Satisfies Operator",
+                content="TypeScript tip: Use the `satisfies` operator instead of type assertions when you want to ensure an object conforms to a type while preserving its literal types. It's a game changer! #typescript #webdev",
+                author_id="ac2402cf-9a84-46a5-8484-d32400e7a18d",
                 post_type=PostType.THOUGHTS,
                 status=PostStatus.PUBLISHED,
                 tags=[tag_lookup["typescript"], tag_lookup["webdev"]],
                 view_count=134,
                 like_count=19,
                 comment_count=2,
-                created_at=datetime(2025, 1, 23, 9, 15, tzinfo=timezone.utc),
-                updated_at=datetime(2025, 1, 23, 9, 15, tzinfo=timezone.utc)
+                created_at=datetime(2025, 1, 30, 11, 20, tzinfo=timezone.utc),
+                updated_at=datetime(2025, 1, 30, 11, 20, tzinfo=timezone.utc)
             ),
             Post(
                 id="post-3",
@@ -317,7 +297,7 @@ What architectural patterns do you use in your React projects?""",
                 author_id="user-2",
                 post_type=PostType.POSTS,
                 status=PostStatus.PUBLISHED,
-                tags=[tag_lookup["react"], tag_lookup["webdev"], tag_lookup["developer"]],
+                tags=[tag_lookup["react"], tag_lookup["webdev"], tag_lookup["javascript"]],
                 view_count=312,
                 like_count=28,
                 comment_count=12,
@@ -387,19 +367,10 @@ Repository: https://gitlab.com/company/payment-gateway-api.git""",
                 updated_at=datetime(2025, 1, 27, 14, 30, tzinfo=timezone.utc)
             )
         ]
-        
-        created_posts = []
-        for post in posts:
-            created_post = await self.db_service.create_post(post)
-            created_posts.append(created_post)
-            logger.info(f"Created post: {post.title[:50]}...")
-        
-        return created_posts
     
-    async def create_sample_comments(self, posts: List[Post], users: List[User]) -> List[Comment]:
-        """Create sample comments"""
-        logger.info("Creating sample comments...")
-        
+    @staticmethod
+    def get_comments(posts: List[Post], users: List[User]) -> List[Comment]:
+        """Get sample comments - same data as bootstrap.sql"""
         # Find specific posts for comments
         thoughts_post = next((p for p in posts if p.id == "thoughts-3282347"), None)
         ts_thoughts_post = next((p for p in posts if p.id == "thoughts-8392647"), None)
@@ -428,46 +399,4 @@ Repository: https://gitlab.com/company/payment-gateway-api.git""",
             )
             comments.append(comment2)
         
-        created_comments = []
-        for comment in comments:
-            created_comment = await self.db_service.create_comment(comment)
-            created_comments.append(created_comment)
-            logger.info(f"Created comment on post: {comment.post_id}")
-        
-        return created_comments
-    
-    async def run_bootstrap(self):
-        """Run the complete bootstrap process"""
-        logger.info("🚀 Starting ITG DocVerse database bootstrap...")
-        
-        try:
-            # Initialize database connection
-            await self.initialize()
-            
-            # Create sample data
-            users = await self.create_sample_users()
-            tags = await self.create_sample_tags()
-            posts = await self.create_sample_posts(users, tags)
-            comments = await self.create_sample_comments(posts, users)
-            
-            logger.info("✅ Bootstrap completed successfully!")
-            logger.info(f"   Created {len(users)} users")
-            logger.info(f"   Created {len(tags)} tags") 
-            logger.info(f"   Created {len(posts)} posts")
-            logger.info(f"   Created {len(comments)} comments")
-            
-        except Exception as e:
-            logger.error(f"❌ Bootstrap failed: {e}")
-            raise
-        finally:
-            # Close database connection
-            await self.db_service.close()
-            logger.info("Database connection closed")
-
-async def main():
-    """Main bootstrap function"""
-    bootstrap = DatabaseBootstrap()
-    await bootstrap.run_bootstrap()
-
-if __name__ == "__main__":
-    asyncio.run(main())
+        return comments

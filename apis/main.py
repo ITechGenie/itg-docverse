@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 import uvicorn
 import os
+import logging
 
 from src.config.settings import get_settings
 from src.routers import posts, users, tags, comments, stats, reactions, authors, events
@@ -18,9 +19,70 @@ from src.routers import public_auth
 from src.database.connection import get_database_service
 from src.middleware.auth import AuthenticationMiddleware
 from src.auth.jwt_service import AuthService
+from bootstrap_data import BootstrapData
 
 # Initialize settings
 settings = get_settings()
+logger = logging.getLogger(__name__)
+
+async def auto_bootstrap(db_service):
+    """Automatically bootstrap the database if it's empty"""
+    try:
+        # Check if we have any users (primary indicator of empty database)
+        existing_users = await db_service.get_users(skip=0, limit=1)
+        
+        if not existing_users or len(existing_users) == 0:
+            logger.info("🔄 Database appears to be empty, running auto-bootstrap...")
+            
+            # Get centralized bootstrap data
+            users = BootstrapData.get_users()
+            tags = BootstrapData.get_tags()
+            posts = BootstrapData.get_posts(users, tags)
+            comments = BootstrapData.get_comments(posts, users)
+            
+            # Create data using service layer
+            created_count = {"users": 0, "tags": 0, "posts": 0, "comments": 0}
+            
+            for user in users:
+                try:
+                    await db_service.create_user(user)
+                    created_count["users"] += 1
+                except Exception as e:
+                    logger.warning(f"User {user.username} might already exist: {e}")
+            
+            for tag in tags:
+                try:
+                    await db_service.create_tag(tag)
+                    created_count["tags"] += 1
+                except Exception as e:
+                    logger.warning(f"Tag {tag.name} might already exist: {e}")
+            
+            for post in posts:
+                try:
+                    await db_service.create_post(post)
+                    created_count["posts"] += 1
+                except Exception as e:
+                    logger.warning(f"Post {post.title[:30]} might already exist: {e}")
+            
+            for comment in comments:
+                try:
+                    await db_service.create_comment(comment)
+                    created_count["comments"] += 1
+                except Exception as e:
+                    logger.warning(f"Comment on {comment.post_id} might already exist: {e}")
+            
+            logger.info("✅ Auto-bootstrap completed successfully!")
+            logger.info(f"   Created {created_count['users']} users")
+            logger.info(f"   Created {created_count['tags']} tags") 
+            logger.info(f"   Created {created_count['posts']} posts")
+            logger.info(f"   Created {created_count['comments']} comments")
+        else:
+            logger.info(f"📚 Database already has {len(existing_users)} users, skipping bootstrap")
+            
+    except Exception as e:
+        logger.error(f"❌ Auto-bootstrap failed: {e}")
+        # Don't raise the exception to prevent app startup failure
+        # Just log the error and continue
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,6 +95,9 @@ async def lifespan(app: FastAPI):
     # Initialize database service
     db_service = get_database_service()
     await db_service.initialize()
+    
+    # Auto-bootstrap if database is empty
+    await auto_bootstrap(db_service)
     
     print("✅ Application started successfully!")
     
@@ -103,25 +168,33 @@ async def health_check():
         }
 
 # Mount static files (React app)
-app_path = Path("app")
-if app_path.exists():
-    app.mount("/static", StaticFiles(directory="app", html=True), name="static")
+static_dir = Path(__file__).resolve().parent / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir), html=True), name="static")
+    
+    # Serve index.html at root
+    @app.get("/", include_in_schema=False)
+    async def serve_root():
+        index_file = static_dir / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+        return {"error": "Frontend not built. Place index.html under the 'static' folder."}
     
     # Serve React app for all non-API routes
-    @app.get("/{full_path:path}")
+    @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_react_app(request: Request, full_path: str):
         """
-        Serve React app for all routes that don't start with /api
+        Serve React app for all routes that don't start with /apis
         This enables client-side routing to work properly
         """
-        if full_path.startswith("api/"):
+        if full_path.startswith("apis/") or full_path.startswith("api/"):
             raise HTTPException(status_code=404, detail="API endpoint not found")
         
-        index_file = app_path / "index.html"
+        index_file = static_dir / "index.html"
         if index_file.exists():
             return FileResponse(index_file)
         else:
-            return {"error": "Frontend not built. Run the deploy script first."}
+            return {"error": "Frontend not built. Place index.html under the 'static' folder."}
 
 if __name__ == "__main__":
     import uvicorn

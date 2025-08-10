@@ -10,7 +10,7 @@ RUN npm run build
 # Stage 2: Build the FastAPI app
 FROM python:3.12-slim AS backend
 
-WORKDIR /api
+WORKDIR /apis
 
 # Install system dependencies for building Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \

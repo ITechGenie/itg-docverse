@@ -11,7 +11,7 @@ services:
       - ENVIRONMENT=development
     volumes:
       # Mount the database file to persist data
-      - ./apis/itg_docverse.db:/api/itg_docverse.db
+      - ./apis/itg_docuverse.db:/api/itg_docuverse.db
     restart: unless-stopped
 
   # Optional: Add a reverse proxy for production-like setup

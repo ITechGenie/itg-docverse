@@ -111,6 +111,13 @@ export function NavUser({
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+      <SidebarMenuItem>
+        <div className="px-2 py-1">
+          <span className="text-xs text-muted-foreground/60">
+            Made with ❤️ from <a href="https://itechgenie.com" target="_blank" rel="noopener noreferrer">ITechGenie</a>
+          </span>
+        </div>
+      </SidebarMenuItem>
     </SidebarMenu>
   )
 }

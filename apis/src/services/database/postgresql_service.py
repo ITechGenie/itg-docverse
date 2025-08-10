@@ -18,8 +18,9 @@ class PostgreSQLService(DatabaseService):
     """PostgreSQL database service implementation"""
     
     def __init__(self):
-        self.connection_pool = None
-        self.database_url = settings.database_url
+        """Initialize PostgreSQL service"""
+        self.database_url = settings.get_database_url()  # Use get_database_url() method
+        self.pool: Optional[asyncpg.Pool] = None
         
     async def initialize(self):
         """Initialize PostgreSQL database connection pool"""

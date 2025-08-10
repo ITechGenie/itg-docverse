@@ -6,7 +6,7 @@ import {
   User,
   Users,
   Star,
-  BarChart3,
+//  BarChart3,
   Zap,
   FileText,
 } from "lucide-react"

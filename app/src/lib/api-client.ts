@@ -21,7 +21,7 @@ import {getAvatarUrl} from '@/lib/avatar';
 // Configuration flags
 const USE_REAL_API = true;
 const API_BASE_URL = '/apis';
-const TOKEN_STORAGE_KEY = 'itg_docverse_token';
+const TOKEN_STORAGE_KEY = 'itg_docuverse_token';
 
 export class ApiClient {
   private client: AxiosInstance;
@@ -29,7 +29,7 @@ export class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: USE_REAL_API ? '/apis' : '/api',
-      timeout: 10000,
+      timeout: 30000, // 30 seconds timeout for API calls
     });
 
         // Request interceptor to add auth token
@@ -1133,13 +1133,30 @@ export class ApiClient {
         const comments: Comment[] = response.data!.map((apiComment: any) => ({
           id: apiComment.id,
           content: apiComment.content,
-          author: {
+          author_id: apiComment.author_id,
+          author_name: apiComment.author_name,
+          author_username: apiComment.author_username,
+          post_id: apiComment.post_id,
+          parent_id: apiComment.parent_id,
+          like_count: apiComment.like_count || 0,
+          is_edited: apiComment.is_edited || false,
+          created_at: apiComment.created_at,
+          updated_at: apiComment.updated_at,
+          // Keep backward compatibility fields
+          author: apiComment.author_name ? {
             id: apiComment.author_id,
-            username: apiComment.author_id, // TODO: Get real author data
+            username: apiComment.author_username || apiComment.author_id,
+            displayName: apiComment.author_name || apiComment.author_username || 'Unknown User',
+            email: '',
+            avatar: getAvatarUrl(apiComment.author_id, 100),
+            joinedDate: new Date().toISOString(),
+            stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
+          } : {
+            id: apiComment.author_id,
+            username: apiComment.author_id,
             displayName: apiComment.author_id,
             email: '',
-            //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiComment.author_id}`,
-            avatar: getAvatarUrl(apiComment.author_id, 100), // Use avatar utility function
+            avatar: getAvatarUrl(apiComment.author_id, 100),
             joinedDate: new Date().toISOString(),
             stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
           },
@@ -1187,13 +1204,30 @@ export class ApiClient {
         const newComment: Comment = {
           id: apiComment.id,
           content: apiComment.content,
-          author: {
+          author_id: apiComment.author_id,
+          author_name: apiComment.author_name,
+          author_username: apiComment.author_username,
+          post_id: apiComment.post_id,
+          parent_id: apiComment.parent_id,
+          like_count: apiComment.like_count || 0,
+          is_edited: apiComment.is_edited || false,
+          created_at: apiComment.created_at,
+          updated_at: apiComment.updated_at,
+          // Keep backward compatibility
+          author: apiComment.author_name ? {
             id: apiComment.author_id,
-            username: apiComment.author_id, // TODO: Get real author data
+            username: apiComment.author_username || apiComment.author_id,
+            displayName: apiComment.author_name || apiComment.author_username || 'Unknown User',
+            email: '',
+            avatar: getAvatarUrl(apiComment.author_id, 100),
+            joinedDate: new Date().toISOString(),
+            stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
+          } : {
+            id: apiComment.author_id,
+            username: apiComment.author_id,
             displayName: apiComment.author_id,
             email: '',
-            //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiComment.author_id}`,
-            avatar: getAvatarUrl(apiComment.author_id, 100), // Use avatar utility function
+            avatar: getAvatarUrl(apiComment.author_id, 100),
             joinedDate: new Date().toISOString(),
             stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
           },
@@ -1203,14 +1237,24 @@ export class ApiClient {
           reactions: [],
           stats: {
             totalReactions: apiComment.like_count || 0,
-            totalReplies: 0,
-          },
+            totalReplies: 0
+          }
         };
         return { success: true, data: newComment };
       } else {
         const newComment: Comment = {
           id: `comment-${Date.now()}`,
           content,
+          author_id: authMeData.data.id,
+          author_name: authMeData.data.displayName,
+          author_username: authMeData.data.username,
+          post_id: postId,
+          parent_id: parentId,
+          like_count: 0,
+          is_edited: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          // Backward compatibility
           author: authMeData.data,
           postId,
           parentId,

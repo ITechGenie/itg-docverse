@@ -65,6 +65,7 @@ async def get_favorite_filtered_posts(
     
     if favorite_tags:
         # Join with reactions table to find posts with favorite tags
+        # Insert user_id parameter at the beginning since the subquery expects it first
         base_query += """
         INNER JOIN (
             SELECT DISTINCT pt2.post_id
@@ -76,7 +77,8 @@ async def get_favorite_filtered_posts(
               AND et2.id = 'event-favorite'
         ) fav_tags ON p.id = fav_tags.post_id
         """
-        params.append(user_id)
+        # Insert user_id at the beginning of params since subquery expects it first
+        params.insert(0, user_id)
     
     # Add other filters (status and is_latest are already added above)
     

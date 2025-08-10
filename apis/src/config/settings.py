@@ -16,23 +16,23 @@ class Settings(BaseModel):
     
     # Database Configuration
     database_type: str = "sqlite"  # redis, sqlite, postgresql, mock
-    database_url: str = "sqlite:///./itg_docverse.db"
     
     # Redis Configuration
     redis_host: str = "localhost"
     redis_port: int = 6379
+    redis_username: str = "default"  # Add username field for Redis Cloud
     redis_password: str = ""
     redis_db: int = 0
     
     # PostgreSQL Configuration
     postgres_host: str = "localhost"
     postgres_port: int = 5432
-    postgres_db: str = "itg_docverse"
+    postgres_db: str = "itg_docuverse"
     postgres_user: str = "postgres"
     postgres_password: str = "password"
     
     # SQLite Configuration
-    sqlite_path: str = "./docverse.db"
+    sqlite_path: str = "./itg_docuverse.db"
     
     # JWT Configuration
     jwt_secret_key: str = "itg-docverse-default-jwt-secret-change-in-production"
@@ -64,8 +64,13 @@ class Settings(BaseModel):
     def get_database_url(self) -> str:
         """Get the appropriate database URL based on database type"""
         if self.database_type == "redis":
-            password_part = f":{self.redis_password}@" if self.redis_password else ""
-            return f"redis://{password_part}{self.redis_host}:{self.redis_port}/{self.redis_db}"
+            if self.redis_username and self.redis_password:
+                auth_part = f"{self.redis_username}:{self.redis_password}@"
+            elif self.redis_password:
+                auth_part = f":{self.redis_password}@"
+            else:
+                auth_part = ""
+            return f"redis://{auth_part}{self.redis_host}:{self.redis_port}/{self.redis_db}"
         elif self.database_type == "postgresql":
             return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         else:  # sqlite
@@ -74,31 +79,34 @@ class Settings(BaseModel):
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings instance with environment variables"""
-    # Load from environment variables
+    # Create a default Settings instance to get the default values
+    defaults = Settings()
+    
+    # Load from environment variables, using class defaults as fallback
     settings_data = {
-        "database_type": os.getenv("DATABASE_TYPE", "mock"),
-        "database_url": os.getenv("DATABASE_URL", "sqlite:///./itg_docverse.db"),
-        "redis_host": os.getenv("REDIS_HOST", "localhost"),
-        "redis_port": int(os.getenv("REDIS_PORT", 6379)),
-        "redis_password": os.getenv("REDIS_PASSWORD", ""),
-        "redis_db": int(os.getenv("REDIS_DB", 0)),
-        "postgres_host": os.getenv("POSTGRES_HOST", "localhost"),
-        "postgres_port": int(os.getenv("POSTGRES_PORT", 5432)),
-        "postgres_db": os.getenv("POSTGRES_DB", "itg_docverse"),
-        "postgres_user": os.getenv("POSTGRES_USER", "postgres"),
-        "postgres_password": os.getenv("POSTGRES_PASSWORD", "password"),
-        "sqlite_path": os.getenv("SQLITE_PATH", "./itg_docverse.db"),
-        "jwt_secret_key": os.getenv("JWT_SECRET_KEY", "your-super-secret-jwt-key-change-this-in-production"),
-        "jwt_algorithm": os.getenv("JWT_ALGORITHM", "HS256"),
-        "jwt_access_token_expire_minutes": int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 30)),
-        "app_name": os.getenv("APP_NAME", "ITG DocVerse API"),
-        "app_version": os.getenv("APP_VERSION", "1.0.0"),
-        "debug": os.getenv("DEBUG", "True").lower() == "true",
-        "cors_origins": ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
-        "host": os.getenv("HOST", "0.0.0.0"),
-        "port": int(os.getenv("PORT", 8000)),
-        "max_file_size": int(os.getenv("MAX_FILE_SIZE", 10485760)),
-        "upload_dir": os.getenv("UPLOAD_DIR", "./uploads"),
+        "database_type": os.getenv("DATABASE_TYPE", defaults.database_type),
+        "redis_host": os.getenv("REDIS_HOST", defaults.redis_host),
+        "redis_port": int(os.getenv("REDIS_PORT", defaults.redis_port)),
+        "redis_username": os.getenv("REDIS_USERNAME", defaults.redis_username),
+        "redis_password": os.getenv("REDIS_PASSWORD", defaults.redis_password),
+        "redis_db": int(os.getenv("REDIS_DB", defaults.redis_db)),
+        "postgres_host": os.getenv("POSTGRES_HOST", defaults.postgres_host),
+        "postgres_port": int(os.getenv("POSTGRES_PORT", defaults.postgres_port)),
+        "postgres_db": os.getenv("POSTGRES_DB", defaults.postgres_db),
+        "postgres_user": os.getenv("POSTGRES_USER", defaults.postgres_user),
+        "postgres_password": os.getenv("POSTGRES_PASSWORD", defaults.postgres_password),
+        "sqlite_path": os.getenv("SQLITE_PATH", defaults.sqlite_path),
+        "jwt_secret_key": os.getenv("JWT_SECRET_KEY", defaults.jwt_secret_key),
+        "jwt_algorithm": os.getenv("JWT_ALGORITHM", defaults.jwt_algorithm),
+        "jwt_access_token_expire_minutes": int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", defaults.jwt_access_token_expire_minutes)),
+        "app_name": os.getenv("APP_NAME", defaults.app_name),
+        "app_version": os.getenv("APP_VERSION", defaults.app_version),
+        "debug": os.getenv("DEBUG", str(defaults.debug)).lower() == "true",
+        "cors_origins": defaults.cors_origins,  # Use class default directly
+        "host": os.getenv("HOST", defaults.host),
+        "port": int(os.getenv("PORT", defaults.port)),
+        "max_file_size": int(os.getenv("MAX_FILE_SIZE", defaults.max_file_size)),
+        "upload_dir": os.getenv("UPLOAD_DIR", defaults.upload_dir),
     }
     return Settings(**settings_data)
 

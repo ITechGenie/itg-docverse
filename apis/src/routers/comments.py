@@ -53,6 +53,8 @@ async def get_comments_by_post(
                 id=comment_dict['id'],
                 post_id=comment_dict['post_id'],
                 author_id=comment_dict['author_id'],
+                author_name=comment_dict.get('display_name'),  # Use display_name from joined user data
+                author_username=comment_dict.get('username'),  # Use username from joined user data
                 content=comment_dict['content'],
                 parent_id=comment_dict.get('parent_discussion_id'),
                 like_count=comment_dict.get('like_count', 0),
@@ -80,6 +82,8 @@ async def get_comment(
             id=comment_dict['id'],
             post_id=comment_dict['post_id'],
             author_id=comment_dict['author_id'],
+            author_name=comment_dict.get('display_name'),  # Use display_name from joined user data
+            author_username=comment_dict.get('username'),  # Use username from joined user data
             content=comment_dict['content'],
             parent_id=comment_dict.get('parent_discussion_id'),
             like_count=comment_dict.get('like_count', 0),
@@ -124,6 +128,8 @@ async def create_comment(
             id=created_comment_dict['id'],
             post_id=created_comment_dict['post_id'],
             author_id=created_comment_dict['author_id'],
+            author_name=created_comment_dict.get('display_name'),  # Use display_name from joined user data
+            author_username=created_comment_dict.get('username'),  # Use username from joined user data
             content=created_comment_dict['content'],
             parent_id=created_comment_dict.get('parent_discussion_id'),
             like_count=created_comment_dict.get('like_count', 0),
