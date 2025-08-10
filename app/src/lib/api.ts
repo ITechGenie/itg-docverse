@@ -261,13 +261,46 @@ export const api = {
 
   // Comments
   async getComments(postId: string): Promise<ApiResponse<Comment[]>> {
-    return apiCall<Comment[]>(`/api/posts/${postId}/comments`);
+    // Mock comments for testing
+    const mockComments: Comment[] = [
+      {
+        id: 'comment-1',
+        content: 'Great post! Thanks for sharing these alternatives.',
+        post_id: postId,
+        author_id: mockUser.id,
+        author_name: mockUser.displayName,
+        author_username: mockUser.username,
+        parent_id: undefined,
+        like_count: 5,
+        is_edited: false,
+        created_at: '2025-07-22T12:00:00Z',
+        updated_at: '2025-07-22T12:00:00Z',
+        // Backward compatibility
+        author: mockUser,
+        postId,
+        createdAt: '2025-07-22T12:00:00Z',
+        reactions: [],
+        stats: { totalReactions: 5, totalReplies: 0 }
+      }
+    ];
+    
+    return { success: true, data: mockComments };
   },
 
   async createComment(postId: string, content: string, parentId?: string): Promise<ApiResponse<Comment>> {
     const newComment: Comment = {
       id: `comment-${Date.now()}`,
       content,
+      post_id: postId,
+      author_id: mockUser.id,
+      author_name: mockUser.displayName,
+      author_username: mockUser.username,
+      parent_id: parentId,
+      like_count: 0,
+      is_edited: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      // Backward compatibility fields
       author: mockUser,
       postId,
       parentId,
