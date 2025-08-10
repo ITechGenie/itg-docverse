@@ -27,12 +27,12 @@ class Settings(BaseModel):
     # PostgreSQL Configuration
     postgres_host: str = "localhost"
     postgres_port: int = 5432
-    postgres_db: str = "itg_docuverse"
+    postgres_db: str = "itg_docverse"
     postgres_user: str = "postgres"
     postgres_password: str = "password"
     
     # SQLite Configuration
-    sqlite_path: str = "./itg_docuverse.db"
+    sqlite_path: str = "./itg_docverse.db"
     
     # JWT Configuration
     jwt_secret_key: str = "itg-docverse-default-jwt-secret-change-in-production"

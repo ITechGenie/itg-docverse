@@ -21,7 +21,7 @@ import {getAvatarUrl} from '@/lib/avatar';
 // Configuration flags
 const USE_REAL_API = true;
 const API_BASE_URL = '/apis';
-const TOKEN_STORAGE_KEY = 'itg_docuverse_token';
+const TOKEN_STORAGE_KEY = 'itg_docverse_token';
 
 export class ApiClient {
   private client: AxiosInstance;
