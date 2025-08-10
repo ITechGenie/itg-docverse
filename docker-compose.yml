@@ -1,17 +1,38 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+
   itg-docverse:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: DockerFile
     ports:
       - "8000:8000"
     environment:
       - ENVIRONMENT=development
-    volumes:
-      # Mount the database file to persist data
-      - ./apis/itg_docverse.db:/api/itg_docverse.db
+      - REDIS_URL=redis://redis:6379
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      - redis
+      - ollama
     restart: unless-stopped
 
   # Optional: Add a reverse proxy for production-like setup
@@ -26,3 +47,7 @@ services:
     restart: unless-stopped
     profiles:
       - production
+
+volumes:
+  redis_data:
+  ollama_data:
