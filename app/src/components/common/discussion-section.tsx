@@ -220,8 +220,8 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
             {comments
               .filter(comment => !comment.parent_id) // Show only top-level comments first
               .map((comment) => {
-                const authorName = comment.author_name || comment.author?.displayName || comment.author_username || 'Unknown User';
-                const authorAvatar = getAvatarUrl(comment.author_id || comment.author?.id || 'default', 32);
+                const authorName = comment.author_name || comment.author_username || 'Unknown User';
+                const authorAvatar = getAvatarUrl(comment.author_id || 'default', 32);
                 
                 return (
                 <div key={comment.id}>
@@ -230,19 +230,19 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                     <Avatar className="w-8 h-8">
                       <AvatarImage src={authorAvatar} />
                       <AvatarFallback>
-                        {authorName.split(' ').map(n => n[0]).join('')}
+                        {authorName.split(' ').map((n: string) => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
                         <button 
-                          onClick={() => handleUserClick(comment.author_username || comment.author?.id || '')}
+                          onClick={() => handleUserClick(comment.author_username || comment.author_id || '')}
                           className="font-semibold text-sm text-primary hover:text-primary/80 transition-colors cursor-pointer"
                         >
                           {authorName}
                         </button>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(comment.created_at || comment.createdAt || '').toLocaleDateString()}
+                          {new Date(comment.created_at || '').toLocaleDateString()}
                         </span>
                       </div>
                       <p className="text-sm mb-3 leading-relaxed text-foreground">{comment.content}</p>
@@ -287,8 +287,8 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                   {comments
                     .filter(reply => reply.parent_id === comment.id)
                     .map((reply) => {
-                      const replyAuthorName = reply.author_name || reply.author?.displayName || reply.author_username || 'Unknown User';
-                      const replyAuthorAvatar = getAvatarUrl(reply.author_id || reply.author?.id || 'default', 32);
+                      const replyAuthorName = reply.author_name || reply.author_username || 'Unknown User';
+                      const replyAuthorAvatar = getAvatarUrl(reply.author_id || 'default', 32);
                       
                       return (
                       <div key={reply.id} className="ml-11 mt-4 relative">
@@ -297,19 +297,19 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                           <Avatar className="w-6 h-6">
                             <AvatarImage src={replyAuthorAvatar} />
                             <AvatarFallback>
-                              {replyAuthorName.split(' ').map(n => n[0]).join('')}
+                              {replyAuthorName.split(' ').map((n: string) => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
                               <button 
-                                onClick={() => handleUserClick(reply.author_username || reply.author?.id || '')}
+                                onClick={() => handleUserClick(reply.author_username || reply.author_id || '')}
                                 className="font-semibold text-xs text-primary hover:text-primary/80 transition-colors cursor-pointer"
                               >
                                 {replyAuthorName}
                               </button>
                               <span className="text-xs text-muted-foreground">
-                                {new Date(reply.created_at || reply.createdAt || '').toLocaleDateString()}
+                                {new Date(reply.created_at || '').toLocaleDateString()}
                               </span>
                             </div>
                             <p className="text-xs mb-2 leading-relaxed text-foreground">{reply.content}</p>

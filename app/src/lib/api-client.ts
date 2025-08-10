@@ -21,7 +21,7 @@ import {getAvatarUrl} from '@/lib/avatar';
 // Configuration flags
 const USE_REAL_API = true;
 const API_BASE_URL = '/apis';
-const TOKEN_STORAGE_KEY = 'itg_docuverse_token';
+const TOKEN_STORAGE_KEY = 'itg_docverse_token';
 
 export class ApiClient {
   private client: AxiosInstance;
@@ -1139,35 +1139,7 @@ export class ApiClient {
           post_id: apiComment.post_id,
           parent_id: apiComment.parent_id,
           like_count: apiComment.like_count || 0,
-          is_edited: apiComment.is_edited || false,
-          created_at: apiComment.created_at,
-          updated_at: apiComment.updated_at,
-          // Keep backward compatibility fields
-          author: apiComment.author_name ? {
-            id: apiComment.author_id,
-            username: apiComment.author_username || apiComment.author_id,
-            displayName: apiComment.author_name || apiComment.author_username || 'Unknown User',
-            email: '',
-            avatar: getAvatarUrl(apiComment.author_id, 100),
-            joinedDate: new Date().toISOString(),
-            stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
-          } : {
-            id: apiComment.author_id,
-            username: apiComment.author_id,
-            displayName: apiComment.author_id,
-            email: '',
-            avatar: getAvatarUrl(apiComment.author_id, 100),
-            joinedDate: new Date().toISOString(),
-            stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
-          },
-          postId: apiComment.post_id,
-          parentId: apiComment.parent_id,
-          createdAt: apiComment.created_at,
-          reactions: [],
-          stats: {
-            totalReactions: apiComment.like_count || 0,
-            totalReplies: 0,
-          },
+          created_at: apiComment.created_at
         }));
 
         return { success: true, data: comments };
@@ -1210,35 +1182,7 @@ export class ApiClient {
           post_id: apiComment.post_id,
           parent_id: apiComment.parent_id,
           like_count: apiComment.like_count || 0,
-          is_edited: apiComment.is_edited || false,
-          created_at: apiComment.created_at,
-          updated_at: apiComment.updated_at,
-          // Keep backward compatibility
-          author: apiComment.author_name ? {
-            id: apiComment.author_id,
-            username: apiComment.author_username || apiComment.author_id,
-            displayName: apiComment.author_name || apiComment.author_username || 'Unknown User',
-            email: '',
-            avatar: getAvatarUrl(apiComment.author_id, 100),
-            joinedDate: new Date().toISOString(),
-            stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
-          } : {
-            id: apiComment.author_id,
-            username: apiComment.author_id,
-            displayName: apiComment.author_id,
-            email: '',
-            avatar: getAvatarUrl(apiComment.author_id, 100),
-            joinedDate: new Date().toISOString(),
-            stats: { postsCount: 0, commentsCount: 0, tagsFollowed: 0 }
-          },
-          postId: apiComment.post_id,
-          parentId: apiComment.parent_id,
-          createdAt: apiComment.created_at,
-          reactions: [],
-          stats: {
-            totalReactions: apiComment.like_count || 0,
-            totalReplies: 0
-          }
+          created_at: apiComment.created_at
         };
         return { success: true, data: newComment };
       } else {
@@ -1251,19 +1195,7 @@ export class ApiClient {
           post_id: postId,
           parent_id: parentId,
           like_count: 0,
-          is_edited: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          // Backward compatibility
-          author: authMeData.data,
-          postId,
-          parentId,
-          createdAt: new Date().toISOString(),
-          reactions: [],
-          stats: {
-            totalReactions: 0,
-            totalReplies: 0,
-          },
+          created_at: new Date().toISOString()
         };
         return { success: true, data: newComment };
       }
@@ -1428,6 +1360,64 @@ export class ApiClient {
     } catch (error) {
       console.error('Get event types failed:', error);
       return { success: false, error: 'Failed to get event types' };
+    }
+  }
+
+  // Search API methods
+  async getSearchConfig(): Promise<ApiResponse<any>> {
+    try {
+      return await this.apiCall<any>('/search/config');
+    } catch (error) {
+      console.error('Failed to get search config:', error);
+      return { success: false, error: 'Failed to get search configuration' };
+    }
+  }
+
+  async search(filters: {
+    query: string;
+    limit?: number;
+    threshold?: number;
+    post_types?: string[];
+  }): Promise<ApiResponse<any[]>> {
+    try {
+      const params = new URLSearchParams();
+      params.append('q', filters.query);
+      
+      if (filters.limit) {
+        params.append('limit', filters.limit.toString());
+      }
+      
+      if (filters.threshold) {
+        params.append('threshold', filters.threshold.toString());
+      }
+      
+      if (filters.post_types && filters.post_types.length > 0) {
+        params.append('post_types', filters.post_types.join(','));
+      }
+
+      return await this.apiCall<any[]>(`/search/semantic?${params.toString()}`);
+    } catch (error) {
+      console.error('Search failed:', error);
+      return { success: false, error: 'Search failed' };
+    }
+  }
+
+  async triggerIndexing(forceReindex = false, postTypes?: string[]): Promise<ApiResponse<{
+    message: string;
+    posts_count: number;
+    trigger_id: string | null;
+    status: string;
+  }>> {
+    try {
+      const payload = {
+        force_reindex: forceReindex,
+        post_types: postTypes
+      };
+
+      return await this.apiCall(`/search/index`, 'POST', payload);
+    } catch (error) {
+      console.error('Indexing failed:', error);
+      return { success: false, error: 'Failed to trigger indexing' };
     }
   }
 

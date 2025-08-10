@@ -19,14 +19,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libssl-dev \
     libffi-dev \
+    libblas-dev \
+    liblapack-dev \
+    gfortran \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Rust for building packages like pydantic-core if needed
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Upgrade pip to latest version
-RUN pip install --upgrade pip
+# Upgrade pip to latest version and install setuptools
+RUN pip install --upgrade pip setuptools wheel
 
 # Copy API code and requirements
 COPY apis/requirements.txt ./

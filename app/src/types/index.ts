@@ -98,21 +98,54 @@ export interface Comment {
   author_username?: string;
   parent_id?: string; // For nested comments (renamed from parentId)
   like_count: number;
-  is_edited: boolean;
-  created_at: string; // renamed from createdAt
-  updated_at: string; // renamed from updatedAt
-  // Keep these for backward compatibility if needed
-  author?: User;
-  postId?: string;
-  parentId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  reactions?: Reaction[];
+  created_at: string;
   replies?: Comment[];
-  stats?: {
-    totalReactions: number;
-    totalReplies: number;
+}
+
+// Search types
+export interface SearchResult {
+  post_id: string;
+  title: string;
+  content_snippet: string;
+  author_name: string;
+  post_type: string;
+  tags: string[];
+  created_at: string;
+  similarity_score?: number; // Only present for AI search
+}
+
+export interface SearchFilters {
+  query: string;
+  limit?: number;
+  threshold?: number;
+  post_types?: string[];
+}
+
+export interface SearchConfig {
+  ai_search_enabled: boolean;
+  ai_search_available: boolean;
+  search_mode: string;
+  components: {
+    ollama: {
+      available: boolean;
+      host: string;
+      model: string;
+    };
+    redis: {
+      available: boolean;
+      host: string;
+      port: number;
+    };
   };
+  settings: {
+    similarity_threshold: number;
+    chunk_size: number;
+    chunk_overlap: number;
+  };
+  statistics: {
+    indexed_chunks: number;
+  };
+  fallback_info: string;
 }
 
 export interface CreatePostData {
