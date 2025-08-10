@@ -1,15 +1,18 @@
 import type { 
   User, 
   Post, 
-  Comment, 
   Tag, 
   CreatePostData, 
   ApiResponse, 
   PaginationParams,
   FeedFilters,
   Reaction,
-  ReactionType 
+  ReactionType,
+  SearchResult,
+  SearchFilters,
+  SearchConfig
 } from '@/types';
+import { api as apiClient } from '@/lib/api-client';
 
 // Mock data
 const mockUser: User = {
@@ -258,60 +261,45 @@ export const api = {
   async getTags(): Promise<ApiResponse<Tag[]>> {
     return apiCall<Tag[]>('/api/tags');
   },
+};
 
-  // Comments
-  async getComments(postId: string): Promise<ApiResponse<Comment[]>> {
-    // Mock comments for testing
-    const mockComments: Comment[] = [
-      {
-        id: 'comment-1',
-        content: 'Great post! Thanks for sharing these alternatives.',
-        post_id: postId,
-        author_id: mockUser.id,
-        author_name: mockUser.displayName,
-        author_username: mockUser.username,
-        parent_id: undefined,
-        like_count: 5,
-        is_edited: false,
-        created_at: '2025-07-22T12:00:00Z',
-        updated_at: '2025-07-22T12:00:00Z',
-        // Backward compatibility
-        author: mockUser,
-        postId,
-        createdAt: '2025-07-22T12:00:00Z',
-        reactions: [],
-        stats: { totalReactions: 5, totalReplies: 0 }
-      }
-    ];
-    
-    return { success: true, data: mockComments };
+// Search API
+export const searchApi = {
+  // Get search configuration
+  async getConfig(): Promise<ApiResponse<SearchConfig>> {
+    try {
+      const response = await apiClient.getSearchConfig();
+      return response;
+    } catch (error) {
+      console.error('Failed to get search config:', error);
+      return { success: false, error: 'Failed to get search configuration' };
+    }
   },
 
-  async createComment(postId: string, content: string, parentId?: string): Promise<ApiResponse<Comment>> {
-    const newComment: Comment = {
-      id: `comment-${Date.now()}`,
-      content,
-      post_id: postId,
-      author_id: mockUser.id,
-      author_name: mockUser.displayName,
-      author_username: mockUser.username,
-      parent_id: parentId,
-      like_count: 0,
-      is_edited: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      // Backward compatibility fields
-      author: mockUser,
-      postId,
-      parentId,
-      createdAt: new Date().toISOString(),
-      reactions: [],
-      stats: {
-        totalReactions: 0,
-        totalReplies: 0,
-      },
-    };
+  // Perform search
+  async search(filters: SearchFilters): Promise<ApiResponse<SearchResult[]>> {
+    try {
+      const response = await apiClient.search(filters);
+      return response;
+    } catch (error) {
+      console.error('Search failed:', error);
+      return { success: false, error: 'Search failed' };
+    }
+  },
 
-    return { success: true, data: newComment };
+  // Trigger indexing (only available when AI search is enabled)
+  async triggerIndexing(forceReindex = false, postTypes?: string[]): Promise<ApiResponse<{
+    message: string;
+    posts_count: number;
+    trigger_id: string | null;
+    status: string;
+  }>> {
+    try {
+      const response = await apiClient.triggerIndexing(forceReindex, postTypes);
+      return response;
+    } catch (error) {
+      console.error('Indexing failed:', error);
+      return { success: false, error: 'Failed to trigger indexing' };
+    }
   },
 };

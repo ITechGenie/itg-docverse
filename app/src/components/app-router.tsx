@@ -20,6 +20,7 @@ const NotFound = lazy(() => import('@/pages/not-found'));
 const GitRepos = lazy(() => import('@/pages/git-repos'));
 const Documents = lazy(() => import('@/pages/documents'));
 const PostVersions = lazy(() => import('@/pages/post-versions'));
+const SearchPage = lazy(() => import('@/pages/search'));
 const LoginPage = lazy(() => import('@/pages/login'));
 
 // Loading fallback components for different sections
@@ -164,6 +165,15 @@ export default function AppRouter() {
             <EditProfile />
           </Suspense>
         } />
+        
+        {/* Search Routes */}
+        <Route path="/search" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <SearchPage />
+          </Suspense>
+        } />
+        
+        {/* Tags and Discovery Routes */}
         <Route path="/tags" element={
           <Suspense fallback={<PageLoadingFallback />}>
             <Tags />

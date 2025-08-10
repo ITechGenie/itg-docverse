@@ -14,7 +14,7 @@ import os
 import logging
 
 from src.config.settings import get_settings
-from src.routers import posts, users, tags, comments, stats, reactions, authors, events
+from src.routers import posts, users, tags, comments, stats, reactions, authors, events, search
 from src.routers import public_auth
 from src.database.connection import get_database_service
 from src.middleware.auth import AuthenticationMiddleware
@@ -143,6 +143,7 @@ app.include_router(tags.router, prefix="/apis/tags", tags=["Tags"])
 app.include_router(authors.router, prefix="/apis/authors", tags=["Authors"])
 app.include_router(reactions.router, prefix="/apis/reactions", tags=["Reactions"])
 app.include_router(events.router, prefix="/apis/events", tags=["Events"])
+app.include_router(search.router, prefix="/apis/search", tags=["Search"])
 
 app.include_router(comments.router, prefix="/apis/comments", tags=["Comments"])
 app.include_router(stats.router, prefix="/apis/stats", tags=["Statistics"])

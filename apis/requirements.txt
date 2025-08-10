@@ -24,5 +24,9 @@ pydantic==2.5.0
 aiofiles==23.2.1
 jinja2==3.1.2
 
+# Semantic Search dependencies
+ollama==0.2.1  # Ollama client for local embeddings
+numpy==1.24.3  # For vector operations
+
 # Redis optimization dependencies
 hiredis==2.2.3  # C extension for faster Redis operations

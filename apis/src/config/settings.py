@@ -42,6 +42,14 @@ class Settings(BaseModel):
     # Cache Configuration
     cache_type: str = "memory"  # memory or redis
     
+    # AI Search Configuration
+    enable_ai_search: bool = os.getenv("ENABLE_AI_SEARCH", "true").lower() == "true"
+    ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    ollama_model: str = os.getenv("OLLAMA_MODEL", "nomic-embed-text")
+    search_similarity_threshold: float = float(os.getenv("SEARCH_SIMILARITY_THRESHOLD", "0.3"))
+    search_chunk_size: int = int(os.getenv("SEARCH_CHUNK_SIZE", "500"))
+    search_chunk_overlap: int = int(os.getenv("SEARCH_CHUNK_OVERLAP", "50"))
+    
     # Application Configuration
     app_name: str = "ITG DocVerse API"
     app_version: str = "1.0.0"

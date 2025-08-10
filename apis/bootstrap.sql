@@ -1113,8 +1113,8 @@ CREATE TABLE IF NOT EXISTS kb_indexes (
     FOREIGN KEY (trigger_id) REFERENCES kb_index_triggers(id),
     FOREIGN KEY (post_id) REFERENCES posts(id),
     FOREIGN KEY (created_by) REFERENCES users(id),
-    -- Ensure unique generation type per trigger
-    UNIQUE(trigger_id, generation_type)
+    -- Ensure unique generation type per trigger per post
+    UNIQUE(trigger_id, post_id, generation_type)
 );
 
 -- =====================================================
@@ -1138,16 +1138,29 @@ CREATE TABLE IF NOT EXISTS kb_metadata (
 
 -- Insert sample KB types
 INSERT OR IGNORE INTO kb_types (id, name, category, description, icon, color, is_active) VALUES
+-- External knowledge base types
 ('kb-type-1', 'gitlab-repo', 'code-repository', 'GitLab Repository', 'git-branch', '#FC6D26', TRUE),
 ('kb-type-2', 'pdf-document', 'document', 'PDF Document', 'file-text', '#FF0000', TRUE),
 ('kb-type-3', 'website', 'web-content', 'Website/Web Page', 'globe', '#0066CC', TRUE),
-('kb-type-4', 'user-post', 'user-content', 'User Generated Post', 'edit', '#6366F1', TRUE);
+('kb-type-4', 'user-post', 'user-content', 'User Generated Post', 'edit', '#6366F1', TRUE),
+-- Post types as knowledge base categories  
+('kb-type-posts-posts', 'posts-posts', 'posts', 'Articles and blog posts', '📝', '#4A90E2', TRUE),
+('kb-type-posts-thoughts', 'posts-thoughts', 'posts', 'Quick thoughts and micro-posts', '💭', '#F39C12', TRUE),
+('kb-type-posts-llm-short', 'posts-llm-short', 'posts', 'AI-generated short summaries', '🤖', '#9B59B6', TRUE),
+('kb-type-posts-llm-long', 'posts-llm-long', 'posts', 'AI-generated detailed documentation', '🤖', '#8E44AD', TRUE),
+('kb-type-posts-block-diagram', 'posts-block-diagram', 'posts', 'Visual diagrams and flowcharts', '📊', '#2ECC71', TRUE),
+('kb-type-posts-code-snippet', 'posts-code-snippet', 'posts', 'Code examples and snippets', '💻', '#E67E22', TRUE),
+('kb-type-posts-discussion', 'posts-discussion', 'posts', 'Discussion starters and questions', '🗣️', '#3498DB', TRUE),
+-- Virtual knowledge base for semantic search
+('kb-type-semantic-search', 'semantic-search', 'system', 'Virtual knowledge base for semantic search indexing', '🔍', '#6B73FF', TRUE);
 
 -- Insert sample knowledge base entries
 INSERT OR IGNORE INTO knowledge_base (id, kb_type_id, title, description, source_url, source_identifier, status, created_by) VALUES
 ('kb-1', 'kb-type-1', 'Payment Gateway API', 'Core payment processing API with Stripe integration', 'https://gitlab.com/company/payment-gateway-api.git', 'payment-gateway-api', 'indexed', 'd5d03fb7-d966-4f0c-a534-5b2c77097965'),
 ('kb-2', 'kb-type-2', 'API Documentation.pdf', 'Comprehensive API documentation for payment gateway', '/uploads/api-docs.pdf', 'doc-hash-12345', 'processing', 'd5d03fb7-d966-4f0c-a534-5b2c77097965'),
-('kb-3', 'kb-type-3', 'Stripe API Reference', 'Official Stripe API documentation', 'https://stripe.com/docs/api', 'stripe-docs', 'discovered', 'd5d03fb7-d966-4f0c-a534-5b2c77097965');
+('kb-3', 'kb-type-3', 'Stripe API Reference', 'Official Stripe API documentation', 'https://stripe.com/docs/api', 'stripe-docs', 'discovered', 'd5d03fb7-d966-4f0c-a534-5b2c77097965'),
+-- Virtual knowledge base for semantic search operations
+('semantic-search-kb', 'kb-type-semantic-search', 'Semantic Search Knowledge Base', 'Virtual knowledge base for semantic search indexing operations', 'internal://semantic-search', 'semantic-search-system', 'indexed', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27');
 
 -- Insert sample trigger entries
 INSERT OR IGNORE INTO kb_index_triggers (id, kb_id, triggered_by, trigger_type, trigger_context, expected_generations, overall_status, total_expected) VALUES

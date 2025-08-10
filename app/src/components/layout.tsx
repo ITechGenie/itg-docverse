@@ -17,6 +17,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { findNavigationItem } from "@/config/navigation"
 
 interface LayoutProps {
@@ -26,12 +27,25 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPath, setCurrentPath] = useState(window.location.hash.slice(1) || '/');
+  const navigate = useNavigate();
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    // TODO: Implement global search functionality
-    // This could trigger a search across all posts in the application
-    console.log('Searching for:', e.target.value);
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate to search page with query parameter
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      // Navigate to search page with query parameter
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   useEffect(() => {
@@ -81,7 +95,7 @@ export default function Layout({ children }: LayoutProps) {
             </Breadcrumb>
           </div>
           <div className="flex items-center gap-3 pr-4">
-            <div className="relative">
+            <form onSubmit={handleSearchSubmit} className="relative">
               <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
@@ -89,8 +103,9 @@ export default function Layout({ children }: LayoutProps) {
                 className="pl-8 w-64"
                 value={searchQuery}
                 onChange={handleSearch}
+                onKeyPress={handleSearchKeyPress}
               />
-            </div>
+            </form>
             <ModeToggle />
           </div>
         </header>

@@ -9,6 +9,7 @@ import {
 //  BarChart3,
   Zap,
   FileText,
+  Search,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -96,6 +97,7 @@ export const navigationConfig: NavigationConfig = {
         },
       ],
     },
+
     {
       title: "Community",
       url: "#/",
@@ -188,6 +190,12 @@ export const navigationConfig: NavigationConfig = {
       name: "Tags",
       url: "#/tags",
       icon: Hash,
+      section: "Discovery",
+    },
+    {
+      name: "Search",
+      url: "#/search",
+      icon: Search,
       section: "Discovery",
     },
   ],
