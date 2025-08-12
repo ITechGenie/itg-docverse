@@ -573,16 +573,7 @@ class PostgreSQLService(DatabaseService):
             
     async def get_post_reactions(self, post_id: str) -> List[Dict[str, Any]]:
         """Get reactions for a post"""
-        return await self.execute_query(
-            """SELECT r.*, et.name as reaction_type, et.icon, et.color,
-                      u.username, u.display_name
-               FROM reactions r
-               JOIN event_types et ON r.event_type_id = et.id
-               JOIN users u ON r.user_id = u.id
-               WHERE r.target_type = 'post' AND r.target_id = $1
-               ORDER BY r.created_ts DESC""",
-            (post_id,)
-        )
+        return await self.get_reactions(post_id, 'post')
 
     async def get_reactions(self, target_id: str, target_type: str = 'post') -> List[Dict[str, Any]]:
         """Get reactions for a post or discussion"""
