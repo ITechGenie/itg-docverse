@@ -45,28 +45,36 @@ async def auto_bootstrap(db_service):
             
             for user in users:
                 try:
-                    await db_service.create_user(user)
+                    # Convert Pydantic model to dict for database service
+                    user_dict = user.model_dump() if hasattr(user, 'model_dump') else user.dict()
+                    await db_service.create_user(user_dict)
                     created_count["users"] += 1
                 except Exception as e:
                     logger.warning(f"User {user.username} might already exist: {e}")
             
             for tag in tags:
                 try:
-                    await db_service.create_tag(tag)
+                    # Convert Pydantic model to dict for database service
+                    tag_dict = tag.model_dump() if hasattr(tag, 'model_dump') else tag.dict()
+                    await db_service.create_tag(tag_dict)
                     created_count["tags"] += 1
                 except Exception as e:
                     logger.warning(f"Tag {tag.name} might already exist: {e}")
             
             for post in posts:
                 try:
-                    await db_service.create_post(post)
+                    # Convert Pydantic model to dict for database service
+                    post_dict = post.model_dump() if hasattr(post, 'model_dump') else post.dict()
+                    await db_service.create_post(post_dict)
                     created_count["posts"] += 1
                 except Exception as e:
                     logger.warning(f"Post {post.title[:30]} might already exist: {e}")
             
             for comment in comments:
                 try:
-                    await db_service.create_comment(comment)
+                    # Convert Pydantic model to dict for database service
+                    comment_dict = comment.model_dump() if hasattr(comment, 'model_dump') else comment.dict()
+                    await db_service.create_comment(comment_dict)
                     created_count["comments"] += 1
                 except Exception as e:
                     logger.warning(f"Comment on {comment.post_id} might already exist: {e}")
@@ -149,7 +157,7 @@ app.include_router(comments.router, prefix="/apis/comments", tags=["Comments"])
 app.include_router(stats.router, prefix="/apis/stats", tags=["Statistics"])
 
 # Health check endpoint
-@app.get("/api/health")
+@app.get("/apis/health")
 async def health_check():
     """Health check endpoint"""
     db_service = get_database_service()
@@ -178,7 +186,22 @@ if static_dir.exists():
     async def serve_root():
         index_file = static_dir / "index.html"
         if index_file.exists():
-            return FileResponse(index_file)
+            # Return a simple HTML page that redirects to /static/index.html
+            redirect_html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta http-equiv="refresh" content="0; url=/static/index.html">
+                <title>ITG DocVerse</title>
+            </head>
+            <body>
+                <p>Redirecting to ITG DocVerse...</p>
+                <script>window.location.href = '/static/index.html';</script>
+            </body>
+            </html>
+            """
+            from fastapi.responses import HTMLResponse
+            return HTMLResponse(content=redirect_html)
         return {"error": "Frontend not built. Place index.html under the 'static' folder."}
     
     # Serve React app for all non-API routes

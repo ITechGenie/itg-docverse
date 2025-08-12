@@ -57,21 +57,22 @@ class MockDatabaseService(DatabaseService):
             if db_path.startswith("./"):
                 db_path = Path(db_path).resolve()
             
-            logger.info(f"🔍 Looking for SQLite database at: {db_path}")
+            logger.debug(f"🔍 Mock service looking for SQLite database at: {db_path}")
             
             if not Path(db_path).exists():
                 logger.warning(f"❌ SQLite database not found at {db_path}, using empty mock data")
+                logger.debug("📝 Mock service will operate with empty data structures")
                 return
             
-            logger.info(f"✅ Found SQLite database, loading data...")
+            logger.debug(f"✅ Found SQLite database, starting data loading process...")
             
             async with aiosqlite.connect(db_path) as db:
                 # Load users
-                logger.info("Loading users...")
+                logger.debug("📊 Loading users from SQLite...")
                 async with db.execute("SELECT id, username, display_name, email, bio, location, avatar_url, is_verified FROM users") as cursor:
                     rows = await cursor.fetchall()
-                    logger.info(f"Found {len(rows)} users in database")
-                    for row in rows:
+                    logger.debug(f"📋 Found {len(rows)} users in SQLite database")
+                    for i, row in enumerate(rows, 1):
                         user = User(
                             id=row[0],
                             username=row[1],
@@ -86,14 +87,14 @@ class MockDatabaseService(DatabaseService):
                         )
                         self.users[user.id] = user
                         self.users_by_username[user.username] = user.id
-                        logger.info(f"Loaded user: {user.username}")
+                        logger.debug(f"[{i}/{len(rows)}] Loaded user: {user.username}")
                 
                 # Load tags
-                logger.info("Loading tags...")
+                logger.debug("📊 Loading tags from SQLite...")
                 async with db.execute("SELECT id, name, description, color, category FROM tag_types") as cursor:
                     rows = await cursor.fetchall()
-                    logger.info(f"Found {len(rows)} tags in database")
-                    for row in rows:
+                    logger.debug(f"📋 Found {len(rows)} tags in SQLite database")
+                    for i, row in enumerate(rows, 1):
                         tag = Tag(
                             id=row[0],
                             name=row[1],
@@ -105,9 +106,10 @@ class MockDatabaseService(DatabaseService):
                         )
                         self.tags[tag.id] = tag
                         self.tags_by_name[tag.name] = tag.id
+                        logger.debug(f"[{i}/{len(rows)}] Loaded tag: {tag.name}")
                 
                 # Load posts with content
-                logger.info("Loading posts...")
+                logger.debug("📊 Loading posts from SQLite...")
                 async with db.execute("""
                     SELECT p.id, p.post_type_id, p.title, p.feed_content, p.author_id, p.status,
                            p.created_ts, p.updated_ts, pc.content
@@ -116,8 +118,8 @@ class MockDatabaseService(DatabaseService):
                     WHERE p.status = 'published'
                 """) as cursor:
                     rows = await cursor.fetchall()
-                    logger.info(f"Found {len(rows)} posts in database")
-                    for row in rows:
+                    logger.debug(f"📋 Found {len(rows)} posts in SQLite database")
+                    for i, row in enumerate(rows, 1):
                         # Map post_type_id to PostType enum
                         post_type_map = {
                             'posts': PostType.LONG_FORM,
@@ -147,12 +149,16 @@ class MockDatabaseService(DatabaseService):
                             stats={'views': 0, 'likes': 0, 'comments': 0}
                         )
                         self.posts[post.id] = post
-                        logger.info(f"Loaded post: {post.title}")
+                        logger.debug(f"[{i}/{len(rows)}] Loaded post: {post.title[:50]}...")
                 
-                logger.info(f"🎉 Successfully loaded {len(self.users)} users, {len(self.tags)} tags, {len(self.posts)} posts from SQLite")
+                logger.info(f"🎉 Mock service successfully loaded: {len(self.users)} users, {len(self.tags)} tags, {len(self.posts)} posts from SQLite")
                 
         except Exception as e:
-            logger.error(f"❌ Failed to load sample data from SQLite: {e}", exc_info=True)
+            logger.error(f"❌ Failed to load sample data from SQLite into Mock service: {e}")
+            import traceback
+            logger.debug(f"🐛 Mock data loading error traceback: {traceback.format_exc()}")
+            # Don't raise - Mock service should continue with empty data
+            logger.warning("⚠️ Mock service continuing with empty data structures")
     
     async def close(self) -> None:
         """Close the mock database"""
@@ -165,7 +171,9 @@ class MockDatabaseService(DatabaseService):
     
     async def execute_bootstrap(self, sql_content: str) -> bool:
         """Execute bootstrap SQL script (no-op for mock)"""
-        logger.info("Mock bootstrap executed (no-op)")
+        logger.debug(f"🔧 Mock bootstrap called with {len(sql_content)} characters of SQL content")
+        logger.debug("📝 Mock service doesn't execute SQL - loads sample data from SQLite instead")
+        logger.info("✅ Mock bootstrap executed (no-op - uses sample data loading)")
         return True
     
     # ============================================

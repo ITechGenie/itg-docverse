@@ -52,24 +52,34 @@ class SQLiteService(DatabaseService):
     async def _run_bootstrap(self, db):
         """Run bootstrap SQL to create schema and initial data"""
         try:
-            logger.info("🔧 Running database bootstrap...")
+            logger.info("🔧 Running SQLite database bootstrap...")
             
             # Read bootstrap SQL file
             bootstrap_sql_path = Path(__file__).parent.parent.parent.parent / "bootstrap.sql"
+            logger.debug(f"📁 Looking for bootstrap SQL at: {bootstrap_sql_path}")
             
             if not bootstrap_sql_path.exists():
-                logger.warning(f"Bootstrap SQL file not found: {bootstrap_sql_path}")
+                logger.warning(f"❌ Bootstrap SQL file not found: {bootstrap_sql_path}")
                 return
                 
+            logger.debug(f"✅ Bootstrap SQL file found, loading content...")
             with open(bootstrap_sql_path, 'r', encoding='utf-8') as file:
                 sql_content = file.read()
                 
+            # Log file statistics
+            char_count = len(sql_content)
+            line_count = len(sql_content.split('\n'))
+            statement_count = len([stmt.strip() for stmt in sql_content.split(';') if stmt.strip()])
+            logger.debug(f"📊 Bootstrap SQL loaded: {char_count} characters, {line_count} lines, ~{statement_count} statements")
+                
             # Execute bootstrap SQL
             await self.execute_bootstrap(sql_content)
-            logger.info("✅ Database bootstrap completed successfully")
+            logger.info("✅ SQLite database bootstrap completed successfully")
             
         except Exception as e:
-            logger.error(f"Failed to run database bootstrap: {e}")
+            logger.error(f"❌ Failed to run SQLite database bootstrap: {e}")
+            import traceback
+            logger.debug(f"🐛 Bootstrap error traceback: {traceback.format_exc()}")
             raise
             
     async def close(self):
@@ -93,25 +103,44 @@ class SQLiteService(DatabaseService):
         """Execute bootstrap SQL script"""
         try:
             async with aiosqlite.connect(self.db_path) as db:
+                logger.debug(f"🔧 Starting SQLite bootstrap execution with {len(sql_content)} characters of SQL")
+                
                 # Enable foreign key constraints
                 await db.execute("PRAGMA foreign_keys = ON")
+                logger.debug("🔐 SQLite PRAGMA foreign_keys = ON enabled")
                 
                 # Split SQL content into individual statements
                 statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
+                logger.info(f"📊 Executing {len(statements)} SQLite SQL statements...")
                 
-                for statement in statements:
+                success_count = 0
+                warning_count = 0
+                
+                for i, statement in enumerate(statements, 1):
                     if statement.strip():
                         try:
+                            # Log statement type for debugging
+                            stmt_type = statement.split()[0].upper() if statement.split() else "UNKNOWN"
+                            logger.debug(f"[{i}/{len(statements)}] Executing {stmt_type}: {statement[:50]}...")
+                            
                             await db.execute(statement)
+                            success_count += 1
+                            
+                            if stmt_type in ['CREATE', 'INSERT']:
+                                logger.debug(f"✅ [{i}/{len(statements)}] {stmt_type} successful")
+                                
                         except Exception as stmt_error:
-                            logger.warning(f"Statement execution warning: {stmt_error}")
-                            logger.debug(f"Statement: {statement[:100]}...")
+                            warning_count += 1
+                            logger.warning(f"⚠️ [{i}/{len(statements)}] SQLite statement execution warning: {stmt_error}")
+                            logger.debug(f"📋 Failed statement: {statement[:200]}...")
                 
                 await db.commit()
-                logger.info("✅ Bootstrap SQL executed successfully")
+                logger.info(f"✅ SQLite bootstrap SQL executed: {success_count} successful, {warning_count} warnings")
                 
         except Exception as e:
-            logger.error(f"Bootstrap execution failed: {e}")
+            logger.error(f"❌ SQLite bootstrap execution failed: {e}")
+            import traceback
+            logger.debug(f"🐛 SQLite bootstrap error traceback: {traceback.format_exc()}")
             raise
             
     async def execute_query(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:

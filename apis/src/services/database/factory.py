@@ -22,6 +22,8 @@ class DatabaseServiceFactory:
     def create_service() -> DatabaseService:
         """Create database service based on configuration"""
         db_type = settings.database_type.lower()
+
+        logger.info(f"Creating database service of type: {db_type}")
         
         if db_type == "redis":
             logger.info("Creating Redis database service")
