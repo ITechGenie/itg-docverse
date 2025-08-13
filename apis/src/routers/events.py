@@ -10,7 +10,7 @@ from datetime import datetime
 import json
 import uuid
 
-from ..database.connection import get_database_service
+from ..services.database.factory import DatabaseServiceFactory
 from ..services.database.base import DatabaseService
 from ..middleware.dependencies import get_current_user_from_middleware
 
@@ -40,8 +40,8 @@ router = APIRouter()
 
 
 def get_db_service() -> DatabaseService:
-    """Dependency to get database service"""
-    return get_database_service()
+    """Dependency to get database service - using singleton pattern"""
+    return DatabaseServiceFactory.create_service()
 
 
 def extract_client_info(request: Request) -> Dict[str, Any]:

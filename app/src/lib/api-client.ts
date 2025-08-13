@@ -380,9 +380,9 @@ export class ApiClient {
       coverImage: apiPost.cover_image || undefined,
       author: {
         id: apiPost.author_id,
-        username: 'ITG DocVerse User', // Default for now
-        displayName: 'ITG DocVerse User',
-        email: 'user@docverse.local',
+        username: apiPost.author_username,
+        displayName: apiPost.author_name,
+        email: apiPost.author_email,
         //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiPost.author_id}`,
         avatar: getAvatarUrl(apiPost.author_id, 100), // Use avatar utility function
         joinedDate: new Date().toISOString(),

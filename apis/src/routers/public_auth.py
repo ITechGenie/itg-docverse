@@ -45,8 +45,6 @@ async def authenticate(login_request: LoginRequest):
         
         # Get database service to check if user exists
         db_service = DatabaseServiceFactory.create_service()
-        if not hasattr(db_service, 'initialized') or not db_service.initialized:
-            await db_service.initialize()
         
         # Try to find user by username
         user = await db_service.get_user_by_username(username)
@@ -153,8 +151,6 @@ async def get_current_user(token: str):
         
         # Get database service
         db_service = DatabaseServiceFactory.create_service()
-        if not hasattr(db_service, 'initialized') or not db_service.initialized:
-            await db_service.initialize()
         
         # Get user details from database
         user = await db_service.get_user_by_id(user_id)

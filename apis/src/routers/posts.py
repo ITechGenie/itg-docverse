@@ -113,11 +113,14 @@ async def get_favorite_filtered_posts(
     
     return results
 
+router = APIRouter()
+
+# Initialize logger
+logger = get_logger("PostsAPI", level="DEBUG", json_format=False)
+
 async def get_db_service() -> DatabaseService:
-    """Dependency to get database service"""
-    if not hasattr(db_service, 'initialized') or not db_service.initialized:
-        await db_service.initialize()
-    return db_service
+    """Dependency to get database service - using singleton pattern"""
+    return DatabaseServiceFactory.create_service()
 
 @router.get("/", response_model=List[PostPublic])
 async def get_posts(
@@ -173,6 +176,8 @@ async def get_posts(
                 'title': post['title'],
                 'content': post.get('content') or '',  # Ensure content is never None
                 'author_id': post['author_id'],
+                'author_name': post['display_name'],
+                'author_username': post['username'],
                 'post_type': PostType(post['post_type_id']),  # Convert string to enum
                 'status': PostStatus(post['status']),  # Convert string to enum
                 'tags': [
@@ -214,6 +219,8 @@ async def get_post(
             'title': post['title'],
             'content': post.get('content') or '',  # Ensure content is never None
             'author_id': post['author_id'],
+            'author_name': post['display_name'],
+            'author_username': post['username'],
             'post_type': PostType(post['post_type_id']),  # Convert string to enum
             'status': PostStatus(post['status']),  # Convert string to enum
             'tags': [],  # TODO: Fetch associated tags
@@ -305,6 +312,8 @@ async def create_post(
             'title': created_post['title'],
             'content': created_post.get('content') or '',  # Ensure content is never None
             'author_id': created_post['author_id'],
+            'author_name': created_post['display_name'],
+            'author_username': created_post['username'],
             'post_type': PostType(created_post['post_type_id']),  # Convert string to enum
             'status': PostStatus(created_post['status']),  # Convert string to enum
             'tags': [],  # TODO: Fetch associated tags

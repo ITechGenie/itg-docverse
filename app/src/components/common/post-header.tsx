@@ -141,13 +141,13 @@ export const PostHeader = ({
             <Avatar className="w-10 h-10 hover:ring-2 hover:ring-primary transition-all">
               <AvatarImage src={avatarUrl} alt={post.author.displayName} />
               <AvatarFallback>
-                {post.author.displayName.split(' ').map(n => n[0]).join('')}
+                {post.author.id + ""}
               </AvatarFallback>
             </Avatar>
           </Link>
           <div>
             <Link 
-              to={`/profile/${post.author.id}`}
+              to={`/profile/${post.author.username}`}
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {post.author.displayName}

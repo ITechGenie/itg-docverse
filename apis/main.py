@@ -100,9 +100,9 @@ async def lifespan(app: FastAPI):
     print(f"📊 Database: {settings.database_type}")
     print(f"🌐 CORS origins: {settings.cors_origins}")
     
-    # Initialize database service
-    db_service = get_database_service()
-    await db_service.initialize()
+    # Initialize database service (singleton)
+    from src.services.database.factory import DatabaseServiceFactory
+    db_service = await DatabaseServiceFactory.initialize_service()
     
     # Auto-bootstrap if database is empty
     await auto_bootstrap(db_service)
@@ -113,8 +113,7 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     print("🛑 Shutting down application...")
-    db_service = get_database_service()
-    await db_service.close()
+    await DatabaseServiceFactory.close_service()
     print("✅ Application shutdown complete!")
 
 # Create FastAPI app

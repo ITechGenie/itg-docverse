@@ -1,7 +1,6 @@
 import React from 'react';
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -67,11 +66,10 @@ interface DefaultErrorFallbackProps {
 }
 
 function DefaultErrorFallback({ error, resetError }: DefaultErrorFallbackProps) {
-  const navigate = useNavigate();
-
   const handleGoHome = () => {
     resetError();
-    navigate('/');
+    // Use window.location to navigate without depending on Router context
+    window.location.href = '/';
   };
 
   const handleReload = () => {

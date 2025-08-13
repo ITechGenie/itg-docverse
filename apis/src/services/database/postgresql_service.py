@@ -22,7 +22,7 @@ class PostgreSQLService(DatabaseService):
     def __init__(self):
         """Initialize PostgreSQL service"""
         self.database_url = settings.get_database_url()  # Use get_database_url() method
-        self.pool: Optional[asyncpg.Pool] = None
+        self.connection_pool: Optional[asyncpg.Pool] = None
         
     async def initialize(self):
         """Initialize PostgreSQL database connection pool"""
@@ -494,22 +494,40 @@ class PostgreSQLService(DatabaseService):
         return results[0] if results else None
         
     # Reaction operations
-    async def add_reaction(self, reaction_data: Dict[str, Any]) -> str:
-        """Add a reaction"""
+    async def add_reaction(self, target_id: str, user_id: str, reaction_type: str, target_type: str = 'post') -> Dict[str, Any]:
+        """Add a reaction to a post or discussion"""
+        import uuid
+        reaction_id = str(uuid.uuid4())
+        
+        # Get event type ID for the reaction
+        event_type_result = await self.execute_query(
+            "SELECT id FROM event_types WHERE id = $1 AND category = 'reaction'",
+            (reaction_type,)
+        )
+        
+        if not event_type_result:
+            raise ValueError(f"Unknown reaction type: {reaction_type}")
+            
+        event_type_id = event_type_result[0]['id']
+        
         await self.execute_command(
             """INSERT INTO reactions 
                (id, event_type_id, user_id, target_type, target_id, target_revision, reaction_value)
                VALUES ($1, $2, $3, $4, $5, $6, $7)
                ON CONFLICT (event_type_id, user_id, target_type, target_id) 
                DO UPDATE SET reaction_value = EXCLUDED.reaction_value, updated_ts = CURRENT_TIMESTAMP""",
-            (
-                reaction_data['id'], reaction_data['event_type_id'],
-                reaction_data['user_id'], reaction_data['target_type'],
-                reaction_data['target_id'], reaction_data.get('target_revision'),
-                reaction_data.get('reaction_value', 1)
-            )
+            (reaction_id, event_type_id, user_id, target_type, target_id, None, 1)
         )
-        return reaction_data['id']
+        
+        # Return the created reaction
+        return {
+            'id': reaction_id,
+            'target_id': target_id,
+            'target_type': target_type,
+            'user_id': user_id,
+            'reaction_type': reaction_type,
+            'created_ts': 'now'  # In real implementation, get actual timestamp
+        }
         
     async def remove_reaction(self, target_id: str, user_id: str, reaction_type: str, target_type: str = 'post') -> bool:
         """Remove a reaction from a post or discussion"""

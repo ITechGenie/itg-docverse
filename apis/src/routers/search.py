@@ -23,9 +23,12 @@ from ..config.settings import get_settings
 router = APIRouter()
 
 # Global services
-db_service = DatabaseServiceFactory.create_service()
 settings = get_settings()
 logger = get_logger("SearchAPI", level="DEBUG", json_format=False)
+
+async def get_db_service() -> DatabaseService:
+    """Dependency to get database service - using singleton pattern"""
+    return DatabaseServiceFactory.create_service()
 
 # Redis connection for vector storage (only if AI search is enabled)
 redis_client = None
@@ -79,7 +82,8 @@ class IndexStatus(BaseModel):
 async def traditional_database_search(
     query: str, 
     limit: int = 10, 
-    post_types: Optional[List[str]] = None
+    post_types: Optional[List[str]] = None,
+    db_service: DatabaseService = None
 ) -> List[Dict[str, Any]]:
     """
     Traditional database search using SQL LIKE queries
@@ -568,7 +572,8 @@ async def semantic_search(
     limit: int = Query(10, description="Maximum number of results"),
     threshold: float = Query(None, description="Similarity threshold (AI search only)"),
     post_types: Optional[str] = Query(None, description="Comma-separated post types to filter"),
-    current_user: Dict = Depends(get_current_user_from_middleware)
+    current_user: Dict = Depends(get_current_user_from_middleware),
+    db: DatabaseService = Depends(get_db_service)
 ):
     """
     Perform search on posts - uses AI semantic search if available, falls back to traditional search
@@ -646,7 +651,7 @@ async def semantic_search(
         logger.info(f"Using traditional database search for query: '{q}'")
         
         # Use traditional search
-        traditional_results = await traditional_database_search(q, limit, post_type_filter)
+        traditional_results = await traditional_database_search(q, limit, post_type_filter, db)
         
         # Convert to SearchResult format
         final_results = []
