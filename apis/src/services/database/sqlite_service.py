@@ -424,8 +424,8 @@ class SQLiteService(DatabaseService):
             )
         )
         return discussion_data['id']
-        
-    async def associate_tags_with_post(self, post_id: str, tag_names: List[str]) -> bool:
+
+    async def associate_tags_with_post(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
         """Associate tags with a post"""
         try:
             for tag_name in tag_names:
@@ -439,7 +439,7 @@ class SQLiteService(DatabaseService):
                         'id': tag_id,
                         'name': tag_name,
                         'description': f'Auto-created tag: {tag_name}',
-                        'created_by': 'system'
+                        'created_by': author_id
                     })
                 else:
                     tag_id = existing_tag['id']

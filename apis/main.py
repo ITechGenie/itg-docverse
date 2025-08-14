@@ -18,6 +18,7 @@ from src.routers import posts, users, tags, comments, stats, reactions, authors,
 from src.routers import public_auth
 from src.database.connection import get_database_service
 from src.middleware.auth import AuthenticationMiddleware
+from src.middleware.request_context import RequestContextMiddleware
 from src.auth.jwt_service import AuthService
 from bootstrap_data import BootstrapData
 
@@ -134,6 +135,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add request context middleware for logging
+app.add_middleware(RequestContextMiddleware)
 
 # Add authentication middleware (handles JWT for all protected routes)
 auth_service = AuthService()

@@ -607,8 +607,8 @@ class MockDatabaseService(DatabaseService):
     # ============================================
     # TAG ASSOCIATION OPERATIONS
     # ============================================
-    
-    async def associate_tags_with_post(self, post_id: str, tag_names: List[str]) -> bool:
+
+    async def associate_tags_with_post(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
         """Associate tags with a post"""
         try:
             if post_id not in self.post_tags:
@@ -624,7 +624,8 @@ class MockDatabaseService(DatabaseService):
                         name=tag_name,
                         description="",
                         color="#666666",
-                        posts_count=0
+                        posts_count=0,
+                        created_by=author_id
                     )
                     await self.create_tag(tag)
                 

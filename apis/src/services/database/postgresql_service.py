@@ -357,7 +357,13 @@ class PostgreSQLService(DatabaseService):
         """Get post by ID"""
         results = await self.execute_query(
             """SELECT p.*, pt.name as post_type_name, u.username, u.display_name,
-                      u.email, u.avatar_url, pc.content
+                      u.email, u.avatar_url, pc.content,
+                      (
+                       SELECT string_agg(tt.name, ', ')
+                       FROM post_tags ptg
+                       JOIN tag_types tt ON ptg.tag_id = tt.id
+                       WHERE ptg.post_id = p.id
+                   ) AS tags
                FROM posts p
                JOIN post_types pt ON p.post_type_id = pt.id
                JOIN users u ON p.author_id = u.id
@@ -417,8 +423,8 @@ class PostgreSQLService(DatabaseService):
                WHERE pt.post_id = $1 AND tt.is_active = $2""",
             (post_id, True)
         )
-        
-    async def associate_tags_with_post(self, post_id: str, tag_names: List[str]) -> bool:
+
+    async def associate_tags_with_post(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
         """Associate tags with a post (create tags if needed) using app-generated UUIDs"""
         try:
             async with self.connection_pool.acquire() as conn:
@@ -441,16 +447,17 @@ class PostgreSQLService(DatabaseService):
                             tag_id,
                             tag_name,
                             f"Auto-created tag: {tag_name}",
-                            "system"
+                            author_id
                         )
                     # Associate tag with post; ignore if exists
+                    post_tag_id = str(uuid.uuid4())
                     await conn.execute(
                         """
-                        INSERT INTO post_tags (post_id, tag_id)
-                        VALUES ($1, $2)
+                        INSERT INTO post_tags (id, post_id, tag_id, created_by)
+                        VALUES ($1, $2, $3, $4)
                         ON CONFLICT (post_id, tag_id) DO NOTHING
                         """,
-                        post_id, tag_id
+                        post_tag_id, post_id, tag_id, author_id
                     )
             return True
         except Exception as e:
@@ -472,7 +479,7 @@ class PostgreSQLService(DatabaseService):
             "INSERT INTO tag_types (id, name, description, color, created_by) VALUES ($1, $2, $3, $4, $5)",
             (
                 tag_data['id'], tag_data['name'], tag_data.get('description'),
-                tag_data.get('color'), tag_data.get('created_by', 'system')
+                tag_data.get('color'), tag_data.get('created_by')
             )
         )
         return tag_data['id']
@@ -481,7 +488,7 @@ class PostgreSQLService(DatabaseService):
         """Get tag by ID"""
         results = await self.execute_query(
             "SELECT * FROM tag_types WHERE id = $1 AND is_active = $2",
-            (tag_id, True)
+            (tag_id, 1)  # Use 1 instead of True for PostgreSQL compatibility
         )
         return results[0] if results else None
 
@@ -489,7 +496,7 @@ class PostgreSQLService(DatabaseService):
         """Get tag by name"""
         results = await self.execute_query(
             "SELECT * FROM tag_types WHERE name = $1 AND is_active = $2",
-            (name, True)
+            (name, 1)  # Use 1 instead of True for PostgreSQL compatibility
         )
         return results[0] if results else None
         

@@ -316,7 +316,7 @@ export const PostHeader = ({
                     <span>Versions</span>
                   </Button>
                 )}
-                <Button
+                {isDetailView && <Button
                   variant="outline"
                   size="sm"
                   className="text-xs flex items-center space-x-1"
@@ -325,7 +325,7 @@ export const PostHeader = ({
                 >
                   <Edit3 className="w-3 h-3" />
                   <span>Edit</span>
-                </Button>
+                </Button>}
                 
               </div>
           )}

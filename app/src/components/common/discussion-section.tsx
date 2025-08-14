@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { api } from '@/lib/api-client';
 import type { Post, Comment } from '@/types';
-//import { useAuth } from '@/hooks/use-auth';
 import { useAuth } from "@/contexts/auth-context"
 
 interface DiscussionSectionProps {

@@ -30,31 +30,45 @@ class CustomFormatter(logging.Formatter):
         request_id = _request_id_var.get()
         user_id = _user_id_var.get()
         
-        # Automatically get caller information
-        frame = inspect.currentframe()
+        # Use the record's information for caller details
+        class_name = record.name
+        method_name = record.funcName
+        
+        # Try to get more specific class information from the stack
         try:
-            # Go up the stack to find the actual caller (skip logging framework frames)
-            caller_frame = frame.f_back.f_back.f_back.f_back
-            if caller_frame:
-                filename = caller_frame.f_code.co_filename
-                class_name = None
-                method_name = caller_frame.f_code.co_name
+            frame = inspect.currentframe()
+            # Skip logging framework frames to find the actual caller
+            for i in range(10):  # Look up to 10 frames back
+                frame = frame.f_back
+                if frame is None:
+                    break
                 
-                # Try to get class name from the frame's locals
-                if 'self' in caller_frame.f_locals:
-                    class_name = caller_frame.f_locals['self'].__class__.__name__
-                elif 'cls' in caller_frame.f_locals:
-                    class_name = caller_frame.f_locals['cls'].__name__
+                # Skip frames from logging module
+                if 'logging' in frame.f_code.co_filename:
+                    continue
+                    
+                # Found a non-logging frame
+                method_name = frame.f_code.co_name
                 
-                # If no class found, use the module name
-                if not class_name:
+                # Try to get class name
+                if 'self' in frame.f_locals:
+                    class_name = frame.f_locals['self'].__class__.__name__
+                    break
+                elif 'cls' in frame.f_locals:
+                    class_name = frame.f_locals['cls'].__name__
+                    break
+                else:
+                    # Use module name as fallback
                     import os
-                    class_name = os.path.basename(filename).replace('.py', '')
-            else:
-                class_name = "Unknown"
-                method_name = "Unknown"
-        finally:
-            del frame
+                    module_name = os.path.basename(frame.f_code.co_filename).replace('.py', '')
+                    if module_name != '__init__':
+                        class_name = module_name
+                        break
+                        
+        except Exception as e:
+            # Fallback to record information
+            class_name = record.name
+            method_name = record.funcName
 
         log_entry = {
             "timestamp": datetime.utcnow().isoformat(),

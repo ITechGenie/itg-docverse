@@ -218,7 +218,7 @@ class DatabaseService(ABC):
     # ============================================
     
     @abstractmethod
-    async def associate_tags_with_post(self, post_id: str, tag_names: List[str]) -> bool:
+    async def associate_tags_with_post(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
         """Associate tags with a post"""
         pass
     

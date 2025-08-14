@@ -17,6 +17,7 @@ class Tag(BaseModel):
     post_count: int = Field(default=0, ge=0)
     follower_count: int = Field(default=0, ge=0)
     is_featured: bool = Field(default=False)
+    created_by: Optional[str] = Field(None, max_length=50)
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
