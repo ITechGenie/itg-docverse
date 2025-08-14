@@ -635,6 +635,50 @@ class RedisService(DatabaseService):
             logger.error(f"Failed to get comments for post {post_id}: {e}")
             return []
     
+    async def get_recent_comments(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent comments across all posts"""
+        try:
+            # Get all comment IDs
+            comment_ids = await self.redis_client.smembers("indexes:comments")
+            
+            # Get comments with timestamp for sorting
+            comments_with_ts = []
+            for comment_id in comment_ids:
+                comment = await self.get_comment_by_id(comment_id)
+                if comment:
+                    comments_with_ts.append((comment, comment.created_at))
+            
+            # Sort by created_at descending (most recent first)
+            comments_with_ts.sort(key=lambda x: x[1], reverse=True)
+            
+            # Apply pagination and convert to dict format
+            result = []
+            for comment, _ in comments_with_ts[skip:skip + limit]:
+                # Get user and post info
+                user = await self.get_user_by_id(comment.author_id)
+                post = await self.get_post_by_id(comment.post_id)
+                
+                comment_dict = {
+                    'id': comment.id,
+                    'post_id': comment.post_id,
+                    'author_id': comment.author_id,
+                    'content': comment.content,
+                    'parent_discussion_id': comment.parent_id,
+                    'is_edited': False,  # Mock value
+                    'created_ts': comment.created_at,
+                    'updated_ts': comment.updated_at,
+                    'display_name': user.display_name if user else 'Unknown',
+                    'username': user.username if user else 'unknown',
+                    'post_title': post.title if post else 'Unknown Post'
+                }
+                result.append(comment_dict)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to get recent comments: {e}")
+            return []
+    
     async def delete_comment(self, comment_id: str) -> bool:
         """Delete a comment"""
         try:
@@ -1071,6 +1115,39 @@ class RedisService(DatabaseService):
         except Exception as e:
             logger.error(f"Failed to get post tags: {e}")
             return []
+
+    async def update_post_tags(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
+        """Update tags for a post by removing existing associations and creating new ones"""
+        try:
+            # Remove existing tag associations for this post
+            await self.redis_client.delete(f"post:tags:{post_id}")
+            
+            # Add new tag associations
+            for tag_name in tag_names:
+                # Find existing tag by name or create new one
+                tag = await self.get_tag_by_name(tag_name)
+                if not tag:
+                    # Create new tag
+                    import uuid
+                    from src.models.tag import Tag
+                    tag_id = str(uuid.uuid4())
+                    tag = Tag(
+                        id=tag_id,
+                        name=tag_name,
+                        description=f"Auto-created tag: {tag_name}",
+                        color="#24A890"
+                    )
+                    await self.create_tag(tag)
+                
+                # Associate tag with post
+                await self.redis_client.sadd(f"post:tags:{post_id}", tag.id)
+                await self.redis_client.sadd(f"tag:posts:{tag.id}", post_id)
+            
+            logger.info(f"Updated tags for post {post_id}: {tag_names}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update tags for post {post_id}: {e}")
+            return False
     
     # ============================================
     # DISCUSSION/COMMENT OPERATIONS

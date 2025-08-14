@@ -98,7 +98,10 @@ export interface Comment {
   author_username?: string;
   parent_id?: string; // For nested comments (renamed from parentId)
   like_count: number;
+  is_edited?: boolean;
   created_at: string;
+  updated_at?: string;
+  post_title?: string; // For recent comments display
   replies?: Comment[];
 }
 

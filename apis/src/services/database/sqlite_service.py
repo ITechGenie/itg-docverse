@@ -319,6 +319,52 @@ class SQLiteService(DatabaseService):
                WHERE pt.post_id = ? AND tt.is_active = ?""",
             (post_id, True)
         )
+
+    async def update_post_tags(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
+        """Update tags for a post by removing existing associations and creating new ones"""
+        try:
+            # Remove existing tag associations for this post
+            await self.execute_command(
+                "DELETE FROM post_tags WHERE post_id = ?",
+                (post_id,)
+            )
+            
+            # Add new tag associations
+            for tag_name in tag_names:
+                # Check if tag exists by name
+                tag_result = await self.execute_query(
+                    "SELECT id FROM tag_types WHERE name = ? AND is_active = ?",
+                    (tag_name, True)
+                )
+                
+                if tag_result:
+                    tag_id = tag_result[0]['id']
+                else:
+                    # Create tag
+                    import uuid
+                    tag_id = str(uuid.uuid4())
+                    await self.execute_command(
+                        """
+                        INSERT INTO tag_types (id, name, description, created_by)
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        (tag_id, tag_name, f"Auto-created tag: {tag_name}", author_id)
+                    )
+                
+                # Associate tag with post
+                await self.execute_command(
+                    """
+                    INSERT INTO post_tags (post_id, tag_id, created_by)
+                    VALUES (?, ?, ?)
+                    """,
+                    (post_id, tag_id, author_id)
+                )
+            
+            logger.info(f"Updated tags for post {post_id}: {tag_names}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update tags for post {post_id}: {e}")
+            return False
         
     # Reaction operations  
     async def add_reaction(self, target_id: str, user_id: str, reaction_type: str, target_type: str = 'post') -> Dict[str, Any]:
@@ -610,6 +656,32 @@ class SQLiteService(DatabaseService):
     async def get_comments_by_post(self, post_id: str) -> List[Dict[str, Any]]:
         """Get comments for a post"""
         return await self.get_post_discussions(post_id)
+    
+    async def get_recent_comments(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent comments across all posts"""
+        return await self.execute_query(
+            """
+            SELECT 
+                pd.id,
+                pd.post_id,
+                pd.author_id,
+                pd.content,
+                pd.parent_discussion_id,
+                pd.is_edited,
+                pd.created_ts,
+                pd.updated_ts,
+                u.display_name,
+                u.username,
+                p.title as post_title
+            FROM post_discussions pd
+            JOIN users u ON pd.author_id = u.id
+            JOIN posts p ON pd.post_id = p.id
+            WHERE pd.is_deleted = 0
+            ORDER BY pd.created_ts DESC
+            LIMIT ? OFFSET ?
+            """,
+            (limit, skip)
+        )
         
     async def delete_comment(self, comment_id: str) -> bool:
         """Delete a comment (soft delete)"""

@@ -1205,6 +1205,70 @@ export class ApiClient {
     }
   }
 
+  async getRecentComments(skip: number = 0, limit: number = 15): Promise<ApiResponse<Comment[]>> {
+    try {
+      if (USE_REAL_API) {
+        const response = await this.apiCall<any[]>(`/comments/?skip=${skip}&limit=${limit}`);
+
+        if (!response.success) {
+          return { success: false, error: response.error };
+        }
+
+        // Transform API comments to frontend format
+        const comments: Comment[] = response.data!.map((apiComment: any) => ({
+          id: apiComment.id,
+          content: apiComment.content,
+          author_id: apiComment.author_id,
+          author_name: apiComment.author_name,
+          author_username: apiComment.author_username,
+          post_id: apiComment.post_id,
+          parent_id: apiComment.parent_id,
+          like_count: apiComment.like_count || 0,
+          is_edited: apiComment.is_edited || false,
+          created_at: apiComment.created_at,
+          updated_at: apiComment.updated_at,
+          post_title: apiComment.post_title
+        }));
+
+        return { success: true, data: comments };
+      } else {
+        // Mock recent comments for development
+        const mockComments: Comment[] = [
+          {
+            id: 'comment-1',
+            content: 'Great post! This really helped me understand the concept better.',
+            author_id: 'user-2',
+            author_name: 'Jane Smith',
+            author_username: 'janesmith',
+            post_id: 'post-1',
+            like_count: 5,
+            is_edited: false,
+            created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            post_title: 'Getting Started with React Hooks'
+          },
+          {
+            id: 'comment-2',
+            content: 'I had a similar issue. Thanks for sharing the solution!',
+            author_id: 'user-3',
+            author_name: 'Bob Johnson',
+            author_username: 'bobjohnson',
+            post_id: 'post-2',
+            like_count: 3,
+            is_edited: false,
+            created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+            post_title: 'TypeScript Best Practices'
+          }
+        ];
+        return { success: true, data: mockComments.slice(skip, skip + limit) };
+      }
+    } catch (error) {
+      console.error('Get recent comments failed:', error);
+      return { success: false, error: 'Failed to load recent comments' };
+    }
+  }
+
   // Search APIs
   async searchPosts(query: string): Promise<ApiResponse<Post[]>> {
     try {

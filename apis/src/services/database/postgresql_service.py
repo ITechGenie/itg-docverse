@@ -319,7 +319,7 @@ class PostgreSQLService(DatabaseService):
                        FROM post_tags ptg
                        JOIN tag_types tt ON ptg.tag_id = tt.id
                        WHERE ptg.post_id = p.id
-                   ) AS tags
+                   ) AS tags, p.feed_content as content
             FROM posts p
             JOIN post_types pt ON p.post_type_id = pt.id
             JOIN users u ON p.author_id = u.id
@@ -423,6 +423,56 @@ class PostgreSQLService(DatabaseService):
                WHERE pt.post_id = $1 AND tt.is_active = $2""",
             (post_id, True)
         )
+
+    async def update_post_tags(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
+        """Update tags for a post by removing existing associations and creating new ones"""
+        try:
+            async with self.connection_pool.acquire() as conn:
+                async with conn.transaction():
+                    # Remove existing tag associations for this post
+                    await conn.execute(
+                        "DELETE FROM post_tags WHERE post_id = $1",
+                        post_id
+                    )
+                    
+                    # Add new tag associations
+                    for tag_name in tag_names:
+                        # Check if tag exists by name
+                        tag_row = await conn.fetchrow(
+                            "SELECT id FROM tag_types WHERE name = $1 AND is_active = TRUE",
+                            tag_name
+                        )
+                        if tag_row:
+                            tag_id = tag_row["id"]
+                        else:
+                            # Create tag with app-generated UUID
+                            tag_id = str(uuid.uuid4())
+                            await conn.execute(
+                                """
+                                INSERT INTO tag_types (id, name, description, created_by)
+                                VALUES ($1, $2, $3, $4)
+                                """,
+                                tag_id,
+                                tag_name,
+                                f"Auto-created tag: {tag_name}",
+                                author_id
+                            )
+                        
+                        # Associate tag with post
+                        post_tag_id = str(uuid.uuid4())
+                        await conn.execute(
+                            """
+                            INSERT INTO post_tags (id, post_id, tag_id, created_by)
+                            VALUES ($1, $2, $3, $4)
+                            """,
+                            post_tag_id, post_id, tag_id, author_id
+                        )
+            
+            logger.info(f"Updated tags for post {post_id}: {tag_names}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update tags for post {post_id}: {e}")
+            return False
 
     async def associate_tags_with_post(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
         """Associate tags with a post (create tags if needed) using app-generated UUIDs"""
@@ -669,6 +719,32 @@ class PostgreSQLService(DatabaseService):
     async def get_comments_by_post(self, post_id: str) -> List[Dict[str, Any]]:
         """Get comments for a post"""
         return await self.get_post_discussions(post_id)
+    
+    async def get_recent_comments(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent comments across all posts"""
+        return await self.execute_query(
+            """
+            SELECT 
+                pd.id,
+                pd.post_id,
+                pd.author_id,
+                pd.content,
+                pd.parent_discussion_id,
+                pd.is_edited,
+                pd.created_ts,
+                pd.updated_ts,
+                u.display_name,
+                u.username,
+                p.title as post_title
+            FROM post_discussions pd
+            JOIN users u ON pd.author_id = u.id
+            JOIN posts p ON pd.post_id = p.id
+            WHERE pd.is_deleted = FALSE
+            ORDER BY pd.created_ts DESC
+            LIMIT $1 OFFSET $2
+            """,
+            (limit, skip)
+        )
         
     async def delete_comment(self, comment_id: str) -> bool:
         """Delete a comment (soft delete)"""

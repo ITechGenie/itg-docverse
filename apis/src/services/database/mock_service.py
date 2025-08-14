@@ -429,6 +429,38 @@ class MockDatabaseService(DatabaseService):
         comments.sort(key=lambda c: c.created_at)
         return comments
     
+    async def get_recent_comments(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent comments across all posts"""
+        # Get all comments and convert to dict format
+        all_comments = []
+        for comment in self.comments.values():
+            # Get user info
+            user = self.users.get(comment.author_id)
+            # Get post info
+            post = self.posts.get(comment.post_id)
+            
+            if user and post:
+                comment_dict = {
+                    'id': comment.id,
+                    'post_id': comment.post_id,
+                    'author_id': comment.author_id,
+                    'content': comment.content,
+                    'parent_discussion_id': comment.parent_id,
+                    'is_edited': False,  # Mock value
+                    'created_ts': comment.created_at,
+                    'updated_ts': comment.updated_at,
+                    'display_name': user.display_name,
+                    'username': user.username,
+                    'post_title': post.title
+                }
+                all_comments.append(comment_dict)
+        
+        # Sort by created_ts descending (most recent first)
+        all_comments.sort(key=lambda c: c['created_ts'], reverse=True)
+        
+        # Apply pagination
+        return all_comments[skip:skip + limit]
+    
     async def delete_comment(self, comment_id: str) -> bool:
         """Delete a comment"""
         comment = self.comments.get(comment_id)
@@ -657,6 +689,44 @@ class MockDatabaseService(DatabaseService):
                 })
         
         return tags
+
+    async def update_post_tags(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
+        """Update tags for a post by removing existing associations and creating new ones"""
+        try:
+            # Remove existing tag associations for this post
+            if post_id in self.post_tags:
+                del self.post_tags[post_id]
+            
+            # Add new tag associations
+            self.post_tags[post_id] = []
+            for tag_name in tag_names:
+                # Find existing tag by name
+                tag_id = None
+                for tid, tag in self.tags.items():
+                    if tag.name == tag_name:
+                        tag_id = tid
+                        break
+                
+                # Create tag if doesn't exist
+                if not tag_id:
+                    import uuid
+                    from src.models.tag import Tag
+                    tag_id = str(uuid.uuid4())
+                    self.tags[tag_id] = Tag(
+                        id=tag_id,
+                        name=tag_name,
+                        description=f"Auto-created tag: {tag_name}",
+                        color="#24A890"
+                    )
+                
+                # Associate tag with post
+                self.post_tags[post_id].append(tag_id)
+            
+            logger.info(f"Updated tags for post {post_id}: {tag_names}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update tags for post {post_id}: {e}")
+            return False
     
     # ============================================
     # DISCUSSION/COMMENT OPERATIONS

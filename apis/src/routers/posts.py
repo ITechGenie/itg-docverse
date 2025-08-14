@@ -288,16 +288,21 @@ async def create_post(
 
         # Convert Post model to database format
         import uuid
+        import hashlib
         post_id = str(uuid.uuid4())
         
         # Generate title if not provided
         title = post_data.title
+        feed_content = None
         if not title:
             if post_data.post_type == PostType.THOUGHTS:
+
+                hash_id = hashlib.sha256(post_id.encode()).hexdigest()[:8]
+
                 # For thoughts, use first 50 characters of content as title
-                title = post_data.content[:50].strip()
-                if len(post_data.content) > 50:
-                    title += "..."
+                title = f"Thought #{hash_id}"
+                post_id = f"thought-{hash_id}"
+                feed_content = str(post_data.content)
             else:
                 # For other types, use a default title
                 title = f"Untitled {post_data.post_type.value.replace('-', ' ').title()}"
@@ -308,6 +313,7 @@ async def create_post(
             'post_type_id': post_data.post_type.value,  # Convert enum to string value
             'title': title,
             'content': post_data.content,
+            "feed_content": feed_content,
             'author_id': author_id,
             'status': post_data.status.value,  # Convert enum to string value
             'created_by': author_id,
@@ -397,10 +403,18 @@ async def update_post(
         
         logger.debug(f"Updating post {post_id} with data: {updates}")
         
+        # Update post data first
         updated_post = await db.update_post(post_id, updates)
         
         if not updated_post:
             raise HTTPException(status_code=404, detail="Post not found after update")
+        
+        # Handle tags update if provided
+        if post_data.tags is not None:
+            logger.debug(f"Updating tags for post {post_id}: {post_data.tags}")
+            await db.update_post_tags(current_user.get("user_id"), post_id, post_data.tags)
+            # Fetch updated post to get the new tags
+            updated_post = await db.get_post_by_id(post_id)
         
         # Transform database fields to match PostPublic model
         transformed_post = {

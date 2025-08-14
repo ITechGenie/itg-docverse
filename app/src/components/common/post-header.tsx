@@ -94,7 +94,7 @@ export const PostHeader = ({
       setLoadingReactions(true);
       const response = await api.getPostReactions(post.id);
       if (response.success && response.data) {
-        console.log('Fetched reactions:', response.data);
+        //console.log('Fetched reactions:', response.data);
         setReactions(response.data);
         setTotalReactions(response.data.length);
       }

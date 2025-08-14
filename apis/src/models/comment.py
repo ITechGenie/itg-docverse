@@ -39,6 +39,7 @@ class CommentPublic(BaseModel):
     """Public comment model"""
     id: str
     post_id: str
+    post_title: Optional[str] = None  # Title of the post
     author_id: str
     author_name: Optional[str] = None  # Display name of the author
     author_username: Optional[str] = None  # Username of the author
