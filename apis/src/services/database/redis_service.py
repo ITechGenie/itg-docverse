@@ -73,33 +73,63 @@ class RedisService(DatabaseService):
             return False
     
     async def execute_bootstrap(self, sql_content: str) -> bool:
-        """Execute bootstrap SQL script (no-op for Redis)"""
-        logger.info("Redis bootstrap executed (no-op)")
+        """Execute bootstrap SQL script (no-op for Redis - uses _initialize_indexes instead)"""
+        logger.debug(f"🔧 Redis bootstrap called with {len(sql_content)} characters of SQL content")
+        logger.debug("📝 Redis doesn't use SQL - using Redis-specific initialization via _initialize_indexes")
+        logger.info("✅ Redis bootstrap executed (no-op - Redis uses key-value initialization)")
         return True
     
     async def _initialize_indexes(self) -> None:
         """Initialize Redis indexes and data structures"""
         try:
+            logger.debug("🔧 Starting Redis indexes and data structures initialization...")
+            
             # Create index sets if they don't exist
-            await self.redis_client.sadd("indexes:users", "initialized")
-            await self.redis_client.sadd("indexes:posts", "initialized")
-            await self.redis_client.sadd("indexes:tags", "initialized")
-            await self.redis_client.sadd("indexes:comments", "initialized")
+            indexes_to_create = ["users", "posts", "tags", "comments"]
+            created_indexes = 0
+            existing_indexes = 0
+            
+            for index_name in indexes_to_create:
+                index_key = f"indexes:{index_name}"
+                if await self.redis_client.exists(index_key):
+                    existing_indexes += 1
+                    logger.debug(f"📋 Index {index_key} already exists")
+                else:
+                    await self.redis_client.sadd(index_key, "initialized")
+                    created_indexes += 1
+                    logger.debug(f"✅ Created index {index_key}")
+            
+            logger.debug(f"📊 Index summary: {created_indexes} created, {existing_indexes} existing")
             
             # Initialize counters if they don't exist
-            if not await self.redis_client.exists("counters:users"):
-                await self.redis_client.set("counters:users", 0)
-            if not await self.redis_client.exists("counters:posts"):
-                await self.redis_client.set("counters:posts", 0)
-            if not await self.redis_client.exists("counters:tags"):
-                await self.redis_client.set("counters:tags", 0)
-            if not await self.redis_client.exists("counters:comments"):
-                await self.redis_client.set("counters:comments", 0)
-                
-            logger.info("Redis indexes initialized")
+            counters_to_create = ["users", "posts", "tags", "comments"]
+            created_counters = 0
+            existing_counters = 0
+            
+            for counter_name in counters_to_create:
+                counter_key = f"counters:{counter_name}"
+                if not await self.redis_client.exists(counter_key):
+                    await self.redis_client.set(counter_key, 0)
+                    created_counters += 1
+                    logger.debug(f"✅ Created counter {counter_key} = 0")
+                else:
+                    current_value = await self.redis_client.get(counter_key)
+                    existing_counters += 1
+                    logger.debug(f"📋 Counter {counter_key} already exists = {current_value}")
+            
+            logger.debug(f"🔢 Counter summary: {created_counters} created, {existing_counters} existing")
+            
+            # Log Redis database info
+            db_size = await self.redis_client.dbsize()
+            memory_info = await self.redis_client.info("memory")
+            used_memory = memory_info.get('used_memory_human', 'unknown')
+            
+            logger.info(f"✅ Redis indexes initialized - DB size: {db_size} keys, Memory: {used_memory}")
             
         except Exception as e:
-            logger.error(f"Failed to initialize Redis indexes: {e}")
+            logger.error(f"❌ Failed to initialize Redis indexes: {e}")
+            import traceback
+            logger.debug(f"🐛 Redis initialization error traceback: {traceback.format_exc()}")
             raise
     
     def _serialize_model(self, obj: Any) -> str:
@@ -605,6 +635,50 @@ class RedisService(DatabaseService):
             logger.error(f"Failed to get comments for post {post_id}: {e}")
             return []
     
+    async def get_recent_comments(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent comments across all posts"""
+        try:
+            # Get all comment IDs
+            comment_ids = await self.redis_client.smembers("indexes:comments")
+            
+            # Get comments with timestamp for sorting
+            comments_with_ts = []
+            for comment_id in comment_ids:
+                comment = await self.get_comment_by_id(comment_id)
+                if comment:
+                    comments_with_ts.append((comment, comment.created_at))
+            
+            # Sort by created_at descending (most recent first)
+            comments_with_ts.sort(key=lambda x: x[1], reverse=True)
+            
+            # Apply pagination and convert to dict format
+            result = []
+            for comment, _ in comments_with_ts[skip:skip + limit]:
+                # Get user and post info
+                user = await self.get_user_by_id(comment.author_id)
+                post = await self.get_post_by_id(comment.post_id)
+                
+                comment_dict = {
+                    'id': comment.id,
+                    'post_id': comment.post_id,
+                    'author_id': comment.author_id,
+                    'content': comment.content,
+                    'parent_discussion_id': comment.parent_id,
+                    'is_edited': False,  # Mock value
+                    'created_ts': comment.created_at,
+                    'updated_ts': comment.updated_at,
+                    'display_name': user.display_name if user else 'Unknown',
+                    'username': user.username if user else 'unknown',
+                    'post_title': post.title if post else 'Unknown Post'
+                }
+                result.append(comment_dict)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to get recent comments: {e}")
+            return []
+    
     async def delete_comment(self, comment_id: str) -> bool:
         """Delete a comment"""
         try:
@@ -989,8 +1063,8 @@ class RedisService(DatabaseService):
     # ============================================
     # TAG ASSOCIATION OPERATIONS
     # ============================================
-    
-    async def associate_tags_with_post(self, post_id: str, tag_names: List[str]) -> bool:
+
+    async def associate_tags_with_post(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
         """Associate tags with a post"""
         try:
             for tag_name in tag_names:
@@ -1003,7 +1077,8 @@ class RedisService(DatabaseService):
                         name=tag_name,
                         description="",
                         color="#666666",
-                        posts_count=0
+                        posts_count=0,
+                        created_by=author_id
                     )
                     await self.create_tag(tag)
                 
@@ -1040,6 +1115,39 @@ class RedisService(DatabaseService):
         except Exception as e:
             logger.error(f"Failed to get post tags: {e}")
             return []
+
+    async def update_post_tags(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
+        """Update tags for a post by removing existing associations and creating new ones"""
+        try:
+            # Remove existing tag associations for this post
+            await self.redis_client.delete(f"post:tags:{post_id}")
+            
+            # Add new tag associations
+            for tag_name in tag_names:
+                # Find existing tag by name or create new one
+                tag = await self.get_tag_by_name(tag_name)
+                if not tag:
+                    # Create new tag
+                    import uuid
+                    from src.models.tag import Tag
+                    tag_id = str(uuid.uuid4())
+                    tag = Tag(
+                        id=tag_id,
+                        name=tag_name,
+                        description=f"Auto-created tag: {tag_name}",
+                        color="#24A890"
+                    )
+                    await self.create_tag(tag)
+                
+                # Associate tag with post
+                await self.redis_client.sadd(f"post:tags:{post_id}", tag.id)
+                await self.redis_client.sadd(f"tag:posts:{tag.id}", post_id)
+            
+            logger.info(f"Updated tags for post {post_id}: {tag_names}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update tags for post {post_id}: {e}")
+            return False
     
     # ============================================
     # DISCUSSION/COMMENT OPERATIONS

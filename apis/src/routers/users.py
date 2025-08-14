@@ -13,14 +13,9 @@ from ..middleware.dependencies import get_current_user_from_middleware
 
 router = APIRouter()
 
-# Global database service
-db_service = DatabaseServiceFactory.create_service()
-
 async def get_db_service() -> DatabaseService:
-    """Dependency to get database service"""
-    if not hasattr(db_service, 'initialized') or not db_service.initialized:
-        await db_service.initialize()
-    return db_service
+    """Dependency to get database service - using singleton pattern"""
+    return DatabaseServiceFactory.create_service()
 
 @router.get("/", response_model=List[UserPublic])
 async def get_users(

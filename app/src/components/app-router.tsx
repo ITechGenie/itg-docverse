@@ -22,6 +22,7 @@ const Documents = lazy(() => import('@/pages/documents'));
 const PostVersions = lazy(() => import('@/pages/post-versions'));
 const SearchPage = lazy(() => import('@/pages/search'));
 const LoginPage = lazy(() => import('@/pages/login'));
+const DiscussionsPage = lazy(() => import('@/pages/discussions'));
 
 // Loading fallback components for different sections
 const PageLoadingFallback = () => (
@@ -170,6 +171,13 @@ export default function AppRouter() {
         <Route path="/search" element={
           <Suspense fallback={<PageLoadingFallback />}>
             <SearchPage />
+          </Suspense>
+        } />
+        
+        {/* Discussions Routes */}
+        <Route path="/discussions" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <DiscussionsPage />
           </Suspense>
         } />
         

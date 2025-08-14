@@ -14,14 +14,9 @@ from ..middleware.dependencies import get_current_user_from_middleware
 
 router = APIRouter()
 
-# Global database service
-db_service = DatabaseServiceFactory.create_service()
-
 async def get_db_service() -> DatabaseService:
-    """Dependency to get database service"""
-    if not hasattr(db_service, 'initialized') or not db_service.initialized:
-        await db_service.initialize()
-    return db_service
+    """Dependency to get database service - using singleton pattern"""
+    return DatabaseServiceFactory.create_service()
 
 @router.get("/", response_model=List[CommentPublic])
 async def get_all_comments(
@@ -32,9 +27,26 @@ async def get_all_comments(
 ):
     """Get all comments with pagination (requires authentication)"""
     try:
-        # For now, return empty list since MockService doesn't have get_all_comments
-        # This will be implemented when we have proper database services
-        return []
+        # Get recent comments from all posts
+        comments_data = await db.get_recent_comments(skip, limit)
+        comments = []
+        for comment_dict in comments_data:
+            comment = CommentPublic(
+                id=comment_dict['id'],
+                post_id=comment_dict['post_id'],
+                post_title=comment_dict.get('post_title'),
+                author_id=comment_dict['author_id'],
+                author_name=comment_dict.get('display_name', comment_dict.get('author_name')),
+                author_username=comment_dict.get('username', comment_dict.get('author_username')),
+                content=comment_dict['content'],
+                parent_id=comment_dict.get('parent_discussion_id'),
+                like_count=comment_dict.get('like_count', 0),
+                is_edited=comment_dict.get('is_edited', False),
+                created_at=comment_dict['created_ts'],
+                updated_at=comment_dict.get('updated_ts', comment_dict['created_ts'])
+            )
+            comments.append(comment)
+        return comments
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching comments: {str(e)}")
 

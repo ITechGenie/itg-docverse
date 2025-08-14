@@ -4,6 +4,7 @@ Handles all author/contributor-related endpoints
 """
 
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 
@@ -13,12 +14,9 @@ from ..middleware.dependencies import get_current_user_from_middleware
 
 router = APIRouter()
 
-# Global database service
-db_service = DatabaseServiceFactory.create_service()
-
 async def get_db_service() -> DatabaseService:
-    """Dependency to get database service"""
-    return db_service
+    """Dependency to get database service - using singleton pattern"""
+    return DatabaseServiceFactory.create_service()
 
 class AuthorResponse(BaseModel):
     id: str
@@ -86,6 +84,15 @@ async def search_authors(
         
         authors_list = []
         for row in results:
+            # Convert datetime objects to strings
+            first_post_date = row['first_post_date']
+            if isinstance(first_post_date, datetime):
+                first_post_date = first_post_date.isoformat()
+            
+            last_post_date = row['last_post_date']
+            if isinstance(last_post_date, datetime):
+                last_post_date = last_post_date.isoformat()
+            
             authors_list.append(AuthorResponse(
                 id=str(row['id']),
                 name=row['name'],
@@ -93,8 +100,8 @@ async def search_authors(
                 avatar_url=row['avatar_url'],
                 bio=row['bio'],
                 posts_count=row['posts_count'],
-                first_post_date=row['first_post_date'],
-                last_post_date=row['last_post_date'],
+                first_post_date=first_post_date,
+                last_post_date=last_post_date,
                 total_views=row['total_views'] or 0,
                 total_likes=row['total_likes'] or 0
             ))
@@ -148,6 +155,15 @@ async def get_top_authors(
         
         authors_list = []
         for row in results:
+            # Convert datetime objects to strings
+            first_post_date = row['first_post_date']
+            if isinstance(first_post_date, datetime):
+                first_post_date = first_post_date.isoformat()
+            
+            last_post_date = row['last_post_date']
+            if isinstance(last_post_date, datetime):
+                last_post_date = last_post_date.isoformat()
+            
             authors_list.append(AuthorResponse(
                 id=str(row['id']),
                 name=row['name'],
@@ -155,8 +171,8 @@ async def get_top_authors(
                 avatar_url=row['avatar_url'],
                 bio=row['bio'],
                 posts_count=row['posts_count'],
-                first_post_date=row['first_post_date'],
-                last_post_date=row['last_post_date'],
+                first_post_date=first_post_date,
+                last_post_date=last_post_date,
                 total_views=row['total_views'] or 0,
                 total_likes=row['total_likes'] or 0
             ))
@@ -202,6 +218,16 @@ async def get_author_details(
             raise HTTPException(status_code=404, detail="Author not found")
         
         row = results[0]
+        
+        # Convert datetime objects to strings
+        first_post_date = row['first_post_date']
+        if isinstance(first_post_date, datetime):
+            first_post_date = first_post_date.isoformat()
+        
+        last_post_date = row['last_post_date']
+        if isinstance(last_post_date, datetime):
+            last_post_date = last_post_date.isoformat()
+        
         return AuthorResponse(
             id=str(row['id']),
             name=row['name'],
@@ -209,8 +235,8 @@ async def get_author_details(
             avatar_url=row['avatar_url'],
             bio=row['bio'],
             posts_count=row['posts_count'],
-            first_post_date=row['first_post_date'],
-            last_post_date=row['last_post_date'],
+            first_post_date=first_post_date,
+            last_post_date=last_post_date,
             total_views=row['total_views'] or 0,
             total_likes=row['total_likes'] or 0
         )

@@ -11,6 +11,7 @@ from ..services.database.factory import DatabaseServiceFactory
 from ..services.database.base import DatabaseService
 from ..middleware.dependencies import get_current_user_from_middleware
 from ..utils.logger import get_logger
+from ..config.settings import settings
 
 router = APIRouter()
 
@@ -34,19 +35,36 @@ async def get_favorite_filtered_posts(
 ) -> List[Dict[str, Any]]:
     """Get posts filtered by favorites (either favorite posts or posts from favorite tags)"""
     
-    # Use the same query structure as the normal get_posts method in sqlite_service
-    base_query = """
-    SELECT p.id, p.title, p.author_id, p.post_type_id, p.status,
-           p.project_id, p.git_url, p.created_ts, p.updated_ts,
-           COALESCE(pc.content, p.feed_content, '') as content,
-           (
+    # Build the base query with database-specific SQL functions
+    if settings.database_type == "postgresql":
+        # PostgreSQL - use string_agg and TRUE
+        tags_query = """
+               SELECT string_agg(tt.name, ', ')
+               FROM post_tags ptg
+               JOIN tag_types tt ON ptg.tag_id = tt.id
+               WHERE ptg.post_id = p.id
+           """
+        is_current_value = "TRUE"
+    else:
+        # SQLite and others - use GROUP_CONCAT and 1
+        tags_query = """
                SELECT GROUP_CONCAT(tt.name, ', ')
                FROM post_tags ptg
                JOIN tag_types tt ON ptg.tag_id = tt.id
                WHERE ptg.post_id = p.id
-           ) AS tags
+           """
+        is_current_value = "1"
+    
+    base_query = f"""
+    SELECT p.id, p.title, p.author_id,
+    u.username, u.display_name, u.email, u.avatar_url, 
+            p.post_type_id, p.status,
+           p.project_id, p.git_url, p.created_ts, p.updated_ts,
+           COALESCE(pc.content, p.feed_content, '') as content,
+           ({tags_query}) AS tags
     FROM posts p
-    LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = 1
+    JOIN users u ON p.author_id = u.id
+    LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = {is_current_value}
     """
     
     where_conditions = ["p.status = ?", "p.is_latest = ?"]
@@ -108,16 +126,27 @@ async def get_favorite_filtered_posts(
     logger.debug(f"Executing favorite query: {base_query}")
     logger.debug(f"With parameters: {params}")
     
-    results = await db.execute_query(base_query, tuple(params))
+    # Check database type and convert placeholders if needed
+    if settings.database_type == "postgresql":
+        # PostgreSQL service - convert ? to $1, $2, etc.
+        pg_query = db._convert_placeholders(base_query)
+        results = await db.execute_query(pg_query, tuple(params))
+    else:
+        # SQLite or other service - use as-is
+        results = await db.execute_query(base_query, tuple(params))
+        
     logger.debug(f"Query returned {len(results) if results else 0} results")
     
     return results
 
+router = APIRouter()
+
+# Initialize logger
+logger = get_logger("PostsAPI", level="DEBUG", json_format=False)
+
 async def get_db_service() -> DatabaseService:
-    """Dependency to get database service"""
-    if not hasattr(db_service, 'initialized') or not db_service.initialized:
-        await db_service.initialize()
-    return db_service
+    """Dependency to get database service - using singleton pattern"""
+    return DatabaseServiceFactory.create_service()
 
 @router.get("/", response_model=List[PostPublic])
 async def get_posts(
@@ -173,6 +202,8 @@ async def get_posts(
                 'title': post['title'],
                 'content': post.get('content') or '',  # Ensure content is never None
                 'author_id': post['author_id'],
+                'author_name': post['display_name'],
+                'author_username': post['username'],
                 'post_type': PostType(post['post_type_id']),  # Convert string to enum
                 'status': PostStatus(post['status']),  # Convert string to enum
                 'tags': [
@@ -214,9 +245,14 @@ async def get_post(
             'title': post['title'],
             'content': post.get('content') or '',  # Ensure content is never None
             'author_id': post['author_id'],
+            'author_name': post['display_name'],
+            'author_username': post['username'],
             'post_type': PostType(post['post_type_id']),  # Convert string to enum
             'status': PostStatus(post['status']),  # Convert string to enum
-            'tags': [],  # TODO: Fetch associated tags
+            'tags': [
+                    {"id": tag.strip(), "name": tag.strip(), "color": "#24A890"}
+                    for tag in post.get('tags', '').split(',') if tag.strip()
+                ] if post.get('tags') else [],
             'is_document': False,  # Default value since not in DB schema
             'project_id': post.get('project_id'),
             'git_url': post.get('git_url'),
@@ -252,16 +288,21 @@ async def create_post(
 
         # Convert Post model to database format
         import uuid
+        import hashlib
         post_id = str(uuid.uuid4())
         
         # Generate title if not provided
         title = post_data.title
+        feed_content = None
         if not title:
             if post_data.post_type == PostType.THOUGHTS:
+
+                hash_id = hashlib.sha256(post_id.encode()).hexdigest()[:8]
+
                 # For thoughts, use first 50 characters of content as title
-                title = post_data.content[:50].strip()
-                if len(post_data.content) > 50:
-                    title += "..."
+                title = f"Thought #{hash_id}"
+                post_id = f"thought-{hash_id}"
+                feed_content = str(post_data.content)
             else:
                 # For other types, use a default title
                 title = f"Untitled {post_data.post_type.value.replace('-', ' ').title()}"
@@ -272,6 +313,7 @@ async def create_post(
             'post_type_id': post_data.post_type.value,  # Convert enum to string value
             'title': title,
             'content': post_data.content,
+            "feed_content": feed_content,
             'author_id': author_id,
             'status': post_data.status.value,  # Convert enum to string value
             'created_by': author_id,
@@ -289,7 +331,7 @@ async def create_post(
 
         # Handle tags if provided
         if post_data.tags:
-            await db.associate_tags_with_post(created_post_id, post_data.tags)
+            await db.associate_tags_with_post(author_id, created_post_id, post_data.tags)
             logger.debug(f"Associated {len(post_data.tags)} tags with post {created_post_id}")
 
         logger.info(f"Successfully created post with ID: {created_post_id}")
@@ -305,9 +347,14 @@ async def create_post(
             'title': created_post['title'],
             'content': created_post.get('content') or '',  # Ensure content is never None
             'author_id': created_post['author_id'],
+            'author_name': created_post['display_name'],
+            'author_username': created_post['username'],
             'post_type': PostType(created_post['post_type_id']),  # Convert string to enum
             'status': PostStatus(created_post['status']),  # Convert string to enum
-            'tags': [],  # TODO: Fetch associated tags
+            'tags': [
+                    {"id": tag.strip(), "name": tag.strip(), "color": "#24A890"}
+                    for tag in created_post.get('tags', '').split(',') if tag.strip()
+                ] if created_post.get('tags') else [],
             'is_document': False,  # Default value since not in DB schema
             'project_id': created_post.get('project_id'),
             'git_url': created_post.get('git_url'),
@@ -356,10 +403,18 @@ async def update_post(
         
         logger.debug(f"Updating post {post_id} with data: {updates}")
         
+        # Update post data first
         updated_post = await db.update_post(post_id, updates)
         
         if not updated_post:
             raise HTTPException(status_code=404, detail="Post not found after update")
+        
+        # Handle tags update if provided
+        if post_data.tags is not None:
+            logger.debug(f"Updating tags for post {post_id}: {post_data.tags}")
+            await db.update_post_tags(current_user.get("user_id"), post_id, post_data.tags)
+            # Fetch updated post to get the new tags
+            updated_post = await db.get_post_by_id(post_id)
         
         # Transform database fields to match PostPublic model
         transformed_post = {
@@ -369,7 +424,10 @@ async def update_post(
             'author_id': updated_post['author_id'],
             'post_type': PostType(updated_post['post_type_id']),
             'status': PostStatus(updated_post['status']),
-            'tags': [],  # TODO: Fetch associated tags
+            'tags': [
+                {"id": tag.strip(), "name": tag.strip(), "color": "#24A890"}
+                for tag in updated_post.get('tags', '').split(',') if tag.strip()
+            ] if updated_post.get('tags') else [],
             'is_document': False,
             'project_id': updated_post.get('project_id'),
             'git_url': updated_post.get('git_url'),

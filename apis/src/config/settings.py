@@ -30,6 +30,8 @@ class Settings(BaseModel):
     postgres_db: str = "itg_docverse"
     postgres_user: str = "postgres"
     postgres_password: str = "password"
+
+    db_pool_size: int = 10  # Default pool size for database connections
     
     # SQLite Configuration
     sqlite_path: str = "./itg_docverse.db"
@@ -103,6 +105,7 @@ def get_settings() -> Settings:
         "postgres_db": os.getenv("POSTGRES_DB", defaults.postgres_db),
         "postgres_user": os.getenv("POSTGRES_USER", defaults.postgres_user),
         "postgres_password": os.getenv("POSTGRES_PASSWORD", defaults.postgres_password),
+        "db_pool_size": int(os.getenv("DB_POOL_SIZE", defaults.db_pool_size)),
         "sqlite_path": os.getenv("SQLITE_PATH", defaults.sqlite_path),
         "jwt_secret_key": os.getenv("JWT_SECRET_KEY", defaults.jwt_secret_key),
         "jwt_algorithm": os.getenv("JWT_ALGORITHM", defaults.jwt_algorithm),

@@ -129,6 +129,11 @@ class DatabaseService(ABC):
         pass
     
     @abstractmethod
+    async def get_recent_comments(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent comments across all posts"""
+        pass
+    
+    @abstractmethod
     async def delete_comment(self, comment_id: str) -> bool:
         """Delete a comment"""
         pass
@@ -218,13 +223,18 @@ class DatabaseService(ABC):
     # ============================================
     
     @abstractmethod
-    async def associate_tags_with_post(self, post_id: str, tag_names: List[str]) -> bool:
+    async def associate_tags_with_post(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
         """Associate tags with a post"""
         pass
     
     @abstractmethod
     async def get_post_tags(self, post_id: str) -> List[Dict[str, Any]]:
         """Get tags for a specific post"""
+        pass
+    
+    @abstractmethod
+    async def update_post_tags(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
+        """Update tags for a post by removing existing associations and creating new ones"""
         pass
     
     # ============================================

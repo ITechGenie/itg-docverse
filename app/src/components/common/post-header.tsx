@@ -94,7 +94,7 @@ export const PostHeader = ({
       setLoadingReactions(true);
       const response = await api.getPostReactions(post.id);
       if (response.success && response.data) {
-        console.log('Fetched reactions:', response.data);
+        //console.log('Fetched reactions:', response.data);
         setReactions(response.data);
         setTotalReactions(response.data.length);
       }
@@ -141,13 +141,13 @@ export const PostHeader = ({
             <Avatar className="w-10 h-10 hover:ring-2 hover:ring-primary transition-all">
               <AvatarImage src={avatarUrl} alt={post.author.displayName} />
               <AvatarFallback>
-                {post.author.displayName.split(' ').map(n => n[0]).join('')}
+                {post.author.id + ""}
               </AvatarFallback>
             </Avatar>
           </Link>
           <div>
             <Link 
-              to={`/profile/${post.author.id}`}
+              to={`/profile/${post.author.username}`}
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {post.author.displayName}
@@ -316,7 +316,7 @@ export const PostHeader = ({
                     <span>Versions</span>
                   </Button>
                 )}
-                <Button
+                {isDetailView && <Button
                   variant="outline"
                   size="sm"
                   className="text-xs flex items-center space-x-1"
@@ -325,7 +325,7 @@ export const PostHeader = ({
                 >
                   <Edit3 className="w-3 h-3" />
                   <span>Edit</span>
-                </Button>
+                </Button>}
                 
               </div>
           )}

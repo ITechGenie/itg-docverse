@@ -6,6 +6,10 @@ Handles all tag-related endpoints (requires authentication)
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
+from datetime import datetime
+
+from ..config.settings import settings
+from ..utils.logger import get_logger
 
 from ..models.tag import Tag, TagCreate, TagUpdate, TagPublic
 from ..services.database.factory import DatabaseServiceFactory
@@ -14,8 +18,8 @@ from ..middleware.dependencies import get_current_user_from_middleware
 
 router = APIRouter()
 
-# Global database service
-db_service = DatabaseServiceFactory.create_service()
+# Initialize logger - now just like log4j!
+logger = get_logger("PostsAPI", level="DEBUG", json_format=False)
 
 # Additional response models for new endpoints
 class TagTypeAheadResponse(BaseModel):
@@ -32,8 +36,8 @@ class TagWithStats(BaseModel):
     category: Optional[str] = 'general'
     posts_count: int
     is_active: bool
-    created_ts: str
-    updated_ts: str
+    created_ts: datetime
+    updated_ts: datetime
 
 class PostsByTagResponse(BaseModel):
     posts: List[Dict[str, Any]]
@@ -41,10 +45,8 @@ class PostsByTagResponse(BaseModel):
     tag: Dict[str, str]
 
 async def get_db_service() -> DatabaseService:
-    """Dependency to get database service"""
-    if not hasattr(db_service, 'initialized') or not db_service.initialized:
-        await db_service.initialize()
-    return db_service
+    """Dependency to get database service - using singleton pattern"""
+    return DatabaseServiceFactory.create_service()
 
 @router.get("/search", response_model=List[TagTypeAheadResponse])
 async def search_tags(
@@ -56,13 +58,24 @@ async def search_tags(
     """Search tags with type-ahead functionality"""
     try:
         # Search tags by name (case-insensitive) with dynamic post count calculation
-        query = """
+        
+        is_active = "1"
+        is_latest = "1"
+        if settings.database_type == "postgresql":
+        # PostgreSQL - use string_agg and TRUE
+            is_active = "TRUE"
+            is_latest = "TRUE"
+        else:
+            is_active = "1"
+            is_latest = "1"
+        
+        query = f"""
             SELECT tt.id, tt.name, tt.color, 
                    COUNT(DISTINCT pt.post_id) as posts_count
             FROM tag_types tt
             LEFT JOIN post_tags pt ON tt.id = pt.tag_id
-            LEFT JOIN posts p ON pt.post_id = p.id AND p.status = 'published' AND p.is_latest = 1
-            WHERE tt.name LIKE ? AND tt.is_active = 1
+            LEFT JOIN posts p ON pt.post_id = p.id AND p.status = 'published' AND p.is_latest = {is_latest}
+            WHERE tt.name LIKE ? AND tt.is_active = {is_active}
             GROUP BY tt.id, tt.name, tt.color
             ORDER BY COUNT(DISTINCT pt.post_id) DESC, tt.name ASC
             LIMIT ?
@@ -92,14 +105,25 @@ async def get_popular_tags(
 ):
     """Get popular tags ordered by post count (calculated dynamically)"""
     try:
+        is_active = "1"
+        is_latest = "1"
+        if settings.database_type == "postgresql":
+        # PostgreSQL - use string_agg and TRUE
+            is_active = "TRUE"
+            is_latest = "TRUE"
+        else:
+            is_active = "1"
+            is_latest = "1"
+
+        logger.debug(f"Fetching popular tags with is_active={is_active} and limit={limit}") 
         # Calculate post counts dynamically from post_tags table
-        query = """
+        query = f"""
             SELECT tt.*, 
                    COUNT(DISTINCT pt.post_id) as posts_count
             FROM tag_types tt
             LEFT JOIN post_tags pt ON tt.id = pt.tag_id
-            LEFT JOIN posts p ON pt.post_id = p.id AND p.status = 'published' AND p.is_latest = 1
-            WHERE tt.is_active = 1
+            LEFT JOIN posts p ON pt.post_id = p.id AND p.status = 'published' AND p.is_latest = {is_latest}
+            WHERE tt.is_active = {is_active}
             GROUP BY tt.id, tt.name, tt.description, tt.color, tt.category, tt.is_active, tt.created_ts, tt.updated_ts
             ORDER BY COUNT(DISTINCT pt.post_id) DESC, tt.name ASC
             LIMIT ?
@@ -395,7 +419,8 @@ async def create_tag(
 ):
     """Create a new tag (requires authentication)"""
     try:
-        tag = Tag(**tag_data.model_dump())
+        author_id = current_user.get("user_id")
+        tag = Tag(**tag_data.model_dump(), created_by=author_id)
         created_tag = await db.create_tag(tag)
         return TagPublic(**created_tag.model_dump())
     except Exception as e:

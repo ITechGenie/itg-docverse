@@ -82,6 +82,8 @@ class PostPublic(BaseModel):
     title: str
     content: str
     author_id: str
+    author_name: str = ""
+    author_username: str = ""
     post_type: PostType
     status: PostStatus
     tags: List[dict] = Field(

@@ -27,6 +27,9 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         # Set the context variables for logging
         from ..utils.logger import set_request_context
         set_request_context(request_id, user_id)
+        
+        # Debug: print to see if context is being set
+        print(f"🔍 RequestContext: ID={request_id}, UserID={user_id}")
 
         # Proceed with the request
         response = await call_next(request)

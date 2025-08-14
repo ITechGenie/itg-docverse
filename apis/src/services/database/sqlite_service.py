@@ -52,24 +52,34 @@ class SQLiteService(DatabaseService):
     async def _run_bootstrap(self, db):
         """Run bootstrap SQL to create schema and initial data"""
         try:
-            logger.info("🔧 Running database bootstrap...")
+            logger.info("🔧 Running SQLite database bootstrap...")
             
             # Read bootstrap SQL file
             bootstrap_sql_path = Path(__file__).parent.parent.parent.parent / "bootstrap.sql"
+            logger.debug(f"📁 Looking for bootstrap SQL at: {bootstrap_sql_path}")
             
             if not bootstrap_sql_path.exists():
-                logger.warning(f"Bootstrap SQL file not found: {bootstrap_sql_path}")
+                logger.warning(f"❌ Bootstrap SQL file not found: {bootstrap_sql_path}")
                 return
                 
+            logger.debug(f"✅ Bootstrap SQL file found, loading content...")
             with open(bootstrap_sql_path, 'r', encoding='utf-8') as file:
                 sql_content = file.read()
                 
+            # Log file statistics
+            char_count = len(sql_content)
+            line_count = len(sql_content.split('\n'))
+            statement_count = len([stmt.strip() for stmt in sql_content.split(';') if stmt.strip()])
+            logger.debug(f"📊 Bootstrap SQL loaded: {char_count} characters, {line_count} lines, ~{statement_count} statements")
+                
             # Execute bootstrap SQL
             await self.execute_bootstrap(sql_content)
-            logger.info("✅ Database bootstrap completed successfully")
+            logger.info("✅ SQLite database bootstrap completed successfully")
             
         except Exception as e:
-            logger.error(f"Failed to run database bootstrap: {e}")
+            logger.error(f"❌ Failed to run SQLite database bootstrap: {e}")
+            import traceback
+            logger.debug(f"🐛 Bootstrap error traceback: {traceback.format_exc()}")
             raise
             
     async def close(self):
@@ -93,25 +103,44 @@ class SQLiteService(DatabaseService):
         """Execute bootstrap SQL script"""
         try:
             async with aiosqlite.connect(self.db_path) as db:
+                logger.debug(f"🔧 Starting SQLite bootstrap execution with {len(sql_content)} characters of SQL")
+                
                 # Enable foreign key constraints
                 await db.execute("PRAGMA foreign_keys = ON")
+                logger.debug("🔐 SQLite PRAGMA foreign_keys = ON enabled")
                 
                 # Split SQL content into individual statements
                 statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
+                logger.info(f"📊 Executing {len(statements)} SQLite SQL statements...")
                 
-                for statement in statements:
+                success_count = 0
+                warning_count = 0
+                
+                for i, statement in enumerate(statements, 1):
                     if statement.strip():
                         try:
+                            # Log statement type for debugging
+                            stmt_type = statement.split()[0].upper() if statement.split() else "UNKNOWN"
+                            logger.debug(f"[{i}/{len(statements)}] Executing {stmt_type}: {statement[:50]}...")
+                            
                             await db.execute(statement)
+                            success_count += 1
+                            
+                            if stmt_type in ['CREATE', 'INSERT']:
+                                logger.debug(f"✅ [{i}/{len(statements)}] {stmt_type} successful")
+                                
                         except Exception as stmt_error:
-                            logger.warning(f"Statement execution warning: {stmt_error}")
-                            logger.debug(f"Statement: {statement[:100]}...")
+                            warning_count += 1
+                            logger.warning(f"⚠️ [{i}/{len(statements)}] SQLite statement execution warning: {stmt_error}")
+                            logger.debug(f"📋 Failed statement: {statement[:200]}...")
                 
                 await db.commit()
-                logger.info("✅ Bootstrap SQL executed successfully")
+                logger.info(f"✅ SQLite bootstrap SQL executed: {success_count} successful, {warning_count} warnings")
                 
         except Exception as e:
-            logger.error(f"Bootstrap execution failed: {e}")
+            logger.error(f"❌ SQLite bootstrap execution failed: {e}")
+            import traceback
+            logger.debug(f"🐛 SQLite bootstrap error traceback: {traceback.format_exc()}")
             raise
             
     async def execute_query(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
@@ -290,6 +319,52 @@ class SQLiteService(DatabaseService):
                WHERE pt.post_id = ? AND tt.is_active = ?""",
             (post_id, True)
         )
+
+    async def update_post_tags(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
+        """Update tags for a post by removing existing associations and creating new ones"""
+        try:
+            # Remove existing tag associations for this post
+            await self.execute_command(
+                "DELETE FROM post_tags WHERE post_id = ?",
+                (post_id,)
+            )
+            
+            # Add new tag associations
+            for tag_name in tag_names:
+                # Check if tag exists by name
+                tag_result = await self.execute_query(
+                    "SELECT id FROM tag_types WHERE name = ? AND is_active = ?",
+                    (tag_name, True)
+                )
+                
+                if tag_result:
+                    tag_id = tag_result[0]['id']
+                else:
+                    # Create tag
+                    import uuid
+                    tag_id = str(uuid.uuid4())
+                    await self.execute_command(
+                        """
+                        INSERT INTO tag_types (id, name, description, created_by)
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        (tag_id, tag_name, f"Auto-created tag: {tag_name}", author_id)
+                    )
+                
+                # Associate tag with post
+                await self.execute_command(
+                    """
+                    INSERT INTO post_tags (post_id, tag_id, created_by)
+                    VALUES (?, ?, ?)
+                    """,
+                    (post_id, tag_id, author_id)
+                )
+            
+            logger.info(f"Updated tags for post {post_id}: {tag_names}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update tags for post {post_id}: {e}")
+            return False
         
     # Reaction operations  
     async def add_reaction(self, target_id: str, user_id: str, reaction_type: str, target_type: str = 'post') -> Dict[str, Any]:
@@ -395,8 +470,8 @@ class SQLiteService(DatabaseService):
             )
         )
         return discussion_data['id']
-        
-    async def associate_tags_with_post(self, post_id: str, tag_names: List[str]) -> bool:
+
+    async def associate_tags_with_post(self, author_id: str, post_id: str, tag_names: List[str]) -> bool:
         """Associate tags with a post"""
         try:
             for tag_name in tag_names:
@@ -410,7 +485,7 @@ class SQLiteService(DatabaseService):
                         'id': tag_id,
                         'name': tag_name,
                         'description': f'Auto-created tag: {tag_name}',
-                        'created_by': 'system'
+                        'created_by': author_id
                     })
                 else:
                     tag_id = existing_tag['id']
@@ -581,6 +656,32 @@ class SQLiteService(DatabaseService):
     async def get_comments_by_post(self, post_id: str) -> List[Dict[str, Any]]:
         """Get comments for a post"""
         return await self.get_post_discussions(post_id)
+    
+    async def get_recent_comments(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent comments across all posts"""
+        return await self.execute_query(
+            """
+            SELECT 
+                pd.id,
+                pd.post_id,
+                pd.author_id,
+                pd.content,
+                pd.parent_discussion_id,
+                pd.is_edited,
+                pd.created_ts,
+                pd.updated_ts,
+                u.display_name,
+                u.username,
+                p.title as post_title
+            FROM post_discussions pd
+            JOIN users u ON pd.author_id = u.id
+            JOIN posts p ON pd.post_id = p.id
+            WHERE pd.is_deleted = 0
+            ORDER BY pd.created_ts DESC
+            LIMIT ? OFFSET ?
+            """,
+            (limit, skip)
+        )
         
     async def delete_comment(self, comment_id: str) -> bool:
         """Delete a comment (soft delete)"""

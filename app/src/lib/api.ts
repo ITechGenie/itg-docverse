@@ -10,7 +10,8 @@ import type {
   ReactionType,
   SearchResult,
   SearchFilters,
-  SearchConfig
+  SearchConfig,
+  Comment
 } from '@/types';
 import { api as apiClient } from '@/lib/api-client';
 
@@ -300,6 +301,42 @@ export const searchApi = {
     } catch (error) {
       console.error('Indexing failed:', error);
       return { success: false, error: 'Failed to trigger indexing' };
+    }
+  },
+};
+
+// Comments API
+export const commentsApi = {
+  // Get recent comments across all posts
+  async getRecent(skip: number = 0, limit: number = 15): Promise<ApiResponse<Comment[]>> {
+    try {
+      const response = await apiClient.getRecentComments(skip, limit);
+      return response;
+    } catch (error) {
+      console.error('Failed to get recent comments:', error);
+      return { success: false, error: 'Failed to load recent comments' };
+    }
+  },
+
+  // Get comments for a specific post
+  async getForPost(postId: string): Promise<ApiResponse<Comment[]>> {
+    try {
+      const response = await apiClient.getComments(postId);
+      return response;
+    } catch (error) {
+      console.error('Failed to get post comments:', error);
+      return { success: false, error: 'Failed to load comments' };
+    }
+  },
+
+  // Create a new comment
+  async create(postId: string, content: string, parentId?: string): Promise<ApiResponse<Comment>> {
+    try {
+      const response = await apiClient.createComment(postId, content, parentId);
+      return response;
+    } catch (error) {
+      console.error('Failed to create comment:', error);
+      return { success: false, error: 'Failed to create comment' };
     }
   },
 };

@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { api } from '@/lib/api-client';
 import type { Post, Comment } from '@/types';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from "@/contexts/auth-context"
 
 interface DiscussionSectionProps {
   post: Post;
@@ -90,6 +90,12 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
         const response = await api.getReactions(comment.id, 'discussion');
         if (response.success && response.data) {
           reactions[comment.id] = response.data;
+          // Debug: Log reaction data to see structure
+          if (response.data.length > 0) {
+            console.log(`Reactions for comment ${comment.id}:`, response.data);
+            console.log('Current user ID:', currentUser?.id);
+            console.log('User has upvoted:', response.data.some((r: any) => r.reaction_type === 'event-thumbs-up' && r.user_id === currentUser?.id));
+          }
         }
       }
       
@@ -250,8 +256,16 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-7 px-2 text-muted-foreground hover:text-foreground hover:text-green-600"
-                          title="Like this comment"
+                          className={`h-7 px-2 text-muted-foreground hover:text-foreground hover:text-green-600 ${
+                            commentReactions[comment.id]?.some(r => r.reaction_type === 'event-thumbs-up' && r.user_id === currentUser?.id) 
+                              ? 'text-green-600  ' 
+                              : ''
+                          }`}
+                          title={`${
+                            commentReactions[comment.id]?.some(r => r.reaction_type === 'event-thumbs-down' && r.user_id === currentUser?.id) 
+                              ?"Like this comment"
+                              :  "Remove like"
+                          }`}
                           onClick={() => handleCommentReaction(comment.id, 'event-thumbs-up')}
                         >
                           <ThumbsUp className="w-3 h-3 mr-1" />
@@ -262,8 +276,16 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-7 px-2 text-muted-foreground hover:text-foreground hover:text-red-600"
-                          title="Dislike this comment"
+                          className={`h-7 px-2 text-muted-foreground hover:text-foreground hover:text-red-600 ${
+                            commentReactions[comment.id]?.some(r => r.reaction_type === 'event-thumbs-down' && r.user_id === currentUser?.id) 
+                              ? 'text-red-600  ' 
+                              : ''
+                          }`}
+                          title={`${
+                            commentReactions[comment.id]?.some(r => r.reaction_type === 'event-thumbs-down' && r.user_id === currentUser?.id) 
+                              ? "Dislike this comment"
+                              : "Remove dislike"
+                          }`}
                           onClick={() => handleCommentReaction(comment.id, 'event-thumbs-down')}
                         >
                           <ThumbsDown className="w-3 h-3 mr-1" />

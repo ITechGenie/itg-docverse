@@ -23,9 +23,12 @@ from ..config.settings import get_settings
 router = APIRouter()
 
 # Global services
-db_service = DatabaseServiceFactory.create_service()
 settings = get_settings()
 logger = get_logger("SearchAPI", level="DEBUG", json_format=False)
+
+async def get_db_service() -> DatabaseService:
+    """Dependency to get database service - using singleton pattern"""
+    return DatabaseServiceFactory.create_service()
 
 # Redis connection for vector storage (only if AI search is enabled)
 redis_client = None
@@ -79,16 +82,31 @@ class IndexStatus(BaseModel):
 async def traditional_database_search(
     query: str, 
     limit: int = 10, 
-    post_types: Optional[List[str]] = None
+    post_types: Optional[List[str]] = None,
+    db_service: DatabaseService = None
 ) -> List[Dict[str, Any]]:
     """
     Traditional database search using SQL LIKE queries
     Fallback when AI search is disabled or unavailable
     """
     try:
+        # Get database-specific settings
+        settings = get_settings()
+        
+        if settings.database_type == "postgresql":
+            # PostgreSQL - use string_agg and TRUE
+            tag_aggregation = "string_agg(tt.name, ', ')"
+            is_active = "TRUE"
+            is_latest = "TRUE"
+        else:
+            # SQLite - use GROUP_CONCAT and 1
+            tag_aggregation = "GROUP_CONCAT(tt.name)"
+            is_active = "1"
+            is_latest = "1"
+
         # Prepare base SQL query with LIKE search
-        base_query = """
-            SELECT DISTINCT
+        base_query = f"""
+            SELECT 
                 p.id,
                 p.title,
                 COALESCE(pc.content, p.feed_content, '') as content,
@@ -97,10 +115,10 @@ async def traditional_database_search(
                 p.updated_ts,
                 u.display_name as author_name,
                 u.username as author_username,
-                GROUP_CONCAT(tt.name) as tags
+                {tag_aggregation} as tags
             FROM posts p
             LEFT JOIN users u ON p.author_id = u.id
-            LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = 1
+            LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = {is_latest}
             LEFT JOIN post_tags pt ON p.id = pt.post_id
             LEFT JOIN tag_types tt ON pt.tag_id = tt.id
             WHERE p.status = 'published' AND (
@@ -114,27 +132,51 @@ async def traditional_database_search(
         
         # Add post type filter if specified
         if post_types:
-            placeholders = ",".join(["?" for _ in post_types])
+            if settings.database_type == "postgresql":
+                # PostgreSQL uses numbered placeholders
+                start_param = len(params) + 1
+                placeholders = ",".join([f"${i}" for i in range(start_param, start_param + len(post_types))])
+            else:
+                # SQLite uses ? placeholders
+                placeholders = ",".join(["?" for _ in post_types])
             base_query += f" AND p.post_type_id IN ({placeholders})"
             params.extend(post_types)
         
-        # Add grouping and ordering
+        # Add grouping and ordering (simplified to avoid tt.name reference issues)
         base_query += """
             GROUP BY p.id, p.title, pc.content, p.feed_content, p.post_type_id, 
                      p.created_ts, p.updated_ts, u.display_name, u.username
             ORDER BY 
                 CASE 
-                    WHEN p.title LIKE ? THEN 1
-                    WHEN COALESCE(pc.content, p.feed_content, '') LIKE ? THEN 2
-                    WHEN tt.name LIKE ? THEN 3
-                    ELSE 4
+                    WHEN p.title LIKE {title_param} THEN 1
+                    WHEN COALESCE(pc.content, p.feed_content, '') LIKE {content_param} THEN 2
+                    ELSE 3
                 END,
                 p.created_ts DESC
-            LIMIT ?
+            LIMIT {limit_param}
         """
         
-        # Add ordering parameters
-        params.extend([f"%{query}%", f"%{query}%", f"%{query}%", limit])
+        # Add ordering parameters and format based on database type
+        if settings.database_type == "postgresql":
+            # PostgreSQL numbered parameters
+            next_param = len(params) + 1
+            base_query = base_query.format(
+                title_param=f"${next_param}",
+                content_param=f"${next_param + 1}",
+                limit_param=f"${next_param + 2}"
+            )
+            # Convert existing ? to numbered parameters
+            for i, param in enumerate(params):
+                base_query = base_query.replace("?", f"${i + 1}", 1)
+        else:
+            # SQLite ? parameters
+            base_query = base_query.format(
+                title_param="?",
+                content_param="?", 
+                limit_param="?"
+            )
+        
+        params.extend([f"%{query}%", f"%{query}%", limit])
         
         # Execute query
         logger.debug(f"Executing traditional search query: {base_query}")
@@ -167,6 +209,15 @@ async def traditional_database_search(
                         # Get author name with fallback
                         author_name = row.get('author_name') or row.get('author_username') or "Unknown"
                         
+                        # Convert datetime objects to strings
+                        created_at = row.get('created_ts', '')
+                        if isinstance(created_at, datetime):
+                            created_at = created_at.isoformat()
+                        
+                        updated_at = row.get('updated_ts', '')
+                        if isinstance(updated_at, datetime):
+                            updated_at = updated_at.isoformat()
+                        
                         formatted_results.append({
                             "id": row.get('id', ''),
                             "title": row.get('title', ''),
@@ -174,8 +225,8 @@ async def traditional_database_search(
                             "post_type": row.get('post_type_id', ''),
                             "author_name": author_name,
                             "tags": tags,
-                            "created_at": row.get('created_ts', ''),
-                            "updated_at": row.get('updated_ts', ''),
+                            "created_at": created_at,
+                            "updated_at": updated_at,
                             "search_type": "traditional",
                             "similarity_score": None
                         })
@@ -197,6 +248,15 @@ async def traditional_database_search(
                         # Get author name with fallback
                         author_name = row[6] or row[7] or "Unknown"
                         
+                        # Convert datetime objects to strings
+                        created_at = row[4] or ""
+                        if isinstance(created_at, datetime):
+                            created_at = created_at.isoformat()
+                        
+                        updated_at = row[5] or ""
+                        if isinstance(updated_at, datetime):
+                            updated_at = updated_at.isoformat()
+                        
                         formatted_results.append({
                             "id": row[0],
                             "title": row[1] or "",
@@ -204,8 +264,8 @@ async def traditional_database_search(
                             "post_type": row[3] or "",
                             "author_name": author_name,
                             "tags": tags,
-                            "created_at": row[4] or "",
-                            "updated_at": row[5] or "",
+                            "created_at": created_at,
+                            "updated_at": updated_at,
                             "search_type": "traditional",
                             "similarity_score": None
                         })
@@ -317,33 +377,50 @@ async def search_vectors_in_redis(query_vector: List[float], limit: int = 10, th
         logger.error(f"Failed to search vectors in Redis: {str(e)}")
         raise
 
-async def get_posts_to_index(force_reindex: bool = False, post_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+async def get_posts_to_index(db_service: DatabaseService, force_reindex: bool = False, post_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     """Get posts that need to be indexed"""
     try:
+        # Get database-specific aggregation function
+        settings = get_settings()
+        if settings.database_type == "postgresql":
+            tag_aggregation = "string_agg(tt.name, ', ')"
+            is_current = "TRUE"
+        else:
+            tag_aggregation = "GROUP_CONCAT(tt.name)"
+            is_current = "1"
+
         # Build the query based on parameters
         if force_reindex:
             # Get all published posts
             if post_types:
-                posts_query = """
+                if settings.database_type == "postgresql":
+                    # Use numbered placeholders for PostgreSQL
+                    placeholders = ', '.join([f'${i+1}' for i in range(len(post_types))])
+                else:
+                    # Use ? placeholders for SQLite
+                    placeholders = ', '.join(['?' for _ in post_types])
+                
+                posts_query = f"""
                     SELECT p.id, p.title, p.post_type_id, p.author_id, p.created_ts,
                            pc.content, u.display_name as author_name,
-                           GROUP_CONCAT(tt.name) as tags
+                           {tag_aggregation} as tags
                     FROM posts p
-                    JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = 1
+                    JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = {is_current}
                     JOIN users u ON p.author_id = u.id
                     LEFT JOIN post_tags pt ON p.id = pt.post_id
                     LEFT JOIN tag_types tt ON pt.tag_id = tt.id
-                    WHERE p.status = 'published' AND p.post_type_id IN ({})
+                    WHERE p.status = 'published' AND p.post_type_id IN ({placeholders})
                     GROUP BY p.id
-                """.format(','.join(['?' for _ in post_types]))
+                """
+                
                 posts = await db_service.execute_query(posts_query, tuple(post_types))
             else:
-                posts_query = """
+                posts_query = f"""
                     SELECT p.id, p.title, p.post_type_id, p.author_id, p.created_ts,
                            pc.content, u.display_name as author_name,
-                           GROUP_CONCAT(tt.name) as tags
+                           {tag_aggregation} as tags
                     FROM posts p
-                    JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = 1
+                    JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = {is_current}
                     JOIN users u ON p.author_id = u.id
                     LEFT JOIN post_tags pt ON p.id = pt.post_id
                     LEFT JOIN tag_types tt ON pt.tag_id = tt.id
@@ -353,12 +430,12 @@ async def get_posts_to_index(force_reindex: bool = False, post_types: Optional[L
                 posts = await db_service.execute_query(posts_query, ())
         else:
             # Get only posts not yet indexed (not in kb_indexes with generation_type = 'semantic-search')
-            posts_query = """
+            posts_query = f"""
                 SELECT p.id, p.title, p.post_type_id, p.author_id, p.created_ts,
                        pc.content, u.display_name as author_name,
-                       GROUP_CONCAT(tt.name) as tags
+                       {tag_aggregation} as tags
                 FROM posts p
-                JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = 1
+                JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = {is_current}
                 JOIN users u ON p.author_id = u.id
                 LEFT JOIN post_tags pt ON p.id = pt.post_id
                 LEFT JOIN tag_types tt ON pt.tag_id = tt.id
@@ -375,7 +452,7 @@ async def get_posts_to_index(force_reindex: bool = False, post_types: Optional[L
         logger.error(f"Failed to get posts to index: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get posts: {str(e)}")
 
-async def create_index_trigger(user_id: str, expected_posts: int) -> str:
+async def create_index_trigger(db_service: DatabaseService, user_id: str, expected_posts: int) -> str:
     """Create a new index trigger record"""
     trigger_id = f"search-trigger-{uuid.uuid4()}"
     
@@ -399,7 +476,7 @@ async def create_index_trigger(user_id: str, expected_posts: int) -> str:
     
     return trigger_id
 
-async def update_trigger_status(trigger_id: str, status: str, processed_count: int):
+async def update_trigger_status(db_service: DatabaseService, trigger_id: str, status: str, processed_count: int):
     """Update trigger status"""
     update_query = """
         UPDATE kb_index_triggers 
@@ -408,7 +485,7 @@ async def update_trigger_status(trigger_id: str, status: str, processed_count: i
     """
     await db_service.execute_command(update_query, (status, datetime.utcnow().isoformat(), trigger_id))
 
-async def create_kb_index_record(trigger_id: str, post_id: str, user_id: str, status: str = 'completed'):
+async def create_kb_index_record(db_service: DatabaseService, trigger_id: str, post_id: str, user_id: str, status: str = 'completed'):
     """Create KB index record for processed post"""
     kb_index_id = f"search-idx-{uuid.uuid4()}"
     
@@ -428,7 +505,7 @@ async def create_kb_index_record(trigger_id: str, post_id: str, user_id: str, st
         datetime.utcnow().isoformat()
     ))
 
-async def process_posts_for_indexing(trigger_id: str, posts: List[Dict[str, Any]], user_id: str):
+async def process_posts_for_indexing(db_service: DatabaseService, trigger_id: str, posts: List[Dict[str, Any]], user_id: str):
     """Background task to process posts for indexing"""
     try:
         processed_count = 0
@@ -471,31 +548,32 @@ async def process_posts_for_indexing(trigger_id: str, posts: List[Dict[str, Any]
                     await store_vector_in_redis(chunk_id, embedding, metadata)
                 
                 # Record successful processing
-                await create_kb_index_record(trigger_id, post_id, user_id, 'completed')
+                await create_kb_index_record(db_service, trigger_id, post_id, user_id, 'completed')
                 processed_count += 1
                 
                 logger.info(f"Successfully indexed post {post_id} with {len(chunks)} chunks")
                 
             except Exception as e:
                 logger.error(f"Failed to process post {post['id']}: {str(e)}")
-                await create_kb_index_record(trigger_id, post['id'], user_id, 'failed')
+                await create_kb_index_record(db_service, trigger_id, post['id'], user_id, 'failed')
                 failed_count += 1
         
         # Update trigger status
         final_status = 'completed' if failed_count == 0 else 'partial_failure'
-        await update_trigger_status(trigger_id, final_status, processed_count)
+        await update_trigger_status(db_service, trigger_id, final_status, processed_count)
         
         logger.info(f"Indexing completed: {processed_count} successful, {failed_count} failed")
         
     except Exception as e:
         logger.error(f"Critical error in indexing process: {str(e)}")
-        await update_trigger_status(trigger_id, 'failed', 0)
+        await update_trigger_status(db_service, trigger_id, 'failed', 0)
 
 @router.post("/index", response_model=Dict[str, Any])
 async def index_posts(
     request: IndexRequest,
     background_tasks: BackgroundTasks,
-    current_user: Dict = Depends(get_current_user_from_middleware)
+    current_user: Dict = Depends(get_current_user_from_middleware),
+    db: DatabaseService = Depends(get_db_service)
 ):
     """
     Index posts for semantic search (only available when AI search is enabled)
@@ -526,6 +604,7 @@ async def index_posts(
         
         # Get posts that need indexing
         posts_to_index = await get_posts_to_index(
+            db,
             force_reindex=request.force_reindex,
             post_types=request.post_types
         )
@@ -538,11 +617,12 @@ async def index_posts(
             }
         
         # Create index trigger
-        trigger_id = await create_index_trigger(user_id, len(posts_to_index))
+        trigger_id = await create_index_trigger(db, user_id, len(posts_to_index))
         
         # Start background indexing
         background_tasks.add_task(
             process_posts_for_indexing, 
+            db,
             trigger_id, 
             posts_to_index, 
             user_id
@@ -568,7 +648,8 @@ async def semantic_search(
     limit: int = Query(10, description="Maximum number of results"),
     threshold: float = Query(None, description="Similarity threshold (AI search only)"),
     post_types: Optional[str] = Query(None, description="Comma-separated post types to filter"),
-    current_user: Dict = Depends(get_current_user_from_middleware)
+    current_user: Dict = Depends(get_current_user_from_middleware),
+    db: DatabaseService = Depends(get_db_service)
 ):
     """
     Perform search on posts - uses AI semantic search if available, falls back to traditional search
@@ -646,7 +727,7 @@ async def semantic_search(
         logger.info(f"Using traditional database search for query: '{q}'")
         
         # Use traditional search
-        traditional_results = await traditional_database_search(q, limit, post_type_filter)
+        traditional_results = await traditional_database_search(q, limit, post_type_filter, db)
         
         # Convert to SearchResult format
         final_results = []
@@ -674,7 +755,8 @@ async def semantic_search(
 @router.get("/status/{trigger_id}", response_model=IndexStatus)
 async def get_index_status(
     trigger_id: str,
-    current_user: Dict = Depends(get_current_user_from_middleware)
+    current_user: Dict = Depends(get_current_user_from_middleware),
+    db_service: DatabaseService = Depends(get_db_service)
 ):
     """
     Get indexing status for a trigger
