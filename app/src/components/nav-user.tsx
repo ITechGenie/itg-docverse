@@ -79,9 +79,16 @@ export function NavUser({
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs">{user.email}</span>
                 </div>
+                
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem>
+                <a href="#/profile">My Profile</a>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+           {/*} <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <Sparkles />
@@ -102,7 +109,7 @@ export function NavUser({
                 <Bell />
                 Notifications
               </DropdownMenuItem>
-            </DropdownMenuGroup>
+            </DropdownMenuGroup> */}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout}>
               <LogOut />

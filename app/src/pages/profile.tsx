@@ -138,25 +138,25 @@ export default function Profile() {
   });
 
   return (
-    <div className="w-full   mx-auto space-y-6">
+    <div className="w-full mx-auto space-y-6 px-4">
       {/* Profile Header */}
       <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex items-start space-x-6">
-              <Avatar className="w-24 h-24">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 text-center sm:text-left">
+              <Avatar className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24">
                 <AvatarImage src={avatarUrl} alt={displayUser.displayName} />
-                <AvatarFallback className="text-2xl">
+                <AvatarFallback className="text-lg sm:text-xl lg:text-2xl">
                   {displayUser.displayName.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
               
-              <div className="flex-1 space-y-4">
+              <div className="flex-1 space-y-3 sm:space-y-4">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">
                     {displayUser.displayName}
                   </h1>
-                  <p className="text-lg text-muted-foreground">
+                  <p className="text-base sm:text-lg text-muted-foreground">
                     @{displayUser.username}
                   </p>
                 </div>
@@ -215,7 +215,8 @@ export default function Profile() {
             {isOwnProfile && (
               <Button 
                 variant="outline" 
-                className="flex items-center space-x-2"
+                size="sm"
+                className="flex items-center space-x-2 w-full sm:w-auto self-center sm:self-start"
                 onClick={() => navigate('/profile/edit')}
               >
                 <Edit className="w-4 h-4" />
@@ -227,23 +228,23 @@ export default function Profile() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-2xl font-bold">{displayUser.stats.postsCount}</div>
-            <div className="text-sm text-muted-foreground">Posts</div>
+          <CardContent className="p-3 sm:p-6 text-center">
+            <div className="text-lg sm:text-2xl font-bold">{userPosts.length}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Posts</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-2xl font-bold">{displayUser.stats.commentsCount}</div>
-            <div className="text-sm text-muted-foreground">Comments</div>
+          <CardContent className="p-3 sm:p-6 text-center">
+            <div className="text-lg sm:text-2xl font-bold">{displayUser.stats.commentsCount}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Comments</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-2xl font-bold">{displayUser.stats.tagsFollowed}</div>
-            <div className="text-sm text-muted-foreground">Tags Followed</div>
+          <CardContent className="p-3 sm:p-6 text-center">
+            <div className="text-lg sm:text-2xl font-bold">{displayUser.stats.tagsFollowed}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Tags Followed</div>
           </CardContent>
         </Card>
       </div>
