@@ -77,17 +77,17 @@ export default function FavoriteTags() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Heart className="w-8 h-8 text-pink-600" />
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-pink-600" />
             My Favorite Tags
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
             Manage your favorite tags and discover related content
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {/* View Toggle */}
           <div className="flex items-center border rounded-lg p-1">
             <Button

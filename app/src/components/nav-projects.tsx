@@ -20,7 +20,7 @@ import {
 //  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-//  useSidebar,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 export function NavProjects({
@@ -32,7 +32,13 @@ export function NavProjects({
     icon: LucideIcon
   }[]
 }) {
-  //const { isMobile } = useSidebar()
+  const { isMobile, setOpenMobile } = useSidebar()
+
+  const handleProjectClick = () => {
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
@@ -41,7 +47,7 @@ export function NavProjects({
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <a href={item.url}>
+              <a href={item.url} onClick={handleProjectClick}>
                 <item.icon />
                 <span>{item.name}</span>
               </a>

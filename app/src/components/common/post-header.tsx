@@ -134,8 +134,8 @@ export const PostHeader = ({
         </div>
       )}
 
-      {/* Row 2: Author Left, Reaction Actions Right */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Row 2: Author Left, Reaction Actions Right - Stack on Mobile */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <div className="flex items-center space-x-4">
           <Link to={`/profile/${post.author.id}`}>
             <Avatar className="w-10 h-10 hover:ring-2 hover:ring-primary transition-all">
@@ -164,15 +164,15 @@ export const PostHeader = ({
           </div>
         </div>
 
-        {/* Reaction Actions */}
-        <div className="flex items-center space-x-2">
+        {/* Reaction Actions - More compact on mobile */}
+        <div className="flex items-center justify-between sm:justify-end space-x-1 sm:space-x-2">
           {/* Reaction Dropdown with Heart+ */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex items-center space-x-2 text-muted-foreground hover:text-foreground"
+                className="flex items-center space-x-1 text-muted-foreground hover:text-foreground px-2"
                 title="Add reaction"
               >
                 <HeartPlusIcon className="w-4 h-4" />
@@ -197,7 +197,7 @@ export const PostHeader = ({
           <Button
             variant="ghost"
             size="sm"
-            className="flex items-center space-x-2 text-muted-foreground hover:text-foreground"
+            className="flex items-center space-x-1 text-muted-foreground hover:text-foreground px-2"
             onClick={() => document.getElementById('comments-section')?.scrollIntoView({ behavior: 'smooth' })}
             title="Jump to comments"
           >
@@ -209,7 +209,7 @@ export const PostHeader = ({
             variant="ghost"
             size="sm"
             onClick={() => handleReactionClick('event-favorite')}
-            className="flex items-center space-x-2 text-muted-foreground hover:text-foreground"
+            className="flex items-center space-x-1 text-muted-foreground hover:text-foreground px-2"
             title="Save"
           >
             <Bookmark className={`w-4 h-4 ${(() => {
@@ -229,7 +229,7 @@ export const PostHeader = ({
           <Button
             variant="ghost"
             size="sm"
-            className="flex items-center space-x-2 text-muted-foreground hover:text-foreground"
+            className="flex items-center space-x-1 text-muted-foreground hover:text-foreground px-2"
             onClick={() => {/* TODO: Navigate to Analytics/Engagement page */}}
             title="View engagement analytics"
           >
@@ -242,7 +242,7 @@ export const PostHeader = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground px-2"
                 title="More options"
               >
                 <MoreHorizontal className="w-4 h-4" />
@@ -268,8 +268,8 @@ export const PostHeader = ({
         </div>
       </div>
 
-      {/* Row 3: Tags Left, Version Management Right */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Row 3: Tags Left, Version Management Right - Stack on Mobile */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <div className="flex flex-wrap gap-2">
           {post.tags.map((tag) => (
             <Link key={tag.id} to={`/tags/${tag.name}`}>
@@ -284,7 +284,7 @@ export const PostHeader = ({
           ))}
         </div>
         
-        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
           {/* Show version info and management */}
           {post.revision !== undefined && (
             <div className="flex items-center space-x-2">
@@ -308,7 +308,7 @@ export const PostHeader = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-xs flex items-center space-x-1"
+                    className="text-xs flex items-center space-x-1 h-8"
                     onClick={onViewVersions}
                     title="View all versions"
                   >
@@ -319,7 +319,7 @@ export const PostHeader = ({
                 {isDetailView && <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs flex items-center space-x-1"
+                  className="text-xs flex items-center space-x-1 h-8"
                   onClick={onEdit}
                   title="Edit this post"
                 >
@@ -387,8 +387,8 @@ export const PostHeader = ({
 
       {/* Row 5: Reaction Emojis with Counts (only show if reactions exist and post is published) */}
       {!loadingReactions && reactions.length > 0 && post.status === 'published' && (
-        <div className="flex items-center space-x-6 mb-4 p-3 bg-muted/30 rounded-lg">
-          <div className="flex items-center space-x-4">
+        <div className="mb-4 p-3 bg-muted/30 rounded-lg">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             {(() => {
               // Group reactions by type and count them
               const reactionCounts = reactions.reduce((acc, reaction) => {
@@ -401,15 +401,15 @@ export const PostHeader = ({
               console.log('Available emojis:', Object.keys(reactionEmojis));
 
               return Object.entries(reactionCounts).map(([type, count]) => (
-                <div key={type} className="flex items-center space-x-2">
-                  {reactionEmojis[type as ReactionType]}
-                  <span className="text-muted-foreground font-medium">{count as number}</span>
+                <div key={type} className="flex items-center space-x-1 sm:space-x-2">
+                  <span className="text-lg sm:text-xl">{reactionEmojis[type as ReactionType]}</span>
+                  <span className="text-muted-foreground font-medium text-sm">{count as number}</span>
                 </div>
               ));
             })()}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            ({totalReactions} Reactions)
+            <div className="text-sm text-muted-foreground">
+              ({totalReactions} Reaction{totalReactions !== 1 ? 's' : ''})
+            </div>
           </div>
         </div>
       )}

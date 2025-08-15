@@ -225,19 +225,19 @@ export const AuthorCloud: React.FC<AuthorCloudProps> = ({
   }
 
   return (
-    <div className={`relative w-full min-h-[650px] overflow-hidden ${className}`}>
+    <div className={`relative w-full min-h-[400px] sm:min-h-[500px] lg:min-h-[650px] overflow-auto ${className}`}>
       {/* Background gradients */}
       <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.04] pointer-events-none">
-        <div className="absolute top-12 left-12 w-72 h-72 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-16 right-16 w-56 h-56 rounded-full bg-gradient-to-br from-emerald-400 via-blue-500 to-purple-600 blur-3xl animate-pulse" style={{ animationDelay: '1.5s' }}></div>
-        <div className="absolute top-1/3 left-1/4 w-64 h-64 rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 blur-3xl animate-pulse" style={{ animationDelay: '3s' }}></div>
+        <div className="absolute top-12 left-12 w-36 sm:w-56 lg:w-72 h-36 sm:h-56 lg:h-72 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-16 right-16 w-28 sm:w-42 lg:w-56 h-28 sm:h-42 lg:h-56 rounded-full bg-gradient-to-br from-emerald-400 via-blue-500 to-purple-600 blur-3xl animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+        <div className="absolute top-1/3 left-1/4 w-32 sm:w-48 lg:w-64 h-32 sm:h-48 lg:h-64 rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 blur-3xl animate-pulse" style={{ animationDelay: '3s' }}></div>
       </div>
 
       {/* Floating sparkles */}
       {showSparkles && sparklePositions.map((sparkle, index) => (
         <div
           key={index}
-          className="absolute pointer-events-none"
+          className="absolute pointer-events-none hidden sm:block"
           style={{
             left: `${sparkle.x}%`,
             top: `${sparkle.y}%`,
@@ -251,9 +251,53 @@ export const AuthorCloud: React.FC<AuthorCloudProps> = ({
         </div>
       ))}
 
-      {/* Author cloud container */}
-      <div className="absolute inset-0 flex items-center justify-center p-20">
-        <div className="relative w-full max-w-7xl h-full">
+      {/* Mobile-first responsive container */}
+      <div className="block sm:hidden p-4">
+        {/* Mobile: Compact list */}
+        <div className="space-y-3">
+          {authors.slice(0, 10).map((author, index) => (
+            <div
+              key={author.id}
+              className="flex items-center gap-3 p-3 rounded-lg
+                       bg-white/80 dark:bg-gray-800/80 border border-gray-300/40 dark:border-gray-600/40
+                       hover:shadow-md transition-all duration-200 backdrop-blur-sm cursor-pointer"
+              onClick={() => onAuthorClick?.(author)}
+            >
+              <Avatar className="w-10 h-10">
+                <AvatarImage src={author.avatarUrl} alt={author.name} />
+                <AvatarFallback style={{ backgroundColor: author.color + '20', color: author.color }}>
+                  {author.name.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{author.name}</div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {getMetricIcon()}
+                  <span>{getMetricValue(author)}</span>
+                </div>
+              </div>
+              <Badge 
+                variant="secondary" 
+                className="text-xs shrink-0"
+                style={{ borderColor: author.color + '40', color: author.color }}
+              >
+                #{index + 1}
+              </Badge>
+            </div>
+          ))}
+        </div>
+        {authors.length > 10 && (
+          <div className="text-center mt-4">
+            <Button variant="outline" size="sm">
+              View All {authors.length} Contributors
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Author cloud */}
+      <div className="hidden sm:block absolute inset-0 flex items-center justify-center p-8 lg:p-20">
+        <div className="relative w-full max-w-5xl lg:max-w-7xl h-full">
           {processedAuthors.map((author) => (
             <div
               key={author.id}
@@ -410,8 +454,8 @@ export const AuthorCloud: React.FC<AuthorCloudProps> = ({
         </div>
       </div>
 
-      {/* Central focal point */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gradient-to-r from-indigo-400 to-purple-500 opacity-15 animate-pulse pointer-events-none"></div>
+      {/* Central focal point - desktop only */}
+      <div className="hidden sm:block absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gradient-to-r from-indigo-400 to-purple-500 opacity-15 animate-pulse pointer-events-none"></div>
     </div>
   );
 };

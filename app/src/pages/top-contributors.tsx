@@ -143,39 +143,41 @@ const TopContributors: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-              <Users className="w-6 h-6" />
+              <Users className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold">Top Contributors</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-2xl sm:text-3xl font-bold">Top Contributors</h1>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Discover the most active content creators in our community
               </p>
             </div>
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
-            <Button
-              variant={viewMode === 'cloud' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('cloud')}
-              className="flex items-center gap-2"
-            >
-              <Cloud className="w-4 h-4" />
-              Cloud
-            </Button>
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-              className="flex items-center gap-2"
-            >
-              <Grid3X3 className="w-4 h-4" />
-              Grid
-            </Button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center border rounded-lg p-1">
+              <Button
+                variant={viewMode === 'cloud' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('cloud')}
+                className="h-8 px-3"
+              >
+                <Cloud className="w-4 h-4 mr-1" />
+                Cloud
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-8 px-3"
+              >
+                <Grid3X3 className="w-4 h-4 mr-1" />
+                Grid
+              </Button>
+            </div>
           </div>
         </div>
 
