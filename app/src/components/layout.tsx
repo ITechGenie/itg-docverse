@@ -1,7 +1,8 @@
 import { AppSidebar } from "@/components/app-sidebar"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Search, Home } from "lucide-react"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -76,6 +77,15 @@ export default function Layout({ children }: LayoutProps) {
         <header className="flex h-16 shrink-0 items-center gap-2 justify-between transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => window.location.hash = '#/feed'}
+              className="h-7 w-7"
+              title="Go to Home"
+            >
+              <Home className="h-4 w-4" />
+            </Button>
             <Separator
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
@@ -89,18 +99,20 @@ export default function Layout({ children }: LayoutProps) {
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>{breadcrumbs?.page || 'Docverse'}</BreadcrumbPage>
+                  <BreadcrumbPage className="max-w-[120px] sm:max-w-none truncate">
+                    {breadcrumbs?.page || 'Docverse'}
+                  </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          <div className="flex items-center gap-3 pr-4">
+          <div className="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-4">
             <form onSubmit={handleSearchSubmit} className="relative">
               <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search posts..."
-                className="pl-8 w-64"
+                placeholder="Search..."
+                className="pl-8 w-32 sm:w-48 md:w-64 text-sm"
                 value={searchQuery}
                 onChange={handleSearch}
                 onKeyPress={handleSearchKeyPress}
@@ -110,7 +122,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </header>
         <hr />
-        <main className="flex flex-1 flex-col gap-4 p-6 pt-4 max-w-none">
+        <main className="flex flex-1 flex-col gap-4 p-3 sm:p-6 pt-2 sm:pt-4 max-w-none">
           {children}
         </main>
       </SidebarInset>

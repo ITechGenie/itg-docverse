@@ -217,19 +217,19 @@ export const TagCloud: React.FC<TagCloudProps> = ({
   }
 
   return (
-    <div className={`relative w-full min-h-[600px] overflow-hidden ${className}`}>
+    <div className={`relative w-full min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] overflow-auto ${className}`}>
       {/* Background gradients */}
       <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
-        <div className="absolute top-8 left-8 w-64 h-64 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-12 right-12 w-48 h-48 rounded-full bg-gradient-to-br from-green-400 via-blue-500 to-purple-600 blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/3 w-56 h-56 rounded-full bg-gradient-to-br from-yellow-400 via-red-500 to-pink-500 blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-8 left-8 w-32 sm:w-48 lg:w-64 h-32 sm:h-48 lg:h-64 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-12 right-12 w-24 sm:w-36 lg:w-48 h-24 sm:h-36 lg:h-48 rounded-full bg-gradient-to-br from-green-400 via-blue-500 to-purple-600 blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/3 w-28 sm:w-42 lg:w-56 h-28 sm:h-42 lg:h-56 rounded-full bg-gradient-to-br from-yellow-400 via-red-500 to-pink-500 blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
       {/* Floating sparkles */}
       {showSparkles && sparklePositions.map((sparkle, index) => (
         <div
           key={index}
-          className="absolute pointer-events-none"
+          className="absolute pointer-events-none hidden sm:block"
           style={{
             left: `${sparkle.x}%`,
             top: `${sparkle.y}%`,
@@ -243,9 +243,39 @@ export const TagCloud: React.FC<TagCloudProps> = ({
         </div>
       ))}
 
-      {/* Tag cloud container */}
-      <div className="absolute inset-0 flex items-center justify-center p-16">
-        <div className="relative w-full max-w-6xl h-full">
+      {/* Mobile-first responsive container */}
+      <div className="block sm:hidden p-4">
+        {/* Mobile: Simple wrapped list */}
+        <div className="flex flex-wrap gap-2 justify-center">
+          {tags.slice(0, 20).map((tag) => (
+            <button
+              key={tag.id}
+              className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-full
+                       bg-white/80 dark:bg-gray-800/80 border border-gray-300/40 dark:border-gray-600/40
+                       hover:shadow-md transition-all duration-200 backdrop-blur-sm"
+              style={{ borderColor: tag.color + '40', color: tag.color }}
+              onClick={(e) => handleTagClick(tag, e)}
+            >
+              <TagIcon className="w-3 h-3" />
+              {tag.name}
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {tag.postsCount}
+              </Badge>
+            </button>
+          ))}
+        </div>
+        {tags.length > 20 && (
+          <div className="text-center mt-4">
+            <Button variant="outline" size="sm">
+              View All {tags.length} Tags
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Tag cloud */}
+      <div className="hidden sm:block absolute inset-0 flex items-center justify-center p-8 lg:p-16">
+        <div className="relative w-full max-w-4xl lg:max-w-6xl h-full">
           {processedTags.map((tag) => (
             <div
               key={tag.id}
@@ -390,8 +420,8 @@ export const TagCloud: React.FC<TagCloudProps> = ({
         </div>
       </div>
 
-      {/* Central focal point */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 opacity-20 animate-pulse pointer-events-none"></div>
+      {/* Central focal point - desktop only */}
+      <div className="hidden sm:block absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 opacity-20 animate-pulse pointer-events-none"></div>
     </div>
   );
 };
