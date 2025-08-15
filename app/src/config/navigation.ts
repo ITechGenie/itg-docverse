@@ -105,23 +105,18 @@ export const navigationConfig: NavigationConfig = {
       section: "Community",
       items: [
         {
-          title: "Discussions",
-          url: "#/discussions",
-          section: "Community",
-        },
-        {
           title: "All Tags",
           url: "#/tags",
           section: "Discovery",
         },
         {
-          title: "Popular Tags",
-          url: "#/tags/popular",
-          section: "Discovery",
+          title: "Discussions",
+          url: "#/discussions",
+          section: "Community",
         },
         {
-          title: "My Favorite Tags",
-          url: "#/tags/favorites",
+          title: "Popular Tags",
+          url: "#/tags/popular",
           section: "Discovery",
         },
         {
@@ -131,7 +126,7 @@ export const navigationConfig: NavigationConfig = {
         },
       ],
     },
-    {
+/*    {
       title: "Code Summaries",
       url: "#/code-summaries",
       icon: FileText,
@@ -149,7 +144,7 @@ export const navigationConfig: NavigationConfig = {
         },
       ],
     },
-/*    {
+   {
       title: "Analytics",
       url: "#/dashboard",
       icon: BarChart3,
@@ -188,7 +183,7 @@ export const navigationConfig: NavigationConfig = {
     },
     {
       name: "Tags",
-      url: "#/tags",
+      url: "#/tags/favorites",
       icon: Hash,
       section: "Discovery",
     },
