@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link, useParams } from 'react-router-dom';
-import { Plus, Hash, Loader2 } from 'lucide-react';
+import { Plus, Hash } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { Post, FeedFilters } from '@/types';
 import PostCard from '@/components/post-card';

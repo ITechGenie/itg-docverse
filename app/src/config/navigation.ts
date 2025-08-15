@@ -8,7 +8,7 @@ import {
   Star,
 //  BarChart3,
   Zap,
-  FileText,
+//  FileText,
   Search,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
