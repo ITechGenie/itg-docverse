@@ -1,4 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar"
+import { MobileHeader } from "@/components/mobile-header"
+import { MobileFooter } from "@/components/mobile-footer"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -71,61 +73,73 @@ export default function Layout({ children }: LayoutProps) {
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 justify-between transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => window.location.hash = '#/feed'}
-              className="h-7 w-7"
-              title="Go to Home"
-            >
-              <Home className="h-4 w-4" />
-            </Button>
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/">
-                    {breadcrumbs?.section || 'ITG'}
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="max-w-[120px] sm:max-w-none truncate">
-                    {breadcrumbs?.page || 'Docverse'}
-                  </BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-4">
-            <form onSubmit={handleSearchSubmit} className="relative">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search..."
-                className="pl-8 w-32 sm:w-48 md:w-64 text-sm"
-                value={searchQuery}
-                onChange={handleSearch}
-                onKeyPress={handleSearchKeyPress}
+    <div className="relative min-h-screen">
+      <SidebarProvider>
+        <AppSidebar />
+        
+        {/* Mobile Header */}
+        <MobileHeader 
+          currentPath={currentPath}
+          onSearch={(query) => setSearchQuery(query)}
+        />
+        
+        <SidebarInset>
+          <header className="hidden lg:flex h-16 shrink-0 items-center gap-2 justify-between transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+            <div className="flex items-center gap-2 px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => window.location.hash = '#/feed'}
+                className="h-7 w-7"
+                title="Go to Home"
+              >
+                <Home className="h-4 w-4" />
+              </Button>
+              <Separator
+                orientation="vertical"
+                className="mr-2 data-[orientation=vertical]:h-4"
               />
-            </form>
-            <ModeToggle />
-          </div>
-        </header>
-        <hr />
-        <main className="flex flex-1 flex-col gap-4 p-3 sm:p-6 pt-2 sm:pt-4 max-w-none">
-          {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbLink href="/">
+                      {breadcrumbs?.section || 'ITG'}
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage className="max-w-[120px] sm:max-w-none truncate">
+                      {breadcrumbs?.page || 'Docverse'}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-4">
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search..."
+                  className="pl-8 w-32 sm:w-48 md:w-64 text-sm"
+                  value={searchQuery}
+                  onChange={handleSearch}
+                  onKeyPress={handleSearchKeyPress}
+                />
+              </form>
+              <ModeToggle />
+            </div>
+          </header>
+          <hr className="hidden lg:block" />
+          <main className="flex flex-1 flex-col gap-4 p-3 sm:p-6 pt-20 lg:pt-4 pb-16 lg:pb-4 max-w-none">
+            {children}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+      
+      {/* Mobile Footer */}
+      <MobileFooter currentPath={currentPath} />
+    </div>
   );
 }

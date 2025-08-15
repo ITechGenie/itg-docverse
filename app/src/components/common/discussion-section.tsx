@@ -157,22 +157,22 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
       {showBottomBar && (
         <>
           <hr className="border-border" />
-          <div className="flex items-center justify-between py-4" id="reactions-section">
-            <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-              <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4 px-4" id="reactions-section">
+            <div className="flex items-center space-x-3 sm:space-x-6 text-sm text-muted-foreground overflow-x-auto">
+              <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
                 <Heart className="w-4 h-4" />
-                <span>{post.stats.totalReactions} reactions</span>
+                <span className="whitespace-nowrap">{post.stats.totalReactions} reactions</span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
                 <MessageCircle className="w-4 h-4" />
-                <span>{post.stats.totalComments} comments</span>
+                <span className="whitespace-nowrap">{post.stats.totalComments} comments</span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
                 <Eye className="w-4 h-4" />
-                <span>{post.stats.views} views</span>
+                <span className="whitespace-nowrap">{post.stats.views} views</span>
               </div>
             </div>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto shrink-0">
               <MessageCircle className="w-4 h-4 mr-2" />
               Add Comment
             </Button>
@@ -186,28 +186,29 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
         
         {/* Add Comment Form */}
         <div className="pb-6 mb-6 border-b border-border">
-          <div className="flex items-start space-x-3">
-            <Avatar className="w-8 h-8">
+          <div className="flex items-start space-x-2 sm:space-x-3">
+            <Avatar className="w-6 h-6 sm:w-8 sm:h-8 shrink-0">
               <AvatarImage src={getAvatarUrl(post.author.id, 100)} />
-              <AvatarFallback>ME</AvatarFallback>
+              <AvatarFallback className="text-xs">ME</AvatarFallback>
             </Avatar>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <textarea
-                className="w-full p-3 border border-border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
+                className="w-full p-2 sm:p-3 border border-border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground text-sm sm:text-base"
                 rows={3}
                 placeholder="Write a comment..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 disabled={submittingComment}
               />
-              <div className="flex items-center justify-between mt-3">
-                <span className="text-xs text-muted-foreground">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-3 gap-2">
+                <span className="text-xs text-muted-foreground order-2 sm:order-1">
                   Be kind and respectful to get the best response.
                 </span>
                 <Button 
                   size="sm" 
                   onClick={handleSubmitComment}
                   disabled={!newComment.trim() || submittingComment}
+                  className="order-1 sm:order-2 self-end"
                 >
                   {submittingComment ? 'Posting...' : 'Post Comment'}
                 </Button>
@@ -388,22 +389,22 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
 
       {/* Reply Dialog */}
       <Dialog open={showReplyDialog} onOpenChange={setShowReplyDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] w-[95vw] sm:w-full mx-2 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               Reply to {replyTo?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <textarea
-              className="w-full p-3 border border-border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
+              className="w-full p-3 border border-border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground text-sm sm:text-base"
               rows={4}
               placeholder={`Reply to ${replyTo?.name}...`}
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
             <Button 
               variant="outline" 
               onClick={() => {
@@ -411,12 +412,14 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                 setReplyText('');
                 setReplyTo(null);
               }}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button 
               onClick={handleSubmitReply}
               disabled={!replyText.trim()}
+              className="w-full sm:w-auto"
             >
               Post Reply
             </Button>
