@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { findNavigationItem } from "@/config/navigation"
+import { findNavigationItem, navigationConfig } from "@/config/navigation"
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -104,13 +104,13 @@ export default function Layout({ children }: LayoutProps) {
                 <BreadcrumbList>
                   <BreadcrumbItem className="hidden md:block">
                     <BreadcrumbLink href="/">
-                      {breadcrumbs?.section || 'ITG'}
+                      {breadcrumbs?.section || navigationConfig.siteTitle}
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>
                     <BreadcrumbPage className="max-w-[120px] sm:max-w-none truncate">
-                      {breadcrumbs?.page || 'Docverse'}
+                      {breadcrumbs?.page || navigationConfig.siteTitle}
                     </BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
