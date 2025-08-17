@@ -18,8 +18,12 @@ import {
 } from "@/components/ui/sidebar"
 
 export function TeamSwitcher({
+  siteTitle,
+  siteSubtitle,
   teams,
 }: {
+  siteTitle: string
+  siteSubtitle?: string
   teams: {
     name: string
     logo: React.ElementType
@@ -44,8 +48,8 @@ export function TeamSwitcher({
                 <activeTeam.logo className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{activeTeam.name}</span>
-                <span className="truncate text-xs">{activeTeam.plan}</span>
+                <span className="truncate font-medium">{siteTitle}</span>
+                <span className="truncate text-xs">{siteSubtitle || activeTeam.plan}</span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>

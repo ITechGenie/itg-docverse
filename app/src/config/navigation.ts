@@ -30,6 +30,8 @@ export interface NavigationProject {
 }
 
 export interface NavigationConfig {
+  siteTitle: string;
+  siteSubtitle?: string;
   teams: Array<{
     name: string;
     logo: LucideIcon;
@@ -40,6 +42,8 @@ export interface NavigationConfig {
 }
 
 export const navigationConfig: NavigationConfig = {
+  siteTitle: "ITG Docverse",
+  siteSubtitle: "Community",
   teams: [
     {
       name: "ITG Docverse",

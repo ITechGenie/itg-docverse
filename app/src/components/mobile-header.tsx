@@ -4,7 +4,7 @@ import { Menu, Home, Search } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { Input } from '@/components/ui/input';
 import { useSidebar } from '@/components/ui/sidebar';
-import { findNavigationItem } from '@/config/navigation';
+import { findNavigationItem, navigationConfig } from '@/config/navigation';
 
 interface MobileHeaderProps {
   currentPath?: string;
@@ -33,7 +33,7 @@ export function MobileHeader({
   };
 
   const breadcrumbs = currentPath ? findNavigationItem(currentPath) : null;
-  const pageTitle = breadcrumbs?.page || 'Docverse';
+  const pageTitle = breadcrumbs?.page || navigationConfig.siteTitle;
 
   return (
     <div className="lg:hidden fixed top-0 left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
