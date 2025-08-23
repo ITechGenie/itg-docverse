@@ -202,7 +202,7 @@ async def get_all_tags_with_stats(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get tags: {str(e)}")
 
-@router.put("/{tag_id}", response_model=TagPublic)
+@router.post("/{tag_id}", response_model=TagPublic)
 async def update_tag(
     tag_id: str,
     tag_update: TagUpdate,

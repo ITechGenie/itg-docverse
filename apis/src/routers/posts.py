@@ -371,7 +371,7 @@ async def create_post(
         logger.error(f"Error creating post: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error creating post: {str(e)}")
 
-@router.put("/{post_id}", response_model=PostPublic)
+@router.post("/{post_id}", response_model=PostPublic)
 async def update_post(
     post_id: str,
     post_data: PostUpdate,

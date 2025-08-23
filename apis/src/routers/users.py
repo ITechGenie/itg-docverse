@@ -126,7 +126,7 @@ async def create_user(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating user: {str(e)}")
 
-@router.put("/{user_id}", response_model=UserPublic)
+@router.post("/{user_id}", response_model=UserPublic)
 async def update_user(
     user_id: str,
     user_data: UserUpdate,

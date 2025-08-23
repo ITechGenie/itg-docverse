@@ -168,7 +168,7 @@ export default function FavoriteTags() {
               <CardContent className="p-0">
                 <TagCloud
                   tags={filteredTags}
-                  onTagClick={(tag) => navigate(`/documents?tag=${tag.id}`)}
+                  onTagClick={(tag) => navigate(`/tags/${tag.name}`)}
                   onTagFavorite={handleUnfavoriteTag}
                   showActions={true}
                 />
@@ -182,7 +182,7 @@ export default function FavoriteTags() {
                     <div className="flex items-center justify-between mb-3">
                       <div 
                         className="flex items-center gap-2 flex-1"
-                        onClick={() => navigate(`/documents?tag=${tag.id}`)}
+                        onClick={() => navigate(`/tags/${tag.name}`)}
                       >
                         <div
                           className="w-4 h-4 rounded-full"

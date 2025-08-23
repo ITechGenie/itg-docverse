@@ -182,46 +182,66 @@ async def health_check():
 # Mount static files (React app)
 static_dir = Path(__file__).resolve().parent / "static"
 if static_dir.exists():
-    app.mount("/static", StaticFiles(directory=str(static_dir), html=True), name="static")
+    # Mount static assets (CSS, JS, images) at /static
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     
-    # Serve index.html at root
+    # Serve React app directly at root
     @app.get("/", include_in_schema=False)
     async def serve_root():
         index_file = static_dir / "index.html"
         if index_file.exists():
-            # Return a simple HTML page that redirects to /static/index.html
-            redirect_html = """
+            return FileResponse(index_file)
+        return {"error": "Frontend not built. Place index.html under the 'static' folder."}
+    
+    # Serve React app at /content
+    @app.get("/content", include_in_schema=False)
+    async def serve_content():
+        # Return a simple HTML page that redirects to /static/index.html
+        redirect_html = """
             <!DOCTYPE html>
             <html>
             <head>
-                <meta http-equiv="refresh" content="0; url=/static/index.html">
+                <meta http-equiv="refresh" content="0; url=/content/">
                 <title>ITG DocVerse</title>
             </head>
             <body>
                 <p>Redirecting to ITG DocVerse...</p>
-                <script>window.location.href = '/static/index.html';</script>
+                <script>window.location.href = '/content/';</script>
             </body>
             </html>
             """
-            from fastapi.responses import HTMLResponse
-            return HTMLResponse(content=redirect_html)
-        return {"error": "Frontend not built. Place index.html under the 'static' folder."}
-    
-    # Serve React app for all non-API routes
-    @app.get("/{full_path:path}", include_in_schema=False)
-    async def serve_react_app(request: Request, full_path: str):
-        """
-        Serve React app for all routes that don't start with /apis
-        This enables client-side routing to work properly
-        """
-        if full_path.startswith("apis/") or full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail="API endpoint not found")
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=redirect_html)
+
+    # Catch-all for /content/* routes to serve React SPA
+    @app.get("/content/{full_path:path}", include_in_schema=False)
+    async def serve_content_paths(full_path: str):
+        """Serve React SPA for all /content/* routes"""
+        # First check if this path corresponds to an actual file in the static directory
+        potential_static_file = static_dir / full_path
+        if potential_static_file.exists() and potential_static_file.is_file():
+            # This is an actual asset file, serve it directly
+            return FileResponse(potential_static_file)
         
+        # Not a static file, serve the SPA index.html for client-side routing
         index_file = static_dir / "index.html"
         if index_file.exists():
             return FileResponse(index_file)
-        else:
-            return {"error": "Frontend not built. Place index.html under the 'static' folder."}
+        return {"error": "Frontend not built. Place index.html under the 'static' folder."}
+    
+    # Legacy catch-all for backward compatibility (optional)
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_legacy_routes(request: Request, full_path: str):
+        """
+        Legacy fallback for any other routes that don't start with /apis or /content
+        Redirects to /content for SPA routes
+        """
+        if full_path.startswith("apis/") or full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("redoc"):
+            raise HTTPException(status_code=404, detail="API endpoint not found")
+
+        # Redirect old routes to /content/
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/content/", status_code=302)
 
 if __name__ == "__main__":
     import uvicorn

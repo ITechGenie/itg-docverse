@@ -152,7 +152,7 @@ async def create_comment(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating comment: {str(e)}")
 
-@router.put("/{comment_id}", response_model=CommentPublic)
+@router.post("/{comment_id}", response_model=CommentPublic)
 async def update_comment(
     comment_id: str,
     comment_data: CommentUpdate,

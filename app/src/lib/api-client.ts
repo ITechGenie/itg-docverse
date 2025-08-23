@@ -28,7 +28,7 @@ export class ApiClient {
 
   constructor() {
     this.client = axios.create({
-      baseURL: USE_REAL_API ? '/apis' : '/api',
+      baseURL: USE_REAL_API ? API_BASE_URL : '/api',
       timeout: 30000, // 30 seconds timeout for API calls
     });
 
@@ -506,7 +506,7 @@ export class ApiClient {
         if (data.tags !== undefined) apiData.tags = data.tags || [];
         if (data.coverImage !== undefined) apiData.cover_image_url = data.coverImage;
 
-        const response = await this.apiCall<any>(`/posts/${postId}`, 'PUT', apiData);
+        const response = await this.apiCall<any>(`/posts/${postId}`, 'POST', apiData);
         if (response.success) {
           const transformedPost = this.transformApiPostToUIPost(response.data);
           return { success: true, data: transformedPost };
@@ -750,7 +750,7 @@ export class ApiClient {
   async updateTag(tagId: string, tagData: { name?: string; description?: string; color?: string; category?: string }): Promise<ApiResponse<Tag>> {
     try {
       if (USE_REAL_API) {
-        const response = await this.apiCall<any>(`/tags/${tagId}`, 'PUT', tagData);
+        const response = await this.apiCall<any>(`/tags/${tagId}`, 'POST', tagData);
         if (response.success && response.data) {
           const transformedTag = {
             id: response.data.id,
