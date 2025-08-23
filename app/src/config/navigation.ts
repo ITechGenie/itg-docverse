@@ -29,6 +29,12 @@ export interface NavigationProject {
   section?: string;
 }
 
+export interface MobileNavItem {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+}
+
 export interface NavigationConfig {
   siteTitle: string;
   siteSubtitle?: string;
@@ -39,6 +45,7 @@ export interface NavigationConfig {
   }>;
   navMain: NavigationItem[];
   projects: NavigationProject[];
+  mobileNav: MobileNavItem[];
 }
 
 export const navigationConfig: NavigationConfig = {
@@ -54,48 +61,48 @@ export const navigationConfig: NavigationConfig = {
   navMain: [
     {
       title: "Feed",
-      url: "#/feed",
+      url: "/feed",
       icon: Home,
       isActive: true,
       section: "Community",
       items: [
         {
           title: "Latest Posts",
-          url: "#/feed",
+          url: "/feed",
           section: "Community",
         },
         {
           title: "Favorite Posts",
-          url: "#/feed/favorite-posts",
+          url: "/feed/favorite-posts",
           section: "Community",
         },
         {
           title: "Tagged Favorites",
-          url: "#/feed/favorite-tags",
+          url: "/feed/favorite-tags",
           section: "Community",
         },
         {
           title: "Trending",
-          url: "#/feed/trending",
+          url: "/feed/trending",
           section: "Community",
         },
       ],
     },
     {
       title: "Create",
-      url: "#/create",
+      url: "/create",
       icon: PenTool,
       section: "Content",
       items: [
         {
           title: "Write Article",
-          url: "#/create/article",
+          url: "/create/article",
           icon: PenTool,
           section: "Content",
         },
         {
           title: "Quick Thoughts",
-          url: "#/create/thoughts",
+          url: "/create/thoughts",
           icon: Zap,
           section: "Content",
         },
@@ -104,69 +111,69 @@ export const navigationConfig: NavigationConfig = {
 
     {
       title: "Community",
-      url: "#/",
+      url: "/",
       icon: Users,
       section: "Community",
       items: [
         {
           title: "All Tags",
-          url: "#/tags",
+          url: "/tags",
           section: "Discovery",
         },
         {
           title: "Discussions",
-          url: "#/discussions",
+          url: "/discussions",
           section: "Community",
         },
         {
           title: "Popular Tags",
-          url: "#/tags/popular",
+          url: "/tags/popular",
           section: "Discovery",
         },
         {
           title: "Top Contributors",
-          url: "#/contributors",
+          url: "/contributors",
           section: "Community",
         },
       ],
     },
 /*    {
       title: "Code Summaries",
-      url: "#/code-summaries",
+      url: "/code-summaries",
       icon: FileText,
       section: "Content",
       items: [
         {
           title: "Git Repos",
-          url: "#/code-summaries/git-repos",
+          url: "/code-summaries/git-repos",
           section: "Content",
         },
         {
           title: "Documents",
-          url: "#/code-summaries/documents",
+          url: "/code-summaries/documents",
           section: "Content",
         },
       ],
     },
    {
       title: "Analytics",
-      url: "#/dashboard",
+      url: "/dashboard",
       icon: BarChart3,
       section: "Overview",
       items: [
         {
           title: "Overview",
-          url: "#/dashboard",
+          url: "/dashboard",
           section: "Overview",
         },
         {
           title: "My Posts",
-          url: "#/profile/posts",
+          url: "/profile/posts",
           section: "Account",
         },
         {
           title: "Engagement",
-          url: "#/analytics/engagement",
+          url: "/analytics/engagement",
           section: "Overview",
         },
       ],
@@ -175,39 +182,69 @@ export const navigationConfig: NavigationConfig = {
   projects: [
     {
       name: "My Profile",
-      url: "#/profile",
+      url: "/profile",
       icon: User,
       section: "Account",
     },
     {
       name: "Favorites",
-      url: "#/feed/favorite-posts",
+      url: "/feed/favorite-posts",
       icon: Star,
       section: "Account",
     },
     {
       name: "Tags",
-      url: "#/tags/favorites",
+      url: "/tags/favorites",
       icon: Hash,
       section: "Discovery",
     },
     {
       name: "Search",
-      url: "#/search",
+      url: "/search",
       icon: Search,
       section: "Discovery",
+    },
+  ],
+  mobileNav: [
+    {
+      icon: Home,
+      label: 'Home',
+      href: '/feed',
+    },
+    {
+      icon: PenTool,
+      label: 'Create',
+      href: '/create',
+    },
+    {
+      icon: Hash,
+      label: 'Tags',
+      href: '/tags',
+    },
+    {
+      icon: Users,
+      label: 'Community',
+      href: '/contributors',
     },
   ],
 };
 
 // Helper function to find navigation item by path
 export function findNavigationItem(path: string): { section: string; page: string } | null {
-  // Remove hash and trailing slash
-  const cleanPath = path.replace(/^#/, '').replace(/\/$/, '') || '/';
+  // Remove hash, basename, and trailing slash
+  const basename = import.meta.env.VITE_BASENAME || '';
+  let cleanPath = path.replace(/^#/, '');
+  
+  // Remove basename if present
+  if (basename && cleanPath.startsWith(basename)) {
+    cleanPath = cleanPath.slice(basename.length);
+  }
+  
+  cleanPath = cleanPath.replace(/\/$/, '') || '/';
   
   // Check main navigation items and their children
   for (const navItem of navigationConfig.navMain) {
-    const navUrl = navItem.url.replace(/^#/, '').replace(/\/$/, '') || '/';
+    const navUrl = navItem.url.replace(/\/$/, '') || '/';
     
     if (navUrl === cleanPath) {
       return {
@@ -219,7 +256,7 @@ export function findNavigationItem(path: string): { section: string; page: strin
     // Check sub-items
     if (navItem.items) {
       for (const subItem of navItem.items) {
-        const subUrl = subItem.url.replace(/^#/, '').replace(/\/$/, '') || '/';
+        const subUrl = subItem.url.replace(/\/$/, '') || '/';
         if (subUrl === cleanPath) {
           return {
             section: subItem.section || navItem.section || 'ITG',
@@ -232,7 +269,7 @@ export function findNavigationItem(path: string): { section: string; page: strin
   
   // Check project items
   for (const project of navigationConfig.projects) {
-    const projectUrl = project.url.replace(/^#/, '').replace(/\/$/, '') || '/';
+    const projectUrl = project.url.replace(/\/$/, '') || '/';
     if (projectUrl === cleanPath) {
       return {
         section: project.section || 'ITG',

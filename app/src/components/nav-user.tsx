@@ -8,6 +8,8 @@ import {
   LogOut,
 //  Sparkles,
 } from "lucide-react"
+import { Link } from "react-router-dom"
+import { createUrl } from "@/lib/routing"
 
 import {
   Avatar,
@@ -85,7 +87,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <a href="#/profile">My Profile</a>
+                <Link to={createUrl("/profile")}>My Profile</Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
            {/*} <DropdownMenuSeparator />

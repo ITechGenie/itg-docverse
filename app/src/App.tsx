@@ -1,4 +1,4 @@
-import { HashRouter } from "react-router-dom"
+import { BrowserRouter } from "react-router-dom"
 import { Suspense, useEffect } from "react"
 import { ThemeProvider } from "./components/theme-provider"
 import { ErrorBoundary } from "./components/common/error-boundary"
@@ -29,15 +29,18 @@ export default function App() {
     preloadCriticalRoutes();
   }, []);
 
+  // Get the base path from environment variables
+  const basename = import.meta.env.VITE_BASENAME || '';
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <AuthProvider>
-          <HashRouter>
+          <BrowserRouter basename={basename}>
             <Suspense fallback={<AppLoadingFallback />}>
               <AppRouter />
             </Suspense>
-          </HashRouter>
+          </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

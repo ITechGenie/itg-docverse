@@ -20,7 +20,7 @@ import {getAvatarUrl} from '@/lib/avatar';
 
 // Configuration flags
 const USE_REAL_API = true;
-const API_BASE_URL = '/apis';
+const API_BASE_URL = import.meta.env.VITE_API_BASE || '/apis';
 const TOKEN_STORAGE_KEY = 'itg_docverse_token';
 
 export class ApiClient {
