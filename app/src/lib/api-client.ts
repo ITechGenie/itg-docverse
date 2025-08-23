@@ -228,10 +228,11 @@ export class ApiClient {
         
         try {
           // Call the /me endpoint to get full user data
-          const response = await axios.get(`${API_BASE_URL}/public/me?token=${token}`);
+          // const response = await axios.get(`${API_BASE_URL}/public/me?token=${token}`);
+          const response = await this.apiCall<any>(`/users/me`, 'GET');
           
           if (response.data && response.data.success) {
-            return { success: true, data: response.data.data };
+            return { success: true, data: response.data };
           }
           
           return { success: false, error: 'Failed to get user data' };

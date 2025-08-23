@@ -39,6 +39,11 @@ async def get_user(
 ):
     """Get a specific user by ID (requires authentication)"""
     try:
+
+        user = None
+        if("me" == user_id):
+            user_id = current_user.get("user_id")
+
         user = await db.get_user_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
