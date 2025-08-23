@@ -927,7 +927,7 @@ export class ApiClient {
             id: apiAuthor.id,
             name: apiAuthor.name,
             email: apiAuthor.email,
-            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.username),
+            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.username || apiAuthor.email),
             bio: apiAuthor.bio,
             postsCount: apiAuthor.posts_count || 0,
             firstPostDate: apiAuthor.first_post_date,

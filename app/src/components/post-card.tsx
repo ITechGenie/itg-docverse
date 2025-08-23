@@ -50,8 +50,10 @@ export default function PostCard({ post }: PostCardProps) {
         {/* Content Preview for Feed Cards */}
         {post.feed_content && (
           <div className="px-6 pb-6">
-            <div className="text-sm text-muted-foreground line-clamp-3">
-              {post.feed_content}
+            <div className="text-sm  line-clamp-3">
+              <h4 className="scroll-m-20 text-xl font-semibold  ">
+                {post.feed_content}
+              </h4>
             </div>
           </div>
         )}

@@ -391,7 +391,7 @@ export const AuthorCloud: React.FC<AuthorCloudProps> = ({
 
               {/* Hover Actions */}
               {showActions && hoveredAuthor === author.id && (
-                <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 flex gap-1 bg-background/95 backdrop-blur-sm border rounded-lg shadow-xl p-1 z-30 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 flex gap-1 bg-background/95 backdrop-blur-sm border rounded-lg shadow-xl p-1 z-30 animate-in fade-in slide-in-from-top-2">
                   <Button
                     variant="ghost"
                     size="sm"
