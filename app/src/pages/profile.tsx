@@ -131,7 +131,7 @@ export default function Profile() {
     );
   }
 
-  const avatarUrl = getAvatarUrl(displayUser.id || displayUser.email, 96);
+  const avatarUrl = getAvatarUrl(displayUser.username || displayUser.email, 96);
   const joinedDate = new Date(displayUser.joinedDate).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long'

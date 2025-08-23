@@ -80,8 +80,8 @@ export const PostHeader = ({
   const [loadingReactions, setLoadingReactions] = useState(true);
   const [totalReactions, setTotalReactions] = useState(0);
   const { user: currentUser } = useAuth();
-  
-  const avatarUrl = getAvatarUrl(post.author.id || post.author.email, 48);
+
+  const avatarUrl = getAvatarUrl(post.author.username || post.author.email, 48);
   const formattedDate = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
 
   // Fetch reactions independently

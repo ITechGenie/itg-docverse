@@ -14,7 +14,7 @@ export function MobileFooter({ currentPath }: MobileFooterProps) {
   const userData = user ? {
     name: user.displayName,
     email: user.email,
-    avatar: getAvatarUrl(user.id || user.email, 32),
+    avatar: getAvatarUrl(user.username || user.email, 32),
   } : {
     name: "Guest User",
     email: "guest@example.com",

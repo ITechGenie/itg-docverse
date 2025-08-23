@@ -384,7 +384,7 @@ export class ApiClient {
         displayName: apiPost.author_name,
         email: apiPost.author_email,
         //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiPost.author_id}`,
-        avatar: getAvatarUrl(apiPost.author_id, 100), // Use avatar utility function
+        avatar: getAvatarUrl(apiPost.author_username, 100), // Use avatar utility function
         joinedDate: new Date().toISOString(),
         stats: {
           postsCount: 0,
@@ -864,7 +864,7 @@ export class ApiClient {
             id: apiAuthor.id,
             name: apiAuthor.name,
             email: apiAuthor.email,
-            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.name),
+            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.username),
             bio: apiAuthor.bio,
             postsCount: apiAuthor.posts_count || 0,
             firstPostDate: apiAuthor.first_post_date,
@@ -927,7 +927,7 @@ export class ApiClient {
             id: apiAuthor.id,
             name: apiAuthor.name,
             email: apiAuthor.email,
-            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.name),
+            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.username),
             bio: apiAuthor.bio,
             postsCount: apiAuthor.posts_count || 0,
             firstPostDate: apiAuthor.first_post_date,
@@ -1038,7 +1038,7 @@ export class ApiClient {
             id: response.data.id,
             name: response.data.name,
             email: response.data.email,
-            avatarUrl: response.data.avatar_url || getAvatarUrl(response.data.name),
+            avatarUrl: response.data.avatar_url || getAvatarUrl(response.data.username),
             bio: response.data.bio,
             postsCount: response.data.posts_count || 0,
             firstPostDate: response.data.first_post_date,
@@ -1331,7 +1331,7 @@ export class ApiClient {
             username: tokenPayload.username || username,
             displayName: tokenPayload.display_name || tokenPayload.username || username,
             email: tokenPayload.email || `${username}@docverse.local`,
-            avatar: getAvatarUrl(tokenPayload.email || username, 100),
+            avatar: getAvatarUrl(tokenPayload.username || username, 100),
             joinedDate: new Date().toISOString(),
             stats: {
               postsCount: 0,
