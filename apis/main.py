@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from pathlib import Path
 import uvicorn
 import os
@@ -25,6 +26,20 @@ from bootstrap_data import BootstrapData
 # Initialize settings
 settings = get_settings()
 logger = logging.getLogger(__name__)
+
+redirect_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="refresh" content="0; url=/content/">
+        <title>ITG DocVerse</title>
+    </head>
+    <body>
+        <p>Redirecting to ITG DocVerse...</p>
+        <script>window.location.href = '/content/';</script>
+    </body>
+    </html>
+    """
 
 async def auto_bootstrap(db_service):
     """Automatically bootstrap the database if it's empty"""
@@ -188,29 +203,11 @@ if static_dir.exists():
     # Serve React app directly at root
     @app.get("/", include_in_schema=False)
     async def serve_root():
-        index_file = static_dir / "index.html"
-        if index_file.exists():
-            return FileResponse(index_file)
-        return {"error": "Frontend not built. Place index.html under the 'static' folder."}
+        return HTMLResponse(content=redirect_html)
     
     # Serve React app at /content
     @app.get("/content", include_in_schema=False)
     async def serve_content():
-        # Return a simple HTML page that redirects to /static/index.html
-        redirect_html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta http-equiv="refresh" content="0; url=/content/">
-                <title>ITG DocVerse</title>
-            </head>
-            <body>
-                <p>Redirecting to ITG DocVerse...</p>
-                <script>window.location.href = '/content/';</script>
-            </body>
-            </html>
-            """
-        from fastapi.responses import HTMLResponse
         return HTMLResponse(content=redirect_html)
 
     # Catch-all for /content/* routes to serve React SPA
