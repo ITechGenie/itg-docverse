@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button';
-import { Home, PenTool, Hash, Users } from 'lucide-react';
-import { useAuth } from '@/contexts/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl } from '@/lib/avatar';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth-context';
+import { navigationConfig } from '@/config/navigation';
 
 interface MobileFooterProps {
   currentPath?: string;
@@ -10,11 +11,13 @@ interface MobileFooterProps {
 
 export function MobileFooter({ currentPath }: MobileFooterProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const userData = user ? {
     name: user.displayName,
     email: user.email,
-    avatar: getAvatarUrl(user.id || user.email, 32),
+    avatar: getAvatarUrl(user.username || user.email, 32),
   } : {
     name: "Guest User",
     email: "guest@example.com",
@@ -25,35 +28,10 @@ export function MobileFooter({ currentPath }: MobileFooterProps) {
     if (currentPath) {
       return currentPath.startsWith(path);
     }
-    return window.location.hash.slice(1).startsWith(path);
+    return location.pathname.startsWith(path);
   };
 
-  const navigationItems = [
-    {
-      icon: Home,
-      label: 'Home',
-      href: '#/feed',
-      isActive: isActive('/feed') || currentPath === '/',
-    },
-    {
-      icon: PenTool,
-      label: 'Create',
-      href: '#/create',
-      isActive: isActive('/create'),
-    },
-    {
-      icon: Hash,
-      label: 'Tags',
-      href: '#/tags',
-      isActive: isActive('/tags'),
-    },
-    {
-      icon: Users,
-      label: 'Community',
-      href: '#/contributors',
-      isActive: isActive('/contributors') || isActive('/discussions'),
-    },
-  ];
+  const navigationItems = navigationConfig.mobileNav;
 
   return (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
@@ -63,9 +41,9 @@ export function MobileFooter({ currentPath }: MobileFooterProps) {
             key={item.href}
             variant="ghost"
             size="sm"
-            onClick={() => window.location.hash = item.href}
+            onClick={() => navigate(item.href)}
             className={`flex flex-col items-center gap-1 h-12 px-2 ${
-              item.isActive 
+              isActive(item.href) || (item.href === '/feed' && currentPath === '/')
                 ? 'text-primary bg-primary/10' 
                 : 'text-muted-foreground hover:text-foreground'
             }`}
@@ -79,7 +57,7 @@ export function MobileFooter({ currentPath }: MobileFooterProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => window.location.hash = '#/profile'}
+          onClick={() => navigate('/profile')}
           className={`flex flex-col items-center gap-1 h-12 px-2 ${
             isActive('/profile') 
               ? 'text-primary bg-primary/10' 

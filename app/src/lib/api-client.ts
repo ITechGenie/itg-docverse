@@ -20,7 +20,7 @@ import {getAvatarUrl} from '@/lib/avatar';
 
 // Configuration flags
 const USE_REAL_API = true;
-const API_BASE_URL = '/apis';
+const API_BASE_URL = import.meta.env.VITE_API_BASE || '/apis';
 const TOKEN_STORAGE_KEY = 'itg_docverse_token';
 
 export class ApiClient {
@@ -28,7 +28,7 @@ export class ApiClient {
 
   constructor() {
     this.client = axios.create({
-      baseURL: USE_REAL_API ? '/apis' : '/api',
+      baseURL: USE_REAL_API ? API_BASE_URL : '/api',
       timeout: 30000, // 30 seconds timeout for API calls
     });
 
@@ -384,7 +384,7 @@ export class ApiClient {
         displayName: apiPost.author_name,
         email: apiPost.author_email,
         //avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiPost.author_id}`,
-        avatar: getAvatarUrl(apiPost.author_id, 100), // Use avatar utility function
+        avatar: getAvatarUrl(apiPost.author_username, 100), // Use avatar utility function
         joinedDate: new Date().toISOString(),
         stats: {
           postsCount: 0,
@@ -506,7 +506,7 @@ export class ApiClient {
         if (data.tags !== undefined) apiData.tags = data.tags || [];
         if (data.coverImage !== undefined) apiData.cover_image_url = data.coverImage;
 
-        const response = await this.apiCall<any>(`/posts/${postId}`, 'PUT', apiData);
+        const response = await this.apiCall<any>(`/posts/${postId}`, 'POST', apiData);
         if (response.success) {
           const transformedPost = this.transformApiPostToUIPost(response.data);
           return { success: true, data: transformedPost };
@@ -750,7 +750,7 @@ export class ApiClient {
   async updateTag(tagId: string, tagData: { name?: string; description?: string; color?: string; category?: string }): Promise<ApiResponse<Tag>> {
     try {
       if (USE_REAL_API) {
-        const response = await this.apiCall<any>(`/tags/${tagId}`, 'PUT', tagData);
+        const response = await this.apiCall<any>(`/tags/${tagId}`, 'POST', tagData);
         if (response.success && response.data) {
           const transformedTag = {
             id: response.data.id,
@@ -864,7 +864,7 @@ export class ApiClient {
             id: apiAuthor.id,
             name: apiAuthor.name,
             email: apiAuthor.email,
-            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.name),
+            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.username),
             bio: apiAuthor.bio,
             postsCount: apiAuthor.posts_count || 0,
             firstPostDate: apiAuthor.first_post_date,
@@ -927,7 +927,7 @@ export class ApiClient {
             id: apiAuthor.id,
             name: apiAuthor.name,
             email: apiAuthor.email,
-            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.name),
+            avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.username || apiAuthor.email),
             bio: apiAuthor.bio,
             postsCount: apiAuthor.posts_count || 0,
             firstPostDate: apiAuthor.first_post_date,
@@ -1038,7 +1038,7 @@ export class ApiClient {
             id: response.data.id,
             name: response.data.name,
             email: response.data.email,
-            avatarUrl: response.data.avatar_url || getAvatarUrl(response.data.name),
+            avatarUrl: response.data.avatar_url || getAvatarUrl(response.data.username),
             bio: response.data.bio,
             postsCount: response.data.posts_count || 0,
             firstPostDate: response.data.first_post_date,
@@ -1331,7 +1331,7 @@ export class ApiClient {
             username: tokenPayload.username || username,
             displayName: tokenPayload.display_name || tokenPayload.username || username,
             email: tokenPayload.email || `${username}@docverse.local`,
-            avatar: getAvatarUrl(tokenPayload.email || username, 100),
+            avatar: getAvatarUrl(tokenPayload.username || username, 100),
             joinedDate: new Date().toISOString(),
             stats: {
               postsCount: 0,

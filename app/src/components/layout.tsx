@@ -20,8 +20,9 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import { findNavigationItem, navigationConfig } from "@/config/navigation"
+import { createUrl } from "@/lib/routing"
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -29,8 +30,9 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPath, setCurrentPath] = useState(window.location.hash.slice(1) || '/');
   const navigate = useNavigate();
+  const location = useLocation();
+  const [currentPath, setCurrentPath] = useState(location.pathname);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -52,15 +54,9 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   useEffect(() => {
-    const updatePath = () => {
-      // Update state to force re-render when hash changes
-      setCurrentPath(window.location.hash.slice(1) || '/');
-    };
-    
-    window.addEventListener('hashchange', updatePath);
-    
-    return () => window.removeEventListener('hashchange', updatePath);
-  }, []);
+    // Update current path when location changes
+    setCurrentPath(location.pathname);
+  }, [location.pathname]);
   
   const getBreadcrumbs = () => {
     // Use the current path state instead of reading from location directly
@@ -90,7 +86,7 @@ export default function Layout({ children }: LayoutProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => window.location.hash = '#/feed'}
+                onClick={() => navigate(createUrl('/feed'))}
                 className="h-7 w-7"
                 title="Go to Home"
               >

@@ -133,6 +133,7 @@ async def get_top_authors(
             u.id,
             u.display_name AS name,
             u.email,
+            u.username,
             u.avatar_url,
             u.bio,
             COUNT(DISTINCT p.id) as posts_count,

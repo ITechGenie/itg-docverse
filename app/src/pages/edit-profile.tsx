@@ -84,7 +84,7 @@ export default function EditProfile() {
     );
   }
 
-  const avatarUrl = getAvatarUrl(currentUser.email || currentUser.username, 100);
+  const avatarUrl = getAvatarUrl( currentUser.username || currentUser.email, 100);
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">

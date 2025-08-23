@@ -188,7 +188,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
         <div className="pb-6 mb-6 border-b border-border">
           <div className="flex items-start space-x-2 sm:space-x-3">
             <Avatar className="w-6 h-6 sm:w-8 sm:h-8 shrink-0">
-              <AvatarImage src={getAvatarUrl(post.author.id, 100)} />
+              <AvatarImage src={getAvatarUrl(currentUser?.username || "NA", 100)} />
               <AvatarFallback className="text-xs">ME</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
@@ -228,7 +228,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
               .filter(comment => !comment.parent_id) // Show only top-level comments first
               .map((comment) => {
                 const authorName = comment.author_name || comment.author_username || 'Unknown User';
-                const authorAvatar = getAvatarUrl(comment.author_id || 'default', 32);
+                const authorAvatar = getAvatarUrl(comment.author_username || 'default', 32);
                 
                 return (
                 <div key={comment.id}>
@@ -311,7 +311,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                     .filter(reply => reply.parent_id === comment.id)
                     .map((reply) => {
                       const replyAuthorName = reply.author_name || reply.author_username || 'Unknown User';
-                      const replyAuthorAvatar = getAvatarUrl(reply.author_id || 'default', 32);
+                      const replyAuthorAvatar = getAvatarUrl(reply.author_username || 'default', 32);
                       
                       return (
                       <div key={reply.id} className="ml-11 mt-4 relative">

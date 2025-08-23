@@ -4,6 +4,7 @@ import { Menu, Home, Search } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { Input } from '@/components/ui/input';
 import { useSidebar } from '@/components/ui/sidebar';
+import { useNavigate } from 'react-router-dom';
 import { findNavigationItem, navigationConfig } from '@/config/navigation';
 
 interface MobileHeaderProps {
@@ -18,6 +19,7 @@ export function MobileHeader({
   showSearch = true 
 }: MobileHeaderProps) {
   const { toggleSidebar } = useSidebar();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,7 +30,7 @@ export function MobileHeader({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.hash = `#/search?q=${encodeURIComponent(searchQuery.trim())}`;
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
@@ -51,7 +53,7 @@ export function MobileHeader({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => window.location.hash = '#/feed'}
+            onClick={() => navigate('/feed')}
             className="h-8 w-8"
           >
             <Home className="h-4 w-4" />
