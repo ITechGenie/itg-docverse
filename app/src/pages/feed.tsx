@@ -251,7 +251,7 @@ export default function Feed() {
                     <Link to="/create">
                       <Button className="gap-2">
                         <Plus className="w-4 h-4" />
-                        Create New Post
+                        Create New Content
                       </Button>
                     </Link>
                   </div>

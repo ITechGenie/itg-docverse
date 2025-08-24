@@ -126,7 +126,7 @@ export default function Profile() {
     return (
       <div className="w-full max-w-4xl mx-auto text-center py-12">
         <h1 className="text-2xl font-bold text-muted-foreground">User not found</h1>
-        <Link to="/#/feed" className="text-primary hover:underline mt-4 inline-block">
+        <Link to="/feed" className="text-primary hover:underline mt-4 inline-block">
           Back to Feed
         </Link>
       </div>
@@ -323,7 +323,7 @@ export default function Profile() {
           <div className="text-center py-12">
             <p className="text-muted-foreground">No posts yet. {isOwnProfile ? 'Share your first post!' : `${displayUser.displayName} hasn't posted anything yet.`}</p>
             {isOwnProfile && (
-              <Link to="/#/create">
+              <Link to="/create">
                 <Button className="mt-4">Create Your First Post</Button>
               </Link>
             )}
