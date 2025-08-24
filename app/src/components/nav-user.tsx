@@ -9,7 +9,6 @@ import {
 //  Sparkles,
 } from "lucide-react"
 import { Link } from "react-router-dom"
-import { createUrl } from "@/lib/routing"
 
 import {
   Avatar,
