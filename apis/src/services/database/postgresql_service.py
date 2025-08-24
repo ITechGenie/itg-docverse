@@ -335,7 +335,7 @@ class PostgreSQLService(DatabaseService):
             
         if post_type:
             param_count += 1
-            query += f" AND pt.name = ${param_count}"
+            query += f" AND pt.id = ${param_count}"
             params.append(post_type)
         
         if tag_id:

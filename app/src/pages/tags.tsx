@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { TagCloud } from '@/components/ui/tag-cloud';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 import type { Tag as TagType } from '@/types';
 
 interface TagStats extends TagType {

@@ -5,7 +5,7 @@ import { PostHeader } from '@/components/common/post-header';
 import { MarkdownRenderer } from '@/components/common/markdown-renderer';
 import { DiscussionSection } from '@/components/common/discussion-section';
 import { useViewTracker } from '@/hooks/use-view-tracker';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 import type { Post, ReactionType } from '@/types';
 
 interface PostDetailProps {
@@ -47,6 +47,19 @@ export default function PostDetail(props: PostDetailProps) {
     
     fetchPost();
   }, [id, version, docType, props.post]); // Remove location.pathname dependency
+
+  // Handle scrolling to comments when navigated from feed
+  useEffect(() => {
+    if (location.state?.scrollToComments && !loading && post) {
+      // Wait a bit for the page to render completely
+      setTimeout(() => {
+        const commentsSection = document.getElementById('comments-section');
+        if (commentsSection) {
+          commentsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 500);
+    }
+  }, [location.state, loading, post]);
 
   const fetchPost = async () => {
     if (!id) return;
@@ -192,7 +205,7 @@ export default function PostDetail(props: PostDetailProps) {
       {/* Row 8: Content */}
       <div className="w-full max-w-4xl mx-auto py-6">
         {post.content && post.content.trim() ? (
-          post.type === 'long-form' ? (
+          post.type === 'posts' ? (
             <MarkdownRenderer content={post.content} />
           ) : (
             <div className="prose prose-lg max-w-none dark:prose-invert">

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { ApiClient } from '../lib/api-client';
 import type { User } from '../types';
+import { ApiClient } from '@/services/api-client';
 
 export interface AuthToken {
   access_token: string;

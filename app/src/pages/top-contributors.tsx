@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Grid3X3, Cloud, Trophy, Eye, Heart, TrendingUp, Search, Filter } from 'lucide-react';
+import { Grid3X3, Cloud, Trophy, Eye, Heart, TrendingUp, Search, Filter, Users2Icon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AuthorCloud } from '@/components/ui/author-cloud';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 
 interface Author {
   id: string;
@@ -128,7 +128,7 @@ const TopContributors: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <Users2Icon className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
           <h3 className="text-lg font-medium mb-2">Error Loading Contributors</h3>
           <p className="text-muted-foreground mb-4">{error}</p>
           <Button onClick={() => window.location.reload()}>
@@ -145,14 +145,12 @@ const TopContributors: React.FC = () => {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-              <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="p-2 rounded-lg  ">
+              <Users2Icon className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Top Contributors</h1>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Discover the most active content creators in our community
-              </p>
+            
             </div>
           </div>
 
@@ -253,7 +251,7 @@ const TopContributors: React.FC = () => {
       {filteredAuthors.length === 0 ? (
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-30" />
+            <Users2Icon className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-30" />
             <h3 className="text-lg font-medium mb-2">
               {searchQuery ? 'No contributors found' : 'No contributors yet'}
             </h3>

@@ -238,7 +238,7 @@ class SQLiteService(DatabaseService):
             params.append(author_id)
             
         if post_type:
-            query += " AND p.post_type_id = ?"
+            query += " AND pt.id  = ?"
             params.append(post_type)
             
         if tag_id:

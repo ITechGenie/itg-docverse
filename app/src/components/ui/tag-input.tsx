@@ -3,7 +3,7 @@ import { X, Plus, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 
 interface TagInputProps {
   value: string[];
@@ -226,7 +226,7 @@ export const TagInput: React.FC<TagInputProps> = ({
           {value.length > 0 && `${value.length}/${maxTags} tags`}
         </span>
         <span>
-          Press Enter to add, Backspace to remove
+          Type 3 or more characters to search / Press Enter to add / Backspace to remove
         </span>
       </div>
     </div>

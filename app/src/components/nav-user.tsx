@@ -87,7 +87,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <Link to={createUrl("/profile")}>My Profile</Link>
+                <Link to={"/profile"}>My Profile</Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
            {/*} <DropdownMenuSeparator />

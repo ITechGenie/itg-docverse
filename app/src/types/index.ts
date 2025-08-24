@@ -27,16 +27,16 @@ export interface Badge {
 
 export interface Post {
   id: string;
-  type: 'long-form' | 'short-form' | 'thoughts';
-  title?: string; // Optional for short-form posts
-  content?: string; // Full content - optional in feed views for long-form posts to save bandwidth
+  type: 'block-diagram' | 'code-snippet' | 'discussion' | 'llm-long' | 'llm-short' | 'posts' | 'thoughts';
+  title?: string; // Optional for short content
+  content?: string; // Full content - optional in feed views for posts to save bandwidth
   feed_content?: string; // Preview content for feed - used for all post types
   coverImage?: string;
   author: User;
   tags: Tag[];
   createdAt: string;
   updatedAt?: string;
-  readTime?: number; // in minutes, for long-form posts
+  readTime?: number; // in minutes, for posts and longer content types
   reactions: Reaction[];
   comments: Comment[];
   stats: {
@@ -152,12 +152,13 @@ export interface SearchConfig {
 }
 
 export interface CreatePostData {
-  type: 'long-form' | 'short-form' | 'thoughts';
+  type: 'block-diagram' | 'code-snippet' | 'discussion' | 'llm-long' | 'llm-short' | 'posts' | 'thoughts';
   title?: string;
   content?: string;
   feed_content?: string; // Optional preview content for feed
   coverImage?: string;
   tags: string[];
+  status?: 'draft' | 'published' | 'archived';
 }
 
 export interface ApiResponse<T> {
@@ -184,9 +185,10 @@ export interface PaginationParams {
 }
 
 export interface FeedFilters {
-  type?: 'all' | 'long-form' | 'short-form' | 'thoughts';
+  type?: 'all' | 'block-diagram' | 'code-snippet' | 'discussion' | 'llm-long' | 'llm-short' | 'posts' | 'thoughts';
   timeframe?: 'today' | 'week' | 'month' | 'year' | 'all';
   author?: string; // Filter posts by specific author ID
+  status?: 'published' | 'draft' | 'archived'; // Filter posts by status
   favoritesPosts?: boolean; // Filter to show only favorite posts
   favoriteTags?: boolean; // Filter to show posts from favorite tags
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { searchApi } from '@/lib/api';
+import { api } from '@/services/api-client';
 import type { SearchResult, SearchFilters, SearchConfig } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,7 @@ export default function SearchPage() {
 
   const loadSearchConfig = async () => {
     try {
-      const response = await searchApi.getConfig();
+      const response = await api.getSearchConfig();
       if (response.success && response.data) {
         setSearchConfig(response.data);
       } else {
@@ -57,7 +57,7 @@ export default function SearchPage() {
         threshold: 0.3  // Lower threshold for better results
       };
 
-      const response = await searchApi.search(filters);
+      const response = await api.search(filters);
       
       if (response.success && response.data) {
         setSearchResults(response.data);
@@ -89,7 +89,7 @@ export default function SearchPage() {
   const handleIndexing = async () => {
     try {
       setError(null);
-      const response = await searchApi.triggerIndexing(false);
+      const response = await api.triggerIndexing(false);
       
       if (response.success && response.data) {
         alert(`Indexing triggered successfully! ${response.data.message}`);
@@ -110,7 +110,20 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="w-full space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <SearchIcon className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0" />
+            Search
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+            Find posts and content across the community
+          </p>
+        </div>
+      </div>
+
       {/* Search Configuration Status */}
       {searchConfig && (
         <Card>
@@ -167,10 +180,7 @@ export default function SearchPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <SearchIcon className="h-5 w-5" />
-              Search Posts
-            </span>
+            <span>Quick Search</span>
             {searchConfig?.ai_search_enabled && (
               <Button 
                 variant="outline" 

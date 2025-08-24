@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl } from '@/lib/avatar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 import type { Post, Comment } from '@/types';
 import { useAuth } from "@/contexts/auth-context"
 
