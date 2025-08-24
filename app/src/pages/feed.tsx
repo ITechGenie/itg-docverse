@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link, useParams } from 'react-router-dom';
-import { Plus, Hash } from 'lucide-react';
+import { Plus, Hash, FileText, MessageCircle, Grid, Rss, Heart, Star, RssIcon } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { Post, FeedFilters } from '@/types';
 import PostCard from '@/components/post-card';
@@ -14,12 +14,13 @@ export default function Feed() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [postTypeFilter, setPostTypeFilter] = useState<'all' | 'long-form' | 'thoughts'>('all');
   const [searchParams] = useSearchParams();
   const { tagName, filter } = useParams<{ tagName?: string; filter?: string }>();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const filters: FeedFilters = {
-    type: (searchParams.get('type') as FeedFilters['type']) || 'all',
+    type: postTypeFilter === 'all' ? 'all' : postTypeFilter,
     timeframe: (searchParams.get('timeframe') as FeedFilters['timeframe']) || 'all',
     favoritesPosts: filter === 'favorite-posts',
     favoriteTags: filter === 'favorite-tags',
@@ -108,11 +109,12 @@ export default function Feed() {
     setCurrentPage(1);
     setHasMore(true);
     loadPosts(true);
-  }, [searchParams.toString(), tagName, filter]);
+  }, [searchParams.toString(), tagName, filter, postTypeFilter]);
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight min-w-0 flex-1">
           {tagName ? (
             <div className="flex items-center gap-2 flex-wrap">
@@ -123,21 +125,66 @@ export default function Feed() {
               </Badge>
             </div>
           ) : filter === 'trending' ? (
-            'Trending'
+            <div className="flex items-center gap-2">
+              <Rss className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0" />
+              Trending Content
+            </div>
           ) : filter === 'favorite-posts' ? (
-            'Favorite Posts'
+            <div className="flex items-center gap-2">
+              <RssIcon className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0 text-pink-600" />
+              Favorite Content
+            </div>
           ) : filter === 'favorite-tags' ? (
-            'Tagged Favorites'
+            <div className="flex items-center gap-2">
+              <Star className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0 text-pink-600" />
+              Tagged Content
+            </div>
           ) : (
-            'Community Feed'
+            <div className="flex items-center gap-2">
+              <Rss className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0" />
+              Content Feed
+            </div>
           )}
         </h1>
-        <div className="flex items-center space-x-2 shrink-0">
+        
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Filter Toggle */}
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={postTypeFilter === 'all' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setPostTypeFilter('all')}
+              className="h-8 px-2 sm:px-3"
+            >
+              <Grid className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">All</span>
+            </Button>
+            <Button
+              variant={postTypeFilter === 'long-form' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setPostTypeFilter('long-form')}
+              className="h-8 px-2 sm:px-3"
+            >
+              <FileText className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Posts</span>
+            </Button>
+            <Button
+              variant={postTypeFilter === 'thoughts' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setPostTypeFilter('thoughts')}
+              className="h-8 px-2 sm:px-3"
+            >
+              <MessageCircle className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Thoughts</span>
+            </Button>
+          </div>
+
+          {/* Create Button */}
           <Link to="/create">
             <Button className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Create Post</span>
-              <span className="sm:hidden">Create</span>
+              <span className="hidden sm:inline">Create Content</span>
+              <span className="sm:hidden">Create Content</span>
             </Button>
           </Link>
         </div>

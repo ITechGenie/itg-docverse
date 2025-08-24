@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Search, Grid3X3, Cloud, Star } from 'lucide-react';
+import { Heart, Search, Grid3X3, Cloud, Star, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -80,12 +80,9 @@ export default function FavoriteTags() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-pink-600" />
-            My Favorite Tags
+            <Hash className="w-6 h-6 sm:w-8 sm:h-8 text-pink-600" />
+            Favorite Tags
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-            Manage your favorite tags and discover related content
-          </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {/* View Toggle */}

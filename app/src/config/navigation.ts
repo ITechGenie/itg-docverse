@@ -10,6 +10,7 @@ import {
   Zap,
 //  FileText,
   Search,
+  RssIcon,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -60,30 +61,35 @@ export const navigationConfig: NavigationConfig = {
   ],
   navMain: [
     {
-      title: "Feed",
+      title: "Content Feed",
       url: "/feed",
       icon: Home,
       isActive: true,
       section: "Community",
       items: [
         {
-          title: "Latest Posts",
+          title: "Latest Content",
           url: "/feed",
           section: "Community",
         },
-        {
-          title: "Favorite Posts",
+/*        {
+          title: "Favorite Content",
           url: "/feed/favorite-posts",
           section: "Community",
-        },
+        }, 
         {
           title: "Tagged Favorites",
           url: "/feed/favorite-tags",
           section: "Community",
-        },
+        }, */
         {
           title: "Trending",
           url: "/feed/trending",
+          section: "Community",
+        },
+        {
+          title: "Discussions",
+          url: "/discussions",
           section: "Community",
         },
       ],
@@ -120,11 +126,7 @@ export const navigationConfig: NavigationConfig = {
           url: "/tags",
           section: "Discovery",
         },
-        {
-          title: "Discussions",
-          url: "/discussions",
-          section: "Community",
-        },
+        
         {
           title: "Popular Tags",
           url: "/tags/popular",
@@ -187,13 +189,19 @@ export const navigationConfig: NavigationConfig = {
       section: "Account",
     },
     {
-      name: "Favorites",
-      url: "/feed/favorite-posts",
+      name: "Tagged Content",
+      url: "/feed/favorite-tags",
       icon: Star,
+      section: "Discovery",
+    },    
+    {
+      name: "Favorite Content",
+      url: "/feed/favorite-posts",
+      icon: RssIcon,
       section: "Account",
     },
     {
-      name: "Tags",
+      name: "Favorite Tags",
       url: "/tags/favorites",
       icon: Hash,
       section: "Discovery",

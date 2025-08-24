@@ -110,7 +110,20 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="w-full space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <SearchIcon className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0" />
+            Search
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+            Find posts and content across the community
+          </p>
+        </div>
+      </div>
+
       {/* Search Configuration Status */}
       {searchConfig && (
         <Card>
@@ -167,10 +180,7 @@ export default function SearchPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <SearchIcon className="h-5 w-5" />
-              Search Posts
-            </span>
+            <span>Quick Search</span>
             {searchConfig?.ai_search_enabled && (
               <Button 
                 variant="outline" 

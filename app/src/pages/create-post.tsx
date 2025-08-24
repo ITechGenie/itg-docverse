@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import MDEditor from '@uiw/react-md-editor';
+import { Plus, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -154,10 +155,20 @@ export default function CreatePost() {
   return (
     <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">
-          {isEditMode ? 'Edit Post' : 'Create New Post'}
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
+          {isEditMode ? (
+            <>
+              <Edit className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0" />
+              Edit Post
+            </>
+          ) : (
+            <>
+              <Plus className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0" />
+              Create New Post
+            </>
+          )}
           {isEditMode && currentPost && (
-            <span className="text-lg font-normal text-muted-foreground ml-2">
+            <span className="text-base sm:text-lg lg:text-xl font-normal text-muted-foreground ml-2">
               - {currentPost.title || `${currentPost.type} post`}
             </span>
           )}
@@ -193,7 +204,7 @@ export default function CreatePost() {
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Article (Markdown)
+                Post (Markdown)
               </button>
               <button
                 onClick={() => {
@@ -216,7 +227,7 @@ export default function CreatePost() {
           <div className="space-y-4">
             <div>
               <Input
-                placeholder="Enter article title..."
+                placeholder="Enter post title..."
                 {...register('title')}
                 className="text-lg"
               />
@@ -243,10 +254,10 @@ export default function CreatePost() {
               <MDEditor
                 value={markdownContent}
                 onChange={(value) => {
-                  setMarkdownContent(value || '');
-                  setValue('content', value || '');
+                  setMarkdownContent(value || '## Enter your content in markdown format');
+                  setValue('content', value || '## Enter your content in markdown format');
                 }}
-                preview="edit"
+                preview="live"
                 height={400}
               />
             </div>

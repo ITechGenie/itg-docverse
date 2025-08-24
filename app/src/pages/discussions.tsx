@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MessageCircle, User } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
@@ -157,21 +157,19 @@ export default function DiscussionsPage() {
   }, []);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Page Header */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
+    <div className="w-full space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <MessageCircle className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0" />
             Recent Discussions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
             Latest comments and discussions from the community
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Error Display */}
       {error && (
@@ -190,7 +188,7 @@ export default function DiscussionsPage() {
       ) : comments.length > 0 ? (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">
-            Recent Comments ({comments.length} found)
+            Recent Discussions ({comments.length} found)
           </h3>
           
           {comments.map((comment) => (
