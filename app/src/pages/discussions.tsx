@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-import { commentsApi } from '@/lib/api';
+import { api } from '@/services/api-client';
 import type { Comment } from '@/types';
 
 const CommentCard = ({ comment }: { comment: Comment }) => {
@@ -138,7 +138,7 @@ export default function DiscussionsPage() {
         setLoading(true);
         setError(null);
         
-        const response = await commentsApi.getRecent(0, 15);
+        const response = await api.getRecentComments(0, 15);
         
         if (response.success && response.data) {
           setComments(response.data);

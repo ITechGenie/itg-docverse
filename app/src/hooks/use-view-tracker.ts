@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 
 interface ViewTrackerOptions {
   /** Delay before tracking the view (in milliseconds) */

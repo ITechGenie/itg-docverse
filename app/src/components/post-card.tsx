@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { PostHeader } from '@/components/common/post-header';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 import type { Post, ReactionType } from '@/types';
 
 interface PostCardProps {

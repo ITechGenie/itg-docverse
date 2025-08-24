@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Tag as TagIcon, Edit, Trash2, ExternalLink, Sparkles, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 
 interface TagCloudItem {
   id: string;

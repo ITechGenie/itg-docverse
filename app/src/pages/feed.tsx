@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link, useParams } from 'react-router-dom';
-import { Plus, Hash, FileText, MessageCircle, Grid, Rss, Heart, Star, RssIcon } from 'lucide-react';
-import { api } from '@/lib/api-client';
+import { Plus, Hash, FileText, MessageCircle, Grid, Rss, Star, RssIcon } from 'lucide-react';
+import { api } from '@/services/api-client';
 import type { Post, FeedFilters } from '@/types';
 import PostCard from '@/components/post-card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ export default function Feed() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [postTypeFilter, setPostTypeFilter] = useState<'all' | 'long-form' | 'thoughts'>('all');
+  const [postTypeFilter, setPostTypeFilter] = useState<'all' | 'posts' | 'thoughts'>('all');
   const [searchParams] = useSearchParams();
   const { tagName, filter } = useParams<{ tagName?: string; filter?: string }>();
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -160,9 +160,9 @@ export default function Feed() {
               <span className="hidden sm:inline">All</span>
             </Button>
             <Button
-              variant={postTypeFilter === 'long-form' ? 'default' : 'ghost'}
+              variant={postTypeFilter === 'posts' ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setPostTypeFilter('long-form')}
+              onClick={() => setPostTypeFilter('posts')}
               className="h-8 px-2 sm:px-3"
             >
               <FileText className="w-4 h-4 sm:mr-1" />

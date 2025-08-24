@@ -14,16 +14,6 @@ export function MobileFooter({ currentPath }: MobileFooterProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const userData = user ? {
-    name: user.displayName,
-    email: user.email,
-    avatar: getAvatarUrl(user.username || user.email, 32),
-  } : {
-    name: "Guest User",
-    email: "guest@example.com",
-    avatar: getAvatarUrl("guest@example.com", 32),
-  };
-
   const isActive = (path: string) => {
     if (currentPath) {
       return currentPath.startsWith(path);
@@ -65,9 +55,9 @@ export function MobileFooter({ currentPath }: MobileFooterProps) {
           }`}
         >
           <Avatar className="h-4 w-4">
-            <AvatarImage src={userData.avatar} alt={userData.name} />
+            <AvatarImage src={getAvatarUrl(user?.username || user?.email || '')} alt={user?.displayName || 'Guest User'} />
             <AvatarFallback className="text-xs">
-              {userData.name.substring(0, 2).toUpperCase()}
+              {user?.displayName?.substring(0, 2).toUpperCase() || 'GU'}
             </AvatarFallback>
           </Avatar>
           <span className="text-xs font-medium">Profile</span>

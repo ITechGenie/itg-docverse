@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AuthorCloud } from '@/components/ui/author-cloud';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 
 interface Author {
   id: string;

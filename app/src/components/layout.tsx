@@ -128,7 +128,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </header>
           <hr className="hidden lg:block" />
-          <main className="flex flex-1 flex-col gap-4 p-3 sm:p-6 pt-20 lg:pt-4 pb-16 lg:pb-4 max-w-none">
+          <main className="flex flex-1 flex-col gap-4 p-3 sm:p-6 pt-[72px] md:pt-20 lg:pt-4 pb-20 lg:pb-4 max-w-none">
             {children}
           </main>
         </SidebarInset>

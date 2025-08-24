@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { searchApi } from '@/lib/api';
+import { api } from '@/services/api-client';
 import type { SearchResult, SearchFilters, SearchConfig } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,7 @@ export default function SearchPage() {
 
   const loadSearchConfig = async () => {
     try {
-      const response = await searchApi.getConfig();
+      const response = await api.getSearchConfig();
       if (response.success && response.data) {
         setSearchConfig(response.data);
       } else {
@@ -57,7 +57,7 @@ export default function SearchPage() {
         threshold: 0.3  // Lower threshold for better results
       };
 
-      const response = await searchApi.search(filters);
+      const response = await api.search(filters);
       
       if (response.success && response.data) {
         setSearchResults(response.data);
@@ -89,7 +89,7 @@ export default function SearchPage() {
   const handleIndexing = async () => {
     try {
       setError(null);
-      const response = await searchApi.triggerIndexing(false);
+      const response = await api.triggerIndexing(false);
       
       if (response.success && response.data) {
         alert(`Indexing triggered successfully! ${response.data.message}`);

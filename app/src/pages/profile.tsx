@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Calendar, ExternalLink, Edit } from 'lucide-react';
+import { MapPin, Calendar, ExternalLink, Edit, FileText, Archive, Eye } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getAvatarUrl } from '@/lib/avatar';
 import { useAuth } from '@/contexts/auth-context';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 import PostCard from '@/components/post-card';
 import type { User, Post } from '@/types';
 
@@ -21,6 +21,7 @@ export default function Profile() {
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<'published' | 'draft' | 'archived'>('published');
 
   useEffect(() => {
     loadProfile();
@@ -31,7 +32,7 @@ export default function Profile() {
     if (profileUser || currentUser) {
       loadUserPosts();
     }
-  }, [profileUser, currentUser]);
+  }, [profileUser, currentUser, statusFilter]);
 
   const loadProfile = async () => {
     setLoading(true);
@@ -84,7 +85,8 @@ export default function Profile() {
         const response = await api.getPosts({ 
           page: 1, 
           limit: 10,
-          author: targetUserId 
+          author: targetUserId,
+          status: statusFilter
         });
         
         if (response.success && response.data) {
@@ -147,7 +149,7 @@ export default function Profile() {
               <Avatar className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24">
                 <AvatarImage src={avatarUrl} alt={displayUser.displayName} />
                 <AvatarFallback className="text-lg sm:text-xl lg:text-2xl">
-                  {displayUser.displayName.split(' ').map(n => n[0]).join('')}
+                  {displayUser.displayName}
                 </AvatarFallback>
               </Avatar>
               
@@ -253,7 +255,42 @@ export default function Profile() {
 
       {/* Posts Section */}
       <div className="space-y-6">
-        <h2 className="text-3xl font-bold tracking-tight">Recent Posts</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h2 className="text-3xl font-bold tracking-tight">Recent Posts</h2>
+          
+          {/* Status Filter - only show if viewing own profile */}
+          {profileUser?.id === currentUser?.id && (
+            <div className="flex items-center border rounded-lg p-1">   
+              <Button
+                variant={statusFilter === 'archived' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setStatusFilter('archived')}
+                className="h-8 px-2 sm:px-3"
+              >
+                <Archive className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Archived</span>
+              </Button>
+               <Button
+                variant={statusFilter === 'draft' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setStatusFilter('draft')}
+                className="h-8 px-2 sm:px-3"
+              >
+                <FileText className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Draft</span>
+              </Button>
+              <Button
+                variant={statusFilter === 'published' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setStatusFilter('published')}
+                className="h-8 px-2 sm:px-3"
+              >
+                <Eye className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Published</span>
+              </Button>
+            </div>
+          )}
+        </div>
         
         {postsLoading ? (
           <div className="space-y-6">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 import type { Post } from '@/types';
 import PostDetail from '@/pages/post-detail';
 

@@ -34,7 +34,7 @@ async def get_favorite_filtered_posts(
     favorite_tags: Optional[bool] = None
 ) -> List[Dict[str, Any]]:
     """Get posts filtered by favorites (either favorite posts or posts from favorite tags)"""
-    
+    logger.debug(f"Fetching favorite filtered posts for user {user_id} with params: skip={skip}, limit={limit}, author_id={author_id}, tag_id={tag_id}, post_type={post_type}, status={status}, favorites_posts={favorites_posts}, favorite_tags={favorite_tags}")
     # Build the base query with database-specific SQL functions
     if settings.database_type == "postgresql":
         # PostgreSQL - use string_agg and TRUE
@@ -76,7 +76,8 @@ async def get_favorite_filtered_posts(
         INNER JOIN reactions r ON p.id = r.target_id 
         INNER JOIN event_types et ON r.event_type_id = et.id
         """
-        where_conditions.append("r.target_type in ('post','thoughts')")
+        # the post here is the common type in the reactions and has nothing to do with the post_types
+        where_conditions.append("r.target_type in ('post')")
         where_conditions.append("r.user_id = ?")
         where_conditions.append("et.id = 'event-favorite'")
         params.append(user_id)

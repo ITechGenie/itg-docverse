@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { TagInput } from '@/components/ui/tag-input';
-import { api } from '@/lib/api-client';
+import { useTheme } from '@/components/theme-provider';
+import { api } from '@/services/api-client';
 import type { CreatePostData, Post } from '@/types';
 
 const createPostSchema = z.object({
@@ -25,20 +26,21 @@ export default function CreatePost() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id, version } = useParams<{ id?: string; version?: string }>();
+  const { theme } = useTheme();
   
   // Determine if we're in edit mode
   const isEditMode = !!id;
   
   // Determine post type from route
-  const getPostTypeFromRoute = (): 'long-form' | 'short-form' | 'thoughts' => {
+  const getPostTypeFromRoute = (): 'posts' | 'thoughts' => {
     const pathname = location.pathname;
-    if (pathname.includes('/create/article')) return 'long-form';
+    if (pathname.includes('/create/article')) return 'posts';
     if (pathname.includes('/create/thoughts')) return 'thoughts';
-    if (pathname.includes('/edit')) return 'long-form'; // Default for edit mode
-    return 'long-form'; // default
+    if (pathname.includes('/edit')) return 'posts'; // Default for edit mode
+    return 'posts'; // default
   };
 
-  const [activeTab, setActiveTab] = useState<'long-form' | 'short-form' | 'thoughts'>(getPostTypeFromRoute());
+  const [activeTab, setActiveTab] = useState<'posts' | 'thoughts'>(getPostTypeFromRoute());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(isEditMode);
   const [markdownContent, setMarkdownContent] = useState('');
@@ -72,8 +74,15 @@ export default function CreatePost() {
         const post = response.data;
         setCurrentPost(post);
         
-        // Set the post type tab based on the post
-        setActiveTab(post.type);
+        // Set the post type tab based on the post - map backend types to UI types
+        if (post.type === 'posts' || post.type === 'llm-long' || post.type === 'llm-short' || 
+            post.type === 'block-diagram' || post.type === 'code-snippet' || post.type === 'discussion') {
+          setActiveTab('posts');
+        } else if (post.type === 'thoughts') {
+          setActiveTab('thoughts');
+        } else {
+          setActiveTab('posts'); // default
+        }
         
         // Pre-populate form fields
         setValue('title', post.title || '');
@@ -111,22 +120,23 @@ export default function CreatePost() {
 
   const contentValue = watch('content');
 
-  const onSubmit = async (data: CreatePostForm) => {
+  const handleSavePost = async (data: CreatePostForm, status: 'draft' | 'published' | 'archived') => {
     setIsSubmitting(true);
     try {
       if (isEditMode && id) {
         // Update existing post
         const updateData = {
-          title: activeTab === 'long-form' ? data.title : undefined,
-          content: activeTab === 'long-form' ? markdownContent : (data.content || ''),
+          title: activeTab === 'posts' ? data.title : undefined,
+          content: activeTab === 'posts' ? markdownContent : (data.content || ''),
           coverImage: data.coverImage || undefined,
           tags: data.tags || [],
+          status: status,
         };
 
         console.log('Updating post:', id, updateData);
         const response = await api.updatePost(id, updateData);
         if (response.success && response.data) {
-          navigate(`/#/post/${id}`);
+          navigate(`/post/${id}`);
         } else {
           console.error('Failed to update post:', response.error);
         }
@@ -134,15 +144,17 @@ export default function CreatePost() {
         // Create new post
         const postData: CreatePostData = {
           type: activeTab,
-          title: activeTab === 'long-form' ? data.title : undefined,
-          content: activeTab === 'long-form' ? markdownContent : (data.content || ''),
+          title: activeTab === 'posts' ? data.title : undefined,
+          content: activeTab === 'posts' ? markdownContent : (data.content || ''),
           coverImage: data.coverImage || undefined,
           tags: data.tags || [],
+          status: status,
         };
 
+        console.log('Creating post with status:', status, postData);
         const response = await api.createPost(postData);
         if (response.success && response.data) {
-          navigate(`/#/post/${response.data.id}`);
+          navigate(`/post/${response.data.id}`);
         }
       }
     } catch (error) {
@@ -150,6 +162,11 @@ export default function CreatePost() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const onSubmit = async (data: CreatePostForm) => {
+    // Default to published status (this is for the main Publish button)
+    await handleSavePost(data, 'published');
   };
 
   return (
@@ -195,11 +212,11 @@ export default function CreatePost() {
             <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
               <button
                 onClick={() => {
-                  setActiveTab('long-form');
+                  setActiveTab('posts');
                   navigate('/create/article');
                 }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'long-form'
+                  activeTab === 'posts'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -223,7 +240,7 @@ export default function CreatePost() {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {activeTab === 'long-form' && (
+        {activeTab === 'posts' && (
           <div className="space-y-4">
             <div>
               <Input
@@ -236,7 +253,7 @@ export default function CreatePost() {
               )}
             </div>
 
-            <div>
+            {/*<div>
               <Input
                 placeholder="Cover image URL (optional)"
                 {...register('coverImage')}
@@ -244,19 +261,25 @@ export default function CreatePost() {
               {errors.coverImage && (
                 <p className="text-sm text-destructive mt-1">{errors.coverImage.message}</p>
               )}
-            </div>
+            </div>*/}
           </div>
         )}
 
         <div>
-          {activeTab === 'long-form' ? (
-            <div data-color-mode="dark">
+          {activeTab === 'posts' ? (
+            <div data-color-mode={theme === 'dark' ? 'dark' : 'light'}>
+              <div className="flex mt-1 text-xs text-muted-foreground">
+                <span className="ml-auto text-right p-1">
+                  Use the mode buttons below to switch between Edit and Preview <br />
+                </span>
+              </div>
               <MDEditor
                 value={markdownContent}
                 onChange={(value) => {
                   setMarkdownContent(value || '## Enter your content in markdown format');
                   setValue('content', value || '## Enter your content in markdown format');
                 }}
+                data-color-mode={theme === 'dark' ? 'dark' : 'light'}
                 preview="live"
                 height={400}
               />
@@ -285,7 +308,7 @@ export default function CreatePost() {
           <TagInput
             value={watch('tags') || []}
             onChange={(tags) => setValue('tags', tags)}
-            placeholder="Add tags..."
+            placeholder="Add or search tags..."
             maxTags={5}
             disabled={isSubmitting}
           />
@@ -300,14 +323,40 @@ export default function CreatePost() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate(isEditMode ? `/#/post/${id}` : '/#/feed')}
+            onClick={() => navigate(isEditMode ? `/post/${id}` : '/feed')}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            disabled={isSubmitting}
+            onClick={handleSubmit((data) => handleSavePost(data, 'archived'))}
+          >
             {isSubmitting 
-              ? (isEditMode ? 'Updating...' : 'Publishing...') 
-              : (isEditMode ? 'Update Post' : 'Publish Post')
+              ?  'Archiving...'
+              : 'Archive'
+            }
+          </Button>
+          <Button 
+            type="button" 
+            variant="outline" 
+            disabled={isSubmitting}
+            onClick={handleSubmit((data) => handleSavePost(data, 'draft'))}
+          >
+            {isSubmitting 
+              ? (isEditMode ? 'Saving...' : 'Saving...') 
+              : 'Save Draft'
+            }
+          </Button>
+          <Button 
+            type="button" 
+            disabled={isSubmitting}
+            onClick={handleSubmit((data) => handleSavePost(data, 'published'))}
+          >
+            {isSubmitting 
+              ? (isEditMode ? 'Publishing...' : 'Publishing...') 
+              : (isEditMode ? 'Update Post' : 'Publish Content')
             }
           </Button>
         </div>

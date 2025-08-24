@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { 
@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getAvatarUrl } from '@/lib/avatar';
-import { api } from '@/lib/api-client';
+import { api } from '@/services/api-client';
 import { useAuth } from '@/contexts/auth-context';
 import type { Post, ReactionType } from '@/types';
 
@@ -80,6 +80,7 @@ export const PostHeader = ({
   const [loadingReactions, setLoadingReactions] = useState(true);
   const [totalReactions, setTotalReactions] = useState(0);
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const avatarUrl = getAvatarUrl(post.author.username || post.author.email, 48);
   const formattedDate = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
@@ -198,7 +199,15 @@ export const PostHeader = ({
             variant="ghost"
             size="sm"
             className="flex items-center space-x-1 text-muted-foreground hover:text-foreground px-2"
-            onClick={() => document.getElementById('comments-section')?.scrollIntoView({ behavior: 'smooth' })}
+            onClick={() => {
+              if (isDetailView) {
+                // If we're in detail view, scroll to comments section
+                document.getElementById('comments-section')?.scrollIntoView({ behavior: 'smooth' });
+              } else {
+                // If we're in feed/card view, navigate to the post detail page and scroll to comments
+                navigate(`/post/${post.id}`, { state: { scrollToComments: true } });
+              }
+            }}
             title="Jump to comments"
           >
             <MessageCircle className="w-4 h-4" />
