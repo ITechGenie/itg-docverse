@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, ArrowLeft, User, MapPin, Globe, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { getAvatarUrl } from '@/lib/avatar';
+import { ApiClient } from '@/services/api-client';
 import type { User as UserType } from '@/types';
 
 interface EditProfileForm {
@@ -20,6 +21,9 @@ interface EditProfileForm {
 }
 
 export default function EditProfile() {
+
+  const { username } = useParams<{ username?: string }>();
+
   const navigate = useNavigate();
   const { user: currentUser, updateUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -32,25 +36,75 @@ export default function EditProfile() {
     formState: { errors, isDirty }
   } = useForm<EditProfileForm>();
 
+  const isAdmin = currentUser?.roles?.includes('role_admin');
+
+  const apiClient = new ApiClient();
+  const [targetUser, setTargetUser] = useState<UserType | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const isEditingOther = Boolean(username && username !== currentUser?.username);
+
+  console.log('Current User:', currentUser);
+  console.log('Username from URL:', username);
+  console.log('users role: ', currentUser?.roles)
+  console.log('Is admin user? ' + isAdmin);
+
   // Pre-populate form with current user data
   useEffect(() => {
-    if (currentUser) {
-      setValue('displayName', currentUser.displayName);
-      setValue('bio', currentUser.bio || '');
-      setValue('location', currentUser.location || '');
-      setValue('website', currentUser.website || '');
-    }
+    const load = async () => {
+      // If username param provided, try to fetch that user's profile
+      if (username) {
+        // If editing another user, ensure admin
+        if (username !== currentUser?.username && !isAdmin) {
+          setError('Not authorized to edit other users');
+          return;
+        }
+
+        const resp = await apiClient.getUserByUsername(username);
+        if (resp.success && resp.data) {
+          setTargetUser(resp.data);
+          setValue('displayName', resp.data.displayName);
+          setValue('bio', resp.data.bio || '');
+          setValue('location', resp.data.location || '');
+          setValue('website', resp.data.website || '');
+          // Pre-select roles when editing another user
+          if (resp.data.roles && Array.isArray(resp.data.roles)) {
+            setSelectedRoles(resp.data.roles as string[]);
+          }
+
+          // If current user is admin, load available role types for assignment
+          if (isAdmin) {
+            const rolesResp = await apiClient.getRoleTypes();
+            if (rolesResp.success && Array.isArray(rolesResp.data)) {
+              // rolesResp.data expected to be array of role objects or strings
+              // normalize to array of role ids (strings)
+              const roleIds = rolesResp.data.map((r: any) => (typeof r === 'string' ? r : r.role_id || r.id || r.roleId)).filter(Boolean);
+              setAvailableRoles(roleIds as string[]);
+            }
+          }
+          return;
+        } else {
+          setError(resp.error || 'Failed to load user');
+          return;
+        }
+      }
+
+      if (currentUser) {
+        setValue('displayName', currentUser.displayName);
+        setValue('bio', currentUser.bio || '');
+        setValue('location', currentUser.location || '');
+        setValue('website', currentUser.website || '');
+      }
+    };
+
+    load();
   }, [currentUser, setValue]);
 
   const onSubmit = async (data: EditProfileForm) => {
-    if (!currentUser) return;
-
     setIsLoading(true);
     setError('');
 
     try {
-      // For now, we'll just update the local user data
-      // In a real app, this would call an API endpoint to update the user profile
       const updatedUser: Partial<UserType> = {
         displayName: data.displayName,
         bio: data.bio,
@@ -58,11 +112,44 @@ export default function EditProfile() {
         website: data.website,
       };
 
-      // Call updateUser from auth context
-      updateUser(updatedUser);
+      // Editing another user -> call API (admin only)
+      if (isEditingOther) {
+        if (!isAdmin) {
+          setError('Not authorized to edit other users');
+          return;
+        }
 
-      // Navigate back to profile
+        // Update profile fields for the target user
+        const resp = await apiClient.updateUser(targetUser?.id || '', updatedUser);
+        if (!resp.success || !resp.data) {
+          setError(resp.error || 'Failed to update user');
+          return;
+        }
+
+        // If admin, also sync selected roles
+        if (isAdmin) {
+          try {
+            const rolesResp = await apiClient.updateUserRoles(targetUser?.id || '', selectedRoles);
+            if (!rolesResp.success) {
+              // roles update failed; surface error but continue
+              setError(rolesResp.error || 'Failed to update user roles');
+              return;
+            }
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update user roles');
+            return;
+          }
+        }
+
+        // Navigate to the updated user's profile
+        navigate(`/profile/${resp.data.username || username}`);
+        return;
+      }
+
+      // Updating self: update local auth state and persist
+      updateUser(updatedUser);
       navigate('/profile');
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
@@ -226,6 +313,40 @@ export default function EditProfile() {
             </div>
 
             {/* Error Message */}
+            {/* Roles (admin editing another user) */}
+            {isEditingOther && isAdmin && (
+              <div className="space-y-2">
+                <Label className="flex items-center space-x-2">
+                  <User className="w-4 h-4" />
+                  <span>Roles</span>
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {availableRoles.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No roles available</p>
+                  ) : (
+                    availableRoles.map((roleId) => {
+                      const checked = selectedRoles.includes(roleId);
+                      return (
+                        <label key={roleId} className="inline-flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setSelectedRoles((prev) =>
+                                prev.includes(roleId) ? prev.filter((r) => r !== roleId) : [...prev, roleId]
+                              );
+                            }}
+                            className="form-checkbox"
+                          />
+                          <span className="text-sm">{roleId}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="p-3 rounded-lg bg-destructive/15 text-destructive text-sm">
                 {error}

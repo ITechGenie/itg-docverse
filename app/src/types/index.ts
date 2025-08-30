@@ -9,6 +9,8 @@ export interface User {
   website?: string;
   joinedDate: string;
   isFollowing?: boolean;
+  isVerified?: boolean;
+  roles?: string[];
   stats: {
     postsCount: number;
     commentsCount: number;

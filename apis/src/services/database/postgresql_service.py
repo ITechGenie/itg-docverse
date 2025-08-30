@@ -518,7 +518,13 @@ class PostgreSQLService(DatabaseService):
     async def get_users(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
         """Get list of users with pagination"""
         return await self.execute_query(
-            "SELECT * FROM users WHERE is_active = $1 ORDER BY created_ts DESC LIMIT $2 OFFSET $3",
+            """SELECT *, COALESCE(
+                (SELECT string_agg(ur.role_id, ', ')
+                FROM user_roles ur
+                WHERE ur.user_id = u.id
+                ),
+                'role_user'
+            ) AS roles FROM users u WHERE is_active = $1 ORDER BY created_ts DESC LIMIT $2 OFFSET $3""",
             (True, limit, skip)
         )
 
@@ -532,6 +538,44 @@ class PostgreSQLService(DatabaseService):
             WHERE ur.user_id = $1 AND ur.is_active = $2 AND rt.is_active = $3
             ORDER BY ur.created_ts DESC
         """, (user_id, True, True))
+
+    async def get_role_types(self) -> List[Dict[str, Any]]:
+        """Get all active role types"""
+        return await self.execute_query(
+            "SELECT role_id, role_name, role_description, permissions, is_active FROM role_types WHERE is_active = $1 ORDER BY role_name",
+            (1,)
+        )
+
+    async def assign_role_to_user(self, user_id: str, role_id: str, assigned_by: str = None) -> bool:
+        """Assign a role to a user (idempotent)"""
+        try:
+            assignment_id = str(uuid.uuid4())
+            # Insert if not exists
+            await self.execute_command(
+                "INSERT INTO user_roles (id, user_id, role_id, is_active, assigned_by, created_by) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (user_id, role_id) DO NOTHING",
+                (assignment_id, user_id, role_id, True, assigned_by or user_id, assigned_by or user_id)
+            )
+            # Ensure assignment is active
+            await self.execute_command(
+                "UPDATE user_roles SET is_active = $1 WHERE user_id = $2 AND role_id = $3",
+                (True, user_id, role_id)
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to assign role {role_id} to user {user_id}: {e}")
+            return False
+
+    async def remove_role_from_user(self, user_id: str, role_id: str) -> bool:
+        """Deactivate a user's role assignment"""
+        try:
+            await self.execute_command(
+                "UPDATE user_roles SET is_active = $1 WHERE user_id = $2 AND role_id = $3",
+                (False, user_id, role_id)
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to remove role {role_id} from user {user_id}: {e}")
+            return False
 
     # Parity: tags CRUD helpers
     async def create_tag(self, tag_data: Dict[str, Any]) -> str:

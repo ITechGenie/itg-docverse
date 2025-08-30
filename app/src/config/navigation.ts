@@ -11,6 +11,7 @@ import {
 //  FileText,
   Search,
   RssIcon,
+  Settings,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -45,6 +46,7 @@ export interface NavigationConfig {
     plan: string;
   }>;
   navMain: NavigationItem[];
+  navSecondary: NavigationItem[];
   projects: NavigationProject[];
   mobileNav: MobileNavItem[];
 }
@@ -180,6 +182,13 @@ export const navigationConfig: NavigationConfig = {
         },
       ],
     }, */
+  ],
+  navSecondary: [
+    {
+      title: "Settings",
+      url: "/settings", 
+      icon: Settings
+    }
   ],
   projects: [
     {

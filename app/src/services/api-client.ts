@@ -162,6 +162,7 @@ export class ApiClient {
               website: response.data.website || '',
               avatar: response.data.avatar_url || getAvatarUrl(response.data.username, 100),
               joinedDate: response.data.created_at || new Date().toISOString(),
+              roles: response.data.roles || [],
               stats: {
                 postsCount: response.data.post_count || 0,
                 commentsCount: response.data.comment_count || 0,
@@ -187,6 +188,50 @@ export class ApiClient {
     } catch (error) {
       console.error('Get current user failed:', error);
       return { success: false, error: 'Failed to get user information' };
+    }
+  }
+
+
+  async getUsers(params: { skip?: number; limit?: number } = {}): Promise<ApiResponse<User[]>> {
+    try {
+      const searchParams = new URLSearchParams();
+      if (params.skip !== undefined) {
+        searchParams.append('skip', String(params.skip));
+      }
+      if (params.limit !== undefined) {
+        searchParams.append('limit', String(params.limit));
+      }
+      
+      const query = searchParams.toString();
+      const endpoint = query ? `/users/?${query}` : '/users/';
+      const response = await this.apiCall<any[]>(endpoint, 'GET');
+      
+      if (response.success && response.data) {
+        // Transform backend user data to frontend User type
+        const users: User[] = response.data.map((backendUser: any) => ({
+          id: backendUser.id,
+          username: backendUser.username,
+          displayName: backendUser.display_name,
+          email: `${backendUser.username}@itgdocverse.com`, // Email not exposed in public API
+          bio: backendUser.bio || '',
+          location: backendUser.location || '',
+          website: backendUser.website || '',
+          avatar: backendUser.avatar_url || getAvatarUrl(backendUser.username, 100),
+          joinedDate: backendUser.created_at,
+          roles: backendUser.roles || [],
+          isVerified: backendUser.is_verified || false,
+          stats: {
+            postsCount: backendUser.post_count || 0,
+            commentsCount: backendUser.comment_count || 0,
+            tagsFollowed: 0, // Not available in backend yet
+          },
+        }));
+        return { success: true, data: users };
+      }
+      return response;
+    } catch (error) {
+      console.error('Get users failed:', error);
+      return { success: false, error: 'Failed to get users' };
     }
   }
 
@@ -218,6 +263,90 @@ export class ApiClient {
     } catch (error) {
       console.error('Get user by username failed:', error);
       return { success: false, error: 'Failed to get user by username' };
+    }
+  }
+
+  async updateUser(userId: string, updates: Partial<User>): Promise<ApiResponse<User>> {
+    try {
+      const payload: any = {
+        display_name: updates.displayName,
+        bio: updates.bio,
+        location: updates.location,
+        website: updates.website,
+      };
+
+      const response = await this.apiCall<any>(`/users/${userId}`, 'POST', payload);
+      if (response.success && response.data) {
+        // Normalize to frontend User shape if possible
+        const backendUser = response.data;
+        const user: User = {
+          id: backendUser.id,
+          username: backendUser.username,
+          displayName: backendUser.display_name || backendUser.username,
+          email: backendUser.email || `${backendUser.username}@itgdocverse.com`,
+          bio: backendUser.bio || '',
+          location: backendUser.location || '',
+          website: backendUser.website || '',
+          avatar: backendUser.avatar_url || getAvatarUrl(backendUser.username, 100),
+          joinedDate: backendUser.created_at || new Date().toISOString(),
+          roles: backendUser.roles || [],
+          stats: {
+            postsCount: backendUser.post_count || 0,
+            commentsCount: backendUser.comment_count || 0,
+            tagsFollowed: 0,
+          },
+        };
+        return { success: true, data: user };
+      }
+      return response;
+    } catch (error) {
+      console.error('Update user failed:', error);
+      return { success: false, error: 'Failed to update user' };
+    }
+  }
+
+  async getRoleTypes(): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await this.apiCall<any[]>('/users/roles', 'GET');
+      if (response.success && response.data) {
+        return { success: true, data: response.data };
+      }
+      return response;
+    } catch (error) {
+      console.error('Get role types failed:', error);
+      return { success: false, error: 'Failed to get role types' };
+    }
+  }
+
+  async updateUserRoles(userId: string, roles: string[]): Promise<ApiResponse<User>> {
+    try {
+      const response = await this.apiCall<any>(`/users/${userId}/roles`, 'POST', { roles });
+      if (response.success && response.data) {
+        // Normalize to User type minimally
+        const backendUser = response.data;
+        const user: User = {
+          id: backendUser.id,
+          username: backendUser.username,
+          displayName: backendUser.display_name || backendUser.username,
+          email: backendUser.email || `${backendUser.username}@itgdocverse.com`,
+          bio: backendUser.bio || '',
+          location: backendUser.location || '',
+          website: backendUser.website || '',
+          avatar: backendUser.avatar_url || getAvatarUrl(backendUser.username, 100),
+          joinedDate: backendUser.created_at || new Date().toISOString(),
+          roles: backendUser.roles || [],
+          stats: {
+            postsCount: backendUser.post_count || 0,
+            commentsCount: backendUser.comment_count || 0,
+            tagsFollowed: 0,
+          },
+        };
+        return { success: true, data: user };
+      }
+      return response;
+    } catch (error) {
+      console.error('Update user roles failed:', error);
+      return { success: false, error: 'Failed to update user roles' };
     }
   }
 
