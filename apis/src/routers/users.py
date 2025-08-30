@@ -4,7 +4,10 @@ Handles all user-related endpoints (requires authentication)
 """
 
 from typing import List, Dict, Any
+
 from fastapi import APIRouter, HTTPException, Depends, Query
+
+from ..utils.logger import get_logger
 
 from ..models.user import User, UserCreate, UserUpdate, UserPublic
 from ..services.database.factory import DatabaseServiceFactory
@@ -12,6 +15,9 @@ from ..services.database.base import DatabaseService
 from ..middleware.dependencies import get_current_user_from_middleware
 
 router = APIRouter()
+
+# Initialize logger - now just like log4j!
+logger = get_logger("PostsAPI", level="DEBUG", json_format=False)
 
 async def get_db_service() -> DatabaseService:
     """Dependency to get database service - using singleton pattern"""
@@ -53,7 +59,13 @@ async def get_user(
         if not user_stats:
             user_stats = {"posts_count": 0, "comments_count": 0, "tags_followed": 0}
         
-        # Build the response with stats
+        # Get user roles - just extract role IDs for lightweight response
+        user_roles_raw = await db.get_user_roles(user['id'])
+        role_ids = [role['role_id'] for role in user_roles_raw if role.get('assignment_active', True)]
+        
+        logger.info(f"User roles for {user['username']} ({user['id']}): {role_ids}")
+
+        # Build the response with stats and role IDs
         user_response = {
             "id": user['id'],
             "username": user['username'],
@@ -65,6 +77,7 @@ async def get_user(
             "post_count": user_stats.get('posts_count', 0),
             "comment_count": user_stats.get('comments_count', 0),
             "is_verified": user.get('is_verified', False),
+            "roles": role_ids,
             "created_at": user['created_ts']
         }
         
@@ -91,7 +104,11 @@ async def get_user_by_username(
         if not user_stats:
             user_stats = {"posts_count": 0, "comments_count": 0, "tags_followed": 0}
         
-        # Build the response with stats
+        # Get user roles - just extract role IDs for lightweight response
+        user_roles_raw = await db.get_user_roles(user['id'])
+        role_ids = [role['role_id'] for role in user_roles_raw if role.get('assignment_active', True)]
+        
+        # Build the response with stats and role IDs
         user_response = {
             "id": user['id'],
             "username": user['username'],
@@ -103,6 +120,7 @@ async def get_user_by_username(
             "post_count": user_stats.get('posts_count', 0),
             "comment_count": user_stats.get('comments_count', 0),
             "is_verified": user.get('is_verified', False),
+            "roles": role_ids,
             "created_at": user['created_ts']
         }
         

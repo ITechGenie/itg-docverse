@@ -41,11 +41,13 @@ class AuthService:
             self.cache = {}
             self.cache_type = 'memory'
     
-    def generate_token(self, user_id: str, additional_claims: Optional[Dict] = None) -> str:
-        """Generate JWT token for user"""
+    def generate_token(self, user_id: str, roles: Optional[list] = None, additional_claims: Optional[Dict] = None) -> str:
+        """Generate JWT token for user with roles"""
         now = datetime.now(timezone.utc)
         payload = {
             'user_id': user_id,
+            'roles': roles or [],
+            'permissions': self._extract_permissions_from_roles(roles or []),
             'iat': now,
             'exp': now + timedelta(hours=self.token_expiry_hours),
             'iss': 'itg-docverse',
@@ -153,6 +155,48 @@ class AuthService:
         except Exception:
             # If cache check fails, allow JWT validation to proceed
             return True
+    
+    def _extract_permissions_from_roles(self, roles: list) -> list:
+        """Extract all permissions from user roles"""
+        permissions = set()
+        for role in roles:
+            if isinstance(role, dict) and 'permissions' in role:
+                role_permissions = role.get('permissions', [])
+                if isinstance(role_permissions, list):
+                    permissions.update(role_permissions)
+                elif isinstance(role_permissions, str):
+                    try:
+                        import json
+                        parsed_permissions = json.loads(role_permissions)
+                        if isinstance(parsed_permissions, list):
+                            permissions.update(parsed_permissions)
+                    except:
+                        pass
+        return list(permissions)
+    
+    def has_permission(self, user_permissions: list, required_permission: str) -> bool:
+        """Check if user has specific permission"""
+        # Support wildcard permissions
+        for permission in user_permissions:
+            if permission == required_permission:
+                return True
+            # Check wildcard permissions like "post:*" matching "post:create"
+            if '*' in permission:
+                prefix = permission.replace('*', '')
+                if required_permission.startswith(prefix):
+                    return True
+        return False
+    
+    def has_role(self, user_roles: list, required_role: str) -> bool:
+        """Check if user has specific role"""
+        for role in user_roles:
+            if isinstance(role, dict):
+                if role.get('role_id') == required_role or role.get('role_name') == required_role:
+                    return True
+            elif isinstance(role, str):
+                if role == required_role:
+                    return True
+        return False
 
 # Global auth service instance
 auth_service = AuthService()

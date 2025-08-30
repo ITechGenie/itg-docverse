@@ -48,6 +48,11 @@ class DatabaseService(ABC):
         """Get list of users with pagination (returns List of Dict for compatibility)"""
         pass
     
+    @abstractmethod
+    async def get_user_roles(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get user roles and permissions"""
+        pass
+    
     # ============================================
     # TAG OPERATIONS
     # ============================================

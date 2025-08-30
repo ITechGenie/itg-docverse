@@ -574,6 +574,18 @@ class SQLiteService(DatabaseService):
         )
         return results
         
+    async def get_user_roles(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get user roles with role details"""
+        results = await self.execute_query("""
+            SELECT rt.role_id, rt.role_description, rt.permissions, rt.is_active as role_active,
+                   ur.created_ts, ur.assigned_by, ur.is_active as assignment_active
+            FROM user_roles ur
+            JOIN role_types rt ON ur.role_id = rt.role_id
+            WHERE ur.user_id = ? AND ur.is_active = ? AND rt.is_active = ?
+            ORDER BY ur.created_ts DESC
+        """, (user_id, True, True))
+        return results
+        
     async def create_tag(self, tag_data: Dict[str, Any]) -> str:
         """Create a new tag"""
         await self.execute_command(

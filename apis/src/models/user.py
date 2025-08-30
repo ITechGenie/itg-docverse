@@ -4,8 +4,35 @@ Represents a user in the ITG DocVerse system
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
+
+class RoleType(BaseModel):
+    """Role type model"""
+    role_id: str
+    role_name: str
+    role_description: Optional[str] = None
+    permissions: List[str] = []
+    is_active: bool = True
+    
+    class Config:
+        from_attributes = True
+
+class UserRole(BaseModel):
+    """User role assignment model"""
+    id: str
+    user_id: str
+    role_id: str
+    role_name: str
+    is_active: bool = True
+    assigned_by: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 
 class User(BaseModel):
     """User model"""
@@ -22,6 +49,7 @@ class User(BaseModel):
     comment_count: int = Field(default=0, ge=0)
     is_active: bool = Field(default=True)
     is_verified: bool = Field(default=False)
+    roles: List[str] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
@@ -61,6 +89,7 @@ class UserPublic(BaseModel):
     post_count: int = 0
     comment_count: int = 0
     is_verified: bool = False
+    roles: List[str] = []
     created_at: datetime
     
     class Config:

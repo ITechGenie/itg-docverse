@@ -238,6 +238,33 @@ class MockDatabaseService(DatabaseService):
             })
         return result
     
+    async def get_user_roles(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get user roles and permissions (mock implementation returns default user role)"""
+        # For mock service, return default roles based on username
+        user = self.users.get(user_id)
+        if not user:
+            return []
+        
+        # Mock role assignment based on username patterns
+        if user.username in ['admin', 'administrator']:
+            return [{
+                'role_id': 'admin',
+                'role_description': 'Administrator',
+                'permissions': ['*']  # All permissions
+            }]
+        elif user.username.startswith('mod_') or 'moderator' in user.username.lower():
+            return [{
+                'role_id': 'community_moderator',
+                'role_description': 'Community Moderator',
+                'permissions': ['posts.moderate', 'comments.moderate', 'users.moderate', 'reports.manage']
+            }]
+        else:
+            return [{
+                'role_id': 'user',
+                'role_description': 'Regular User',
+                'permissions': ['posts.read', 'posts.create', 'posts.update_own', 'comments.read', 'comments.create', 'profile.update_own']
+            }]
+    
     # ============================================
     # TAG OPERATIONS
     # ============================================
