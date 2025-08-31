@@ -232,6 +232,11 @@ export const navigationConfig: NavigationConfig = {
     {
       icon: Home,
       label: 'Home',
+      href: "/dashboard", // Changed from '/feed' to '/dashboard'
+    },
+    {
+    	icon: RssIcon,
+	label: "Feed",
       href: '/feed',
     },
     {
