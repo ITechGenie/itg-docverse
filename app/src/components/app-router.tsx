@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import Layout from '@/components/layout';
 import { Skeleton } from '@/components/ui/skeleton';
+import Settings from '@/pages/settings';
 
 // Lazy load components for code splitting
 const Dashboard = lazy(() => import('@/pages/dashboard'));
@@ -23,6 +24,7 @@ const PostVersions = lazy(() => import('@/pages/post-versions'));
 const SearchPage = lazy(() => import('@/pages/search'));
 const LoginPage = lazy(() => import('@/pages/login'));
 const DiscussionsPage = lazy(() => import('@/pages/discussions'));
+const ManageUsers = lazy(() => import('@/pages/manage-users'));
 
 // Loading fallback components for different sections
 const PageLoadingFallback = () => (
@@ -89,6 +91,7 @@ export default function AppRouter() {
   return (
     <Layout>
       <Routes>
+
         {/* Main Feed Routes */}
         <Route path="/" element={
           <Suspense fallback={<FeedLoadingFallback />}>
@@ -265,6 +268,26 @@ export default function AppRouter() {
           </Suspense>
         } />
 
+        {/** All admin routes here */}
+
+        <Route path="/settings" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Settings />
+          </Suspense>
+        } />
+
+        <Route path="/admin/users" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <ManageUsers />
+          </Suspense>
+        } />
+
+        <Route path="/profile/:username/edit" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <EditProfile />
+          </Suspense>
+        } />
+        
         {/* 404 Route */}
         <Route path="*" element={
           <Suspense fallback={<PageLoadingFallback />}>

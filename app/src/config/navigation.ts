@@ -1,18 +1,19 @@
 import {
-	BookOpen,
-	Hash,
-	Home,
-	PenTool,
-	User,
-	Users,
-	Star,
-	//  BarChart3,
-	Zap,
-	//  FileText,
-	Search,
-	RssIcon,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+  BookOpen,
+  Hash,
+  Home,
+  PenTool,
+  User,
+  Users,
+  Star,
+//  BarChart3,
+  Zap,
+//  FileText,
+  Search,
+  RssIcon,
+  Settings,
+} from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 export interface NavigationItem {
 	title: string;
@@ -37,16 +38,17 @@ export interface MobileNavItem {
 }
 
 export interface NavigationConfig {
-	siteTitle: string;
-	siteSubtitle?: string;
-	teams: Array<{
-		name: string;
-		logo: LucideIcon;
-		plan: string;
-	}>;
-	navMain: NavigationItem[];
-	projects: NavigationProject[];
-	mobileNav: MobileNavItem[];
+  siteTitle: string;
+  siteSubtitle?: string;
+  teams: Array<{
+    name: string;
+    logo: LucideIcon;
+    plan: string;
+  }>;
+  navMain: NavigationItem[];
+  navSecondary: NavigationItem[];
+  projects: NavigationProject[];
+  mobileNav: MobileNavItem[];
 }
 
 export const navigationConfig: NavigationConfig = {
@@ -164,88 +166,95 @@ export const navigationConfig: NavigationConfig = {
 	  ],
 	},
    {
-	  title: "Analytics",
-	  url: "/dashboard",
-	  icon: BarChart3,
-	  section: "Overview",
-	  items: [
-		{
-		  title: "Overview",
-		  url: "/dashboard",
-		  section: "Overview",
-		},
-		{
-		  title: "My Posts",
-		  url: "/profile/posts",
-		  section: "Account",
-		},
-		{
-		  title: "Engagement",
-		  url: "/analytics/engagement",
-		  section: "Overview",
-		},
-	  ],
-	}, */
-	],
-	projects: [
-		{
-			name: 'My Profile',
-			url: '/profile',
-			icon: User,
-			section: 'Account',
-		},
-		{
-			name: 'Tagged Content',
-			url: '/feed/favorite-tags',
-			icon: Star,
-			section: 'Discovery',
-		},
-		{
-			name: 'Favorite Content',
-			url: '/feed/favorite-posts',
-			icon: RssIcon,
-			section: 'Account',
-		},
-		{
-			name: 'Favorite Tags',
-			url: '/tags/favorites',
-			icon: Hash,
-			section: 'Discovery',
-		},
-		{
-			name: 'Search',
-			url: '/search',
-			icon: Search,
-			section: 'Discovery',
-		},
-	],
-	mobileNav: [
-		{
-			icon: Home,
-			label: 'Home',
-			href: '/dashboard', // Changed from '/feed' to '/dashboard'
-		},
-		{
-			icon: RssIcon,
-			label: 'Feed',
-			href: '/feed',
-		},
-		{
-			icon: PenTool,
-			label: 'Create',
-			href: '/create',
-		},
-		{
-			icon: Hash,
-			label: 'Tags',
-			href: '/tags',
-		},
-		{
-			icon: Users,
-			label: 'Community',
-			href: '/contributors',
-		},
-	],
+      title: "Analytics",
+      url: "/dashboard",
+      icon: BarChart3,
+      section: "Overview",
+      items: [
+        {
+          title: "Overview",
+          url: "/dashboard",
+          section: "Overview",
+        },
+        {
+          title: "My Posts",
+          url: "/profile/posts",
+          section: "Account",
+        },
+        {
+          title: "Engagement",
+          url: "/analytics/engagement",
+          section: "Overview",
+        },
+      ],
+    }, */
+  ],
+  navSecondary: [
+    {
+      title: "Settings",
+      url: "/settings", 
+      icon: Settings
+    }
+  ],
+  projects: [
+    {
+      name: "My Profile",
+      url: "/profile",
+      icon: User,
+      section: "Account",
+    },
+    {
+      name: "Tagged Content",
+      url: "/feed/favorite-tags",
+      icon: Star,
+      section: "Discovery",
+    },    
+    {
+      name: "Favorite Content",
+      url: "/feed/favorite-posts",
+      icon: RssIcon,
+      section: "Account",
+    },
+    {
+      name: "Favorite Tags",
+      url: "/tags/favorites",
+      icon: Hash,
+      section: "Discovery",
+    },
+    {
+      name: "Search",
+      url: "/search",
+      icon: Search,
+      section: "Discovery",
+    },
+  ],
+  mobileNav: [
+    {
+      icon: Home,
+      label: 'Home',
+      href: "/dashboard", // Changed from '/feed' to '/dashboard'
+    },
+    {
+    	icon: RssIcon,
+	label: "Feed",
+      href: '/feed',
+    },
+    {
+      icon: PenTool,
+      label: 'Create',
+      href: '/create',
+    },
+    {
+      icon: Hash,
+      label: 'Tags',
+      href: '/tags',
+    },
+    {
+      icon: Users,
+      label: 'Community',
+      href: '/contributors',
+    },
+  ],
 };
 
 // Helper function to find navigation item by path

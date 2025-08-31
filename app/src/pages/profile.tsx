@@ -47,27 +47,12 @@ export default function Profile() {
           if (response.success && response.data) {
             setProfileUser(response.data);
           } else {
-            // Fallback to mock user if not found
-            const mockUser: User = {
-              id: 'user-unknown',
-              username: username,
-              displayName: username.charAt(0).toUpperCase() + username.slice(1),
-              email: `${username}@example.com`,
-              bio: 'User profile not found in database',
-              location: 'Unknown',
-              joinedDate: '2024-01-15T00:00:00Z',
-              stats: {
-                postsCount: 0,
-                commentsCount: 0,
-                tagsFollowed: 0,
-              },
-            };
-            setProfileUser(mockUser);
+            throw new Error('User not found');
           }
         } catch (error) {
           console.error('Failed to load user profile:', error);
           // Use current user as fallback
-          setProfileUser(currentUser);
+          //setProfileUser(currentUser);
         }
       }
     } catch (error) {

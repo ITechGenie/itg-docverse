@@ -48,6 +48,27 @@ class DatabaseService(ABC):
         """Get list of users with pagination (returns List of Dict for compatibility)"""
         pass
     
+    @abstractmethod
+    async def get_user_roles(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get user roles and permissions"""
+        pass
+
+    # Role type operations
+    @abstractmethod
+    async def get_role_types(self) -> List[Dict[str, Any]]:
+        """Get available role types"""
+        pass
+
+    @abstractmethod
+    async def assign_role_to_user(self, user_id: str, role_id: str, assigned_by: str = None) -> bool:
+        """Assign a role to a user"""
+        pass
+
+    @abstractmethod
+    async def remove_role_from_user(self, user_id: str, role_id: str) -> bool:
+        """Remove a role assignment from a user"""
+        pass
+    
     # ============================================
     # TAG OPERATIONS
     # ============================================

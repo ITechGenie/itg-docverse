@@ -569,10 +569,68 @@ class SQLiteService(DatabaseService):
     async def get_users(self, skip: int = 0, limit: int = 10) -> List[Dict[str, Any]]:
         """Get list of users with pagination"""
         results = await self.execute_query(
-            "SELECT * FROM users WHERE is_active = ? ORDER BY created_ts DESC LIMIT ? OFFSET ?",
+            """SELECT *, COALESCE(
+                (SELECT GROUP_CONCAT(ur.role_id, ', ')
+                FROM user_roles ur
+                WHERE ur.user_id = u.id
+                ),
+                'role_user'
+            ) AS roles FROM users u WHERE is_active = ? ORDER BY created_ts DESC LIMIT ? OFFSET ?""",
             (True, limit, skip)
         )
         return results
+        
+    async def get_user_roles(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get user roles with role details"""
+        results = await self.execute_query("""
+            SELECT rt.role_id, rt.role_description, rt.permissions, rt.is_active as role_active,
+                   ur.created_ts, ur.assigned_by, ur.is_active as assignment_active
+            FROM user_roles ur
+            JOIN role_types rt ON ur.role_id = rt.role_id
+            WHERE ur.user_id = ? AND ur.is_active = ? AND rt.is_active = ?
+            ORDER BY ur.created_ts DESC
+        """, (user_id, True, True))
+        return results
+
+    async def get_role_types(self) -> List[Dict[str, Any]]:
+        """Get all active role types"""
+        results = await self.execute_query(
+            "SELECT role_id, role_name, role_description, permissions, is_active FROM role_types WHERE is_active = ? ORDER BY role_name",
+            (True,)
+        )
+        return results
+
+    async def assign_role_to_user(self, user_id: str, role_id: str, assigned_by: str = None) -> bool:
+        """Assign a role to a user (idempotent)"""
+        import uuid
+        assignment_id = str(uuid.uuid4())
+        try:
+            # Use INSERT OR IGNORE to avoid duplicate assignments; set is_active=1
+            await self.execute_command(
+                "INSERT OR IGNORE INTO user_roles (id, user_id, role_id, is_active, assigned_by, created_by) VALUES (?, ?, ?, ?, ?, ?)",
+                (assignment_id, user_id, role_id, True, assigned_by or user_id, assigned_by or user_id)
+            )
+            # Also ensure assignment is active in case a previous record exists
+            await self.execute_command(
+                "UPDATE user_roles SET is_active = ? WHERE user_id = ? AND role_id = ?",
+                (True, user_id, role_id)
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to assign role {role_id} to user {user_id}: {e}")
+            return False
+
+    async def remove_role_from_user(self, user_id: str, role_id: str) -> bool:
+        """Deactivate a user's role assignment"""
+        try:
+            await self.execute_command(
+                "UPDATE user_roles SET is_active = ? WHERE user_id = ? AND role_id = ?",
+                (False, user_id, role_id)
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to remove role {role_id} from user {user_id}: {e}")
+            return False
         
     async def create_tag(self, tag_data: Dict[str, Any]) -> str:
         """Create a new tag"""

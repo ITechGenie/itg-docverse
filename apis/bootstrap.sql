@@ -28,6 +28,41 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- =====================================================
+-- 1.1. ROLE_TYPES TABLE - Master data for user roles
+-- =====================================================
+CREATE TABLE IF NOT EXISTS role_types (
+    role_id VARCHAR(50) PRIMARY KEY,
+    role_name VARCHAR(100) UNIQUE NOT NULL,
+    role_description TEXT,
+    permissions TEXT, -- JSON array of permissions
+    is_active BOOLEAN DEFAULT TRUE,
+    -- Audit columns
+    created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50)
+);
+
+-- =====================================================
+-- 1.2. USER_ROLES TABLE - Association between users and roles
+-- =====================================================
+CREATE TABLE IF NOT EXISTS user_roles (
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    role_id VARCHAR(50) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    assigned_by VARCHAR(50),
+    -- Audit columns
+    created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (role_id) REFERENCES role_types(role_id),
+    UNIQUE(user_id, role_id) -- Prevent duplicate role assignments
+);
+
+-- =====================================================
 -- 2. POST_TYPES TABLE - Master data for post types
 -- =====================================================
 CREATE TABLE IF NOT EXISTS post_types (
@@ -1249,3 +1284,33 @@ CREATE INDEX IF NOT EXISTS idx_kb_indexes_status_time ON kb_indexes(generation_s
 
 -- KB Metadata indexes
 CREATE INDEX IF NOT EXISTS idx_kb_metadata_kb_type ON kb_metadata(kb_id, metadata_type);
+
+-- =====================================================
+-- INITIAL DATA SETUP
+-- =====================================================
+
+-- Default Role Types
+INSERT OR IGNORE INTO role_types (role_id, role_name, role_description, permissions, created_by) VALUES
+('role_admin', 'System Administrator', 'Full system access with all privileges including user management, content moderation, and system configuration', 
+ '["user:*", "post:*", "tag:*", "comment:*", "system:*", "kb:*", "analytics:*"]', 'system'),
+('role_content_admin', 'Content Administrator', 'Manage all content including posts, comments, tags with moderation capabilities', 
+ '["post:*", "comment:*", "tag:*", "user:read", "user:moderate", "analytics:read"]', 'system'),
+('role_content_manager', 'Content Manager', 'Create, edit, and manage content with limited moderation rights', 
+ '["post:create", "post:edit", "post:delete", "comment:moderate", "tag:create", "tag:edit"]', 'system'),
+('role_community_moderator', 'Community Moderator', 'Moderate comments, discussions, and community interactions', 
+ '["comment:moderate", "post:moderate", "user:moderate", "tag:moderate"]', 'system'),
+('role_knowledge_curator', 'Knowledge Curator', 'Manage knowledge base, documentation, and knowledge indexing', 
+ '["kb:*", "post:create", "post:edit", "tag:create", "tag:edit"]', 'system'),
+('role_analytics_viewer', 'Analytics Viewer', 'Read-only access to analytics and reporting features', 
+ '["analytics:read", "post:read", "user:read", "tag:read"]', 'system'),
+('role_verified_user', 'Verified User', 'Verified community member with enhanced posting and interaction privileges', 
+ '["post:create", "post:edit:own", "comment:create", "tag:create"]', 'system'),
+('role_user', 'Standard User', 'Basic user with standard posting and interaction capabilities', 
+ '["post:create", "post:edit:own", "comment:create"]', 'system'),
+('role_guest', 'Guest User', 'Limited read-only access for unverified users', 
+ '["post:read", "comment:read", "tag:read"]', 'system');
+
+-- Assign admin role to system user
+INSERT OR IGNORE INTO user_roles (id, user_id, role_id, assigned_by, created_by) VALUES
+('jj2402cf-9a84-46a5-8484-d32400e7a18d', 'ac2402cf-9a84-46a5-8484-d32400e7a18d', 'role_admin', 'system', 'system'),
+('jj2402cf-9a84-46a5-8484-d32400e7a18d', '61aa7084-a14f-48ee-ac75-6645e2ad9ec4', 'role_admin', 'system', 'system');

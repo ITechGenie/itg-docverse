@@ -57,15 +57,40 @@ async def authenticate(login_request: LoginRequest):
         user_id = user['id']
         display_name = user['display_name']
         
+        # Fetch user roles
+        user_roles = await db_service.get_user_roles(user_id)
+        
+        # Extract roles and permissions
+        roles = []
+        all_permissions = set()
+        
+        for role in user_roles:
+            roles.append(role['role_id'])
+            
+            # Parse permissions from JSON string if available
+            if role.get('permissions'):
+                try:
+                    import json
+                    role_permissions = json.loads(role['permissions'])
+                    if isinstance(role_permissions, list):
+                        all_permissions.update(role_permissions)
+                except json.JSONDecodeError:
+                    # If permissions is not valid JSON, treat as single permission
+                    all_permissions.add(role['permissions'])
+        
+        # Default permissions if no roles assigned
+        if not all_permissions:
+            all_permissions = {"read"}
+        
         # Generate JWT token with 4 hours expiry
         token = auth_service.generate_token(
             user_id=user_id,
+            roles=roles,
             additional_claims={
                 "username": username,
                 "display_name": display_name,
                 "email": user.get('email', f"{username}@itgdocverse.com"),
-                "role": "user",
-                "permissions": ["read", "write", "create", "update"]
+                "permissions": list(all_permissions)
             }
         )
         
