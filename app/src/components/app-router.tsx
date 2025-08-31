@@ -92,7 +92,7 @@ export default function AppRouter() {
         {/* Main Feed Routes */}
         <Route path="/" element={
           <Suspense fallback={<FeedLoadingFallback />}>
-            <Feed />
+            <Dashboard />
           </Suspense>
         } />
         <Route path="/dashboard" element={
@@ -110,7 +110,7 @@ export default function AppRouter() {
             <Feed />
           </Suspense>
         } />
-        
+
         {/* Post Creation Routes */}
         <Route path="/create" element={
           <Suspense fallback={<PageLoadingFallback />}>
@@ -127,7 +127,7 @@ export default function AppRouter() {
             <CreatePost />
           </Suspense>
         } />
-        
+
         {/* Post Detail Routes */}
         <Route path="/post/:id" element={
           <Suspense fallback={<PostLoadingFallback />}>
@@ -154,7 +154,7 @@ export default function AppRouter() {
             <PostVersions />
           </Suspense>
         } />
-        
+
         {/* User and Tags Routes */}
         <Route path="/profile/:username?" element={
           <Suspense fallback={<PageLoadingFallback />}>
@@ -166,21 +166,21 @@ export default function AppRouter() {
             <EditProfile />
           </Suspense>
         } />
-        
+
         {/* Search Routes */}
         <Route path="/search" element={
           <Suspense fallback={<PageLoadingFallback />}>
             <SearchPage />
           </Suspense>
         } />
-        
+
         {/* Discussions Routes */}
         <Route path="/discussions" element={
           <Suspense fallback={<PageLoadingFallback />}>
             <DiscussionsPage />
           </Suspense>
         } />
-        
+
         {/* Tags and Discovery Routes */}
         <Route path="/tags" element={
           <Suspense fallback={<PageLoadingFallback />}>
@@ -212,7 +212,7 @@ export default function AppRouter() {
             <Feed />
           </Suspense>
         } />
-        
+
         {/* Code Summaries Routes */}
         <Route path="/code-summaries/git-repos" element={
           <Suspense fallback={<PageLoadingFallback />}>
@@ -264,7 +264,7 @@ export default function AppRouter() {
             <PostVersions />
           </Suspense>
         } />
-        
+
         {/* 404 Route */}
         <Route path="*" element={
           <Suspense fallback={<PageLoadingFallback />}>
