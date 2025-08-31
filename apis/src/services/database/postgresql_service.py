@@ -445,8 +445,9 @@ class PostgreSQLService(DatabaseService):
                         if tag_row:
                             tag_id = tag_row["id"]
                         else:
-                            # Create tag with app-generated UUID
-                            tag_id = str(uuid.uuid4())
+                            # Create tag with app-generated ID
+                            tag_id = re.sub(r'[^a-zA-Z0-9 ]', '', tag_name).lower().replace(' ', '-')
+                            logger.info(f"Creating new tag '{tag_name}' with ID '{tag_id}'")
                             await conn.execute(
                                 """
                                 INSERT INTO tag_types (id, name, description, created_by)
@@ -487,8 +488,9 @@ class PostgreSQLService(DatabaseService):
                     if tag_row:
                         tag_id = tag_row["id"]
                     else:
-                        # Create tag with app-generated UUID
-                        tag_id = str(uuid.uuid4())
+                        # Create tag with app-generated ID
+                        tag_id = re.sub(r'[^a-zA-Z0-9 ]', '', tag_name).lower().replace(' ', '-')
+                        logger.info(f"Creating new tag '{tag_name}' with ID '{tag_id}'")
                         await conn.execute(
                             """
                             INSERT INTO tag_types (id, name, description, created_by)

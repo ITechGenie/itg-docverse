@@ -3,6 +3,7 @@ SQLite Database Service Implementation
 Provides SQLite-specific database operations
 """
 
+import re
 import aiosqlite
 import logging
 import json
@@ -340,9 +341,9 @@ class SQLiteService(DatabaseService):
                 if tag_result:
                     tag_id = tag_result[0]['id']
                 else:
-                    # Create tag
-                    import uuid
-                    tag_id = str(uuid.uuid4())
+                    # Create tag with app-generated ID
+                    tag_id = re.sub(r'[^a-zA-Z0-9 ]', '', tag_name).lower().replace(' ', '-')
+                    logger.info(f"Creating new tag '{tag_name}' with ID '{tag_id}'")
                     await self.execute_command(
                         """
                         INSERT INTO tag_types (id, name, description, created_by)
@@ -479,8 +480,7 @@ class SQLiteService(DatabaseService):
                 existing_tag = await self.get_tag_by_name(tag_name)
                 if not existing_tag:
                     # Create the tag
-                    import uuid
-                    tag_id = str(uuid.uuid4())
+                    tag_id = re.sub(r'[^a-zA-Z0-9 ]', '', tag_name).lower().replace(' ', '-')
                     await self.create_tag({
                         'id': tag_id,
                         'name': tag_name,

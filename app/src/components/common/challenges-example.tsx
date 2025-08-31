@@ -2,7 +2,7 @@ import { Challenges } from "./challenges";
 import { ChallengesWithFilters } from "./challenges-with-filters";
 import { Button } from "../ui/button";
 import { useState } from "react";
-import type { Challenge } from "@/types/challenges";
+import type { Challenge } from "@/types/index";
 
 export const ChallengesExample = () => {
   const [viewMode, setViewMode] = useState<'basic' | 'filtered'>('basic');

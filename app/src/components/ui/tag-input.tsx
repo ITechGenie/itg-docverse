@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/services/api-client';
+import { useAuth } from '@/contexts/auth-context';
+import { toast } from 'sonner';
 
 interface TagInputProps {
   value: string[];
@@ -36,6 +38,14 @@ export const TagInput: React.FC<TagInputProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const { user: currentUser } = useAuth();
+
+  console.log('Current User Roles:', currentUser?.roles);
+  
+  // Check if current user is admin
+  const isAdmin = currentUser?.roles?.includes('role_admin');
+  // Tags that only admins may add
+  const RESTRICTED_TAGS = ['challenges', 'pinned'];
 
   // Debounce search
   useEffect(() => {
@@ -53,6 +63,8 @@ export const TagInput: React.FC<TagInputProps> = ({
           // Filter out already selected tags and transform to SuggestedTag format
           const filteredSuggestions: SuggestedTag[] = response.data
             .filter(tag => !value.includes(tag.name.toLowerCase()))
+            // If the tag is restricted and user is not admin, don't show it in suggestions
+            .filter(tag => isAdmin || !RESTRICTED_TAGS.includes(tag.name.toLowerCase()))
             .map(tag => ({
               id: tag.id,
               name: tag.name,
@@ -75,6 +87,17 @@ export const TagInput: React.FC<TagInputProps> = ({
 
   const addTag = (tagName: string) => {
     const normalizedTag = tagName.trim().toLowerCase();
+    // Prevent adding restricted tags for non-admin users
+    if (RESTRICTED_TAGS.includes(normalizedTag) && !isAdmin) {
+      toast.error(`The tag "${normalizedTag}" is restricted to administrators.`);
+      // clear input and suggestions
+      setInputValue('');
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setSelectedIndex(-1);
+      return;
+    }
+
     if (
       normalizedTag &&
       !value.includes(normalizedTag) &&
@@ -207,15 +230,31 @@ export const TagInput: React.FC<TagInputProps> = ({
 
           {/* Add new tag option */}
           {inputValue.trim() && !suggestions.some(s => s.name.toLowerCase() === inputValue.trim().toLowerCase()) && (
-            <div
-              className={`flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-muted border-t ${
-                selectedIndex === suggestions.length ? 'bg-muted' : ''
-              }`}
-              onClick={() => addTag(inputValue.trim())}
-            >
-              <Plus className="w-3 h-3" />
-              <span>Create "{inputValue.trim()}"</span>
-            </div>
+            (() => {
+              const normalized = inputValue.trim().toLowerCase();
+              const isRestricted = RESTRICTED_TAGS.includes(normalized);
+              return (
+                <div
+                  className={`flex items-center gap-2 p-2 text-sm border-t ${
+                    selectedIndex === suggestions.length ? 'bg-muted' : ''
+                  } ${isRestricted && !isAdmin ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-muted'}`}
+                  onClick={() => {
+                    if (isRestricted && !isAdmin) {
+                      toast.error(`The tag "${normalized}" is restricted to administrators.`);
+                      // keep suggestions closed
+                      setShowSuggestions(false);
+                      setSelectedIndex(-1);
+                      setInputValue('');
+                      return;
+                    }
+                    addTag(inputValue.trim());
+                  }}
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>{isRestricted && !isAdmin ? `Create "${inputValue.trim()}" (admin only)` : `Create "${inputValue.trim()}"`}</span>
+                </div>
+              );
+            })()
           )}
         </div>
       )}

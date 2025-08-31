@@ -160,7 +160,7 @@ export interface CreatePostData {
   feed_content?: string; // Optional preview content for feed
   coverImage?: string;
   tags: string[];
-  status?: 'draft' | 'published' | 'archived';
+  status?: 'draft' | 'published' | 'archived' | 'frozen';
 }
 
 export interface ApiResponse<T> {
@@ -183,7 +183,7 @@ export interface PaginationParams {
   page: number;
   limit: number;
   sortBy?: 'latest' | 'popular' | 'trending';
-  tag?: string;
+  tag_id?: string;
 }
 
 export interface FeedFilters {
@@ -193,4 +193,16 @@ export interface FeedFilters {
   status?: 'published' | 'draft' | 'archived'; // Filter posts by status
   favoritesPosts?: boolean; // Filter to show only favorite posts
   favoriteTags?: boolean; // Filter to show posts from favorite tags
+}
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  tags: Tag[];
+  timeLimit?: string;
+  isActive?: boolean;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  participants?: number;
+  reward?: string;
 }

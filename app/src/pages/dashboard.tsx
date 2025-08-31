@@ -112,6 +112,10 @@ const TopChallengesCard = () => (
         <Swords className="h-5 w-5 text-red-500" />
         Top Challenges
       </CardTitle>
+      <Link to="/tags/challenges" className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+        View All
+        <ArrowRight className="w-4 h-4 inline" />
+      </Link>
     </CardHeader>
     <CardContent>
       <ScrollArea>
@@ -129,12 +133,12 @@ const TrendingPostsCard = ({ posts, loading }: { posts: Post[], loading: boolean
     <CardHeader className="flex flex-row items-center justify-between">
       <CardTitle className="flex items-center gap-2">
         <Flame className="h-5 w-5 text-red-500" />
-        Trending Posts
+        Trending Content
       </CardTitle>
       <Link to="/feed">
         <span className="hidden sm:inline">
           <Button variant="ghost" size="sm" className="flex items-center gap-2">
-            View more posts
+            View Content Feed
             <ArrowRight className="w-4 h-4" />
           </Button>
         </span>

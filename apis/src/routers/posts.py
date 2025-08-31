@@ -294,7 +294,7 @@ async def create_post(
         
         # Generate title if not provided
         title = post_data.title
-        feed_content = None
+        feed_content = str(post_data.content)[:100] + "..."  # First 100 chars as feed content
         if not title:
             if post_data.post_type == PostType.THOUGHTS:
 

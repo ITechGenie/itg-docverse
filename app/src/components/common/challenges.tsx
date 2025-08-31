@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { Challenge } from "@/types/challenges";
-import { challengesData } from "@/types/challenges";
+import type { Challenge } from "@/types/index";
+import { useChallenges } from '@/hooks/use-challenges';
 import { Badge } from "../ui/badge";
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 // Types
 interface ChallengesProps {
@@ -32,7 +33,7 @@ const CHALLENGE_CARD_STYLES = {
 } as const;
 
 const GRID_STYLES = {
-  container: "grid grid-cols-1 md:grid-cols-3 gap-4"
+  container: "grid grid-cols-1 md:grid-cols-2 gap-4"
 } as const;
 
 const BUTTON_STYLES = {
@@ -41,21 +42,22 @@ const BUTTON_STYLES = {
 
 
 // Challenge Card Component
-const ChallengeCard = ({ challenge, onClick }: ChallengeCardProps) => {
-  const handleClick = () => {
-    onClick?.(challenge);
-  };
+const ChallengeCard = ({ challenge }: ChallengeCardProps) => {
+
+  const navigate = useNavigate();
 
   return (
-    <Card
-      className={CHALLENGE_CARD_STYLES.card}
-      onClick={handleClick}
-    >
-      <CardHeader className={CHALLENGE_CARD_STYLES.header}>
-        <div className={CHALLENGE_CARD_STYLES.title}>
-          {challenge.title}
-        </div>
-      </CardHeader>
+    
+      <Card
+        className={CHALLENGE_CARD_STYLES.card}
+      >
+        <CardHeader className={CHALLENGE_CARD_STYLES.header}>
+          <Link to={`/post/${challenge.id}`} className="block">
+            <div className={CHALLENGE_CARD_STYLES.title}>
+              {challenge.title}
+            </div>
+          </Link>
+        </CardHeader>
 
       <CardContent className={CHALLENGE_CARD_STYLES.content}>
         <p className={CHALLENGE_CARD_STYLES.description}>
@@ -63,12 +65,26 @@ const ChallengeCard = ({ challenge, onClick }: ChallengeCardProps) => {
         </p>
 
         <div className={CHALLENGE_CARD_STYLES.badgesContainer}>
-          <Badge
-            variant="secondary"
-            className={CHALLENGE_CARD_STYLES.tagBadge}
-          >
-            {challenge.tag}
-          </Badge>
+            {challenge.tags
+            ?.filter((tag) => tag.name.toLowerCase() !== "challenges")
+            .map((tag) => (
+              <Badge
+                key={tag.name}
+                variant="secondary"
+                className={`${CHALLENGE_CARD_STYLES.tagBadge} cursor-pointer`}
+                onClick={() => navigate(`/tags/${encodeURIComponent(tag.name)}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate(`/tags/${encodeURIComponent(tag.name)}`);
+                  }
+                }}
+              >
+                {tag.name}
+              </Badge>
+            ))}
 
           {/* Uncomment and refactor when needed */}
           {/* {challenge.isActive && (
@@ -86,11 +102,13 @@ const ChallengeCard = ({ challenge, onClick }: ChallengeCardProps) => {
           )} */}
         </div>
 
+          {/* commenting participants for now 
         {challenge.participants && (
           <p className={CHALLENGE_CARD_STYLES.participants}>
             {challenge.participants} participants
           </p>
         )}
+          */}
       </CardContent>
     </Card>
   );
@@ -98,18 +116,21 @@ const ChallengeCard = ({ challenge, onClick }: ChallengeCardProps) => {
 
 // Main Challenges Component
 export const Challenges = ({
-  challenges = challengesData,
+  challenges,
   className = "",
   onChallengeClick,
-  initialCount = 3
+  initialCount = 4
 }: ChallengesProps) => {
+  // If no challenges prop provided, use hook to fetch and filter
+  const { challenges: fetchedChallenges } = useChallenges();
+  const resolvedChallenges = challenges ?? fetchedChallenges;
   const [isExpanded, setIsExpanded] = useState(false);
   
   const displayChallenges = isExpanded 
-    ? challenges 
-    : challenges.slice(0, initialCount);
+    ? resolvedChallenges 
+    : resolvedChallenges.slice(0, initialCount);
   
-  const hasMoreChallenges = challenges.length > initialCount;
+  const hasMoreChallenges = resolvedChallenges.length > initialCount;
   const containerClassName = `${GRID_STYLES.container} ${className}`.trim();
 
   const handleToggleExpanded = () => {
@@ -119,7 +140,7 @@ export const Challenges = ({
   return (
     <div className="space-y-4">
       <div className={containerClassName}>
-        {displayChallenges.map((challenge) => (
+  {displayChallenges.map((challenge) => (
           <ChallengeCard
             key={challenge.id}
             challenge={challenge}
@@ -128,7 +149,7 @@ export const Challenges = ({
         ))}
       </div>
       
-      {hasMoreChallenges && (
+  {hasMoreChallenges && (
         <Button
           variant="outline"
           onClick={handleToggleExpanded}
@@ -142,7 +163,7 @@ export const Challenges = ({
           ) : (
             <>
               <ChevronDown className="w-4 h-4" />
-              View All ({challenges.length} challenges)
+              View All ({resolvedChallenges.length} challenges)
             </>
           )}
         </Button>

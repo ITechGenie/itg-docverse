@@ -5,6 +5,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, Home } from "lucide-react"
+import { Toaster } from "@/components/ui/sonner"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -70,6 +71,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="relative min-h-screen">
+      <Toaster position="top-right" richColors />
       <SidebarProvider>
         <AppSidebar />
         

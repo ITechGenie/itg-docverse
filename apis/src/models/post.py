@@ -23,6 +23,7 @@ class PostStatus(str, Enum):
     DRAFT = "draft"
     PUBLISHED = "published"
     ARCHIVED = "archived"
+    FROZEN = "frozen"  # New status for frozen posts
 
 class Post(BaseModel):
     """Post model"""

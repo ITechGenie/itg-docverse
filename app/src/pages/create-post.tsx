@@ -120,7 +120,7 @@ export default function CreatePost() {
 
   const contentValue = watch('content');
 
-  const handleSavePost = async (data: CreatePostForm, status: 'draft' | 'published' | 'archived') => {
+  const handleSavePost = async (data: CreatePostForm, status: 'draft' | 'published' | 'archived' | 'frozen') => {
     setIsSubmitting(true);
     try {
       if (isEditMode && id) {
@@ -176,7 +176,7 @@ export default function CreatePost() {
           {isEditMode ? (
             <>
               <Edit className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0" />
-              Edit Post
+              Edit Content
             </>
           ) : (
             <>
@@ -319,11 +319,12 @@ export default function CreatePost() {
 
         <Separator />
 
-        <div className="flex justify-end space-x-4">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:items-center gap-2 sm:gap-4">
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate(isEditMode ? `/post/${id}` : '/feed')}
+            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
@@ -332,17 +333,30 @@ export default function CreatePost() {
             variant="outline" 
             disabled={isSubmitting}
             onClick={handleSubmit((data) => handleSavePost(data, 'archived'))}
+            className="w-full sm:w-auto"
           >
             {isSubmitting 
               ?  'Archiving...'
               : 'Archive'
             }
           </Button>
+          {/*<Button 
+            type="button" 
+            variant="outline" 
+            disabled={isSubmitting}
+            onClick={handleSubmit((data) => handleSavePost(data, 'frozen'))}
+          >
+            {isSubmitting 
+              ? (isEditMode ? 'Saving...' : 'Saving...') 
+              : 'Freeze'
+            }
+          </Button> */}
           <Button 
             type="button" 
             variant="outline" 
             disabled={isSubmitting}
             onClick={handleSubmit((data) => handleSavePost(data, 'draft'))}
+            className="w-full sm:w-auto"
           >
             {isSubmitting 
               ? (isEditMode ? 'Saving...' : 'Saving...') 
@@ -353,10 +367,11 @@ export default function CreatePost() {
             type="button" 
             disabled={isSubmitting}
             onClick={handleSubmit((data) => handleSavePost(data, 'published'))}
+            className="w-full sm:w-auto"
           >
             {isSubmitting 
               ? (isEditMode ? 'Publishing...' : 'Publishing...') 
-              : (isEditMode ? 'Update Post' : 'Publish Content')
+              : (isEditMode ? 'Update Content' : 'Publish Content')
             }
           </Button>
         </div>
