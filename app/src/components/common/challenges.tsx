@@ -39,16 +39,6 @@ const BUTTON_STYLES = {
   viewAll: "mt-6 w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors"
 } as const;
 
-// Utility functions
-const getDifficultyColor = (difficulty: string): string => {
-  const colorMap = {
-    easy: 'text-green-400',
-    medium: 'text-yellow-400',
-    hard: 'text-red-400'
-  } as const;
-
-  return colorMap[difficulty as keyof typeof colorMap] || 'text-muted-foreground';
-};
 
 // Challenge Card Component
 const ChallengeCard = ({ challenge, onClick }: ChallengeCardProps) => {
