@@ -16,25 +16,25 @@ import {
 import type { LucideIcon } from "lucide-react"
 
 export interface NavigationItem {
-  title: string;
-  url: string;
-  icon?: LucideIcon;
-  isActive?: boolean;
-  items?: NavigationItem[];
-  section?: string; // For breadcrumb grouping
+	title: string;
+	url: string;
+	icon?: LucideIcon;
+	isActive?: boolean;
+	items?: NavigationItem[];
+	section?: string; // For breadcrumb grouping
 }
 
 export interface NavigationProject {
-  name: string;
-  url: string;
-  icon: LucideIcon;
-  section?: string;
+	name: string;
+	url: string;
+	icon: LucideIcon;
+	section?: string;
 }
 
 export interface MobileNavItem {
-  icon: LucideIcon;
-  label: string;
-  href: string;
+	icon: LucideIcon;
+	label: string;
+	href: string;
 }
 
 export interface NavigationConfig {
@@ -52,113 +52,119 @@ export interface NavigationConfig {
 }
 
 export const navigationConfig: NavigationConfig = {
-  siteTitle: "ITG Docverse",
-  siteSubtitle: "Community",
-  teams: [
-    {
-      name: "ITG Docverse",
-      logo: BookOpen,
-      plan: "Community",
-    },
-  ],
-  navMain: [
-    {
-      title: "Content Feed",
-      url: "/feed",
-      icon: Home,
-      isActive: true,
-      section: "Community",
-      items: [
-        {
-          title: "Latest Content",
-          url: "/feed",
-          section: "Community",
-        },
-/*        {
-          title: "Favorite Content",
-          url: "/feed/favorite-posts",
-          section: "Community",
-        }, 
-        {
-          title: "Tagged Favorites",
-          url: "/feed/favorite-tags",
-          section: "Community",
-        }, */
-        {
-          title: "Trending",
-          url: "/feed/trending",
-          section: "Community",
-        },
-        {
-          title: "Discussions",
-          url: "/discussions",
-          section: "Community",
-        },
-      ],
-    },
-    {
-      title: "Create",
-      url: "/create",
-      icon: PenTool,
-      section: "Content",
-      items: [
-        {
-          title: "Write Article",
-          url: "/create/article",
-          icon: PenTool,
-          section: "Content",
-        },
-        {
-          title: "Quick Thoughts",
-          url: "/create/thoughts",
-          icon: Zap,
-          section: "Content",
-        },
-      ],
-    },
+	siteTitle: 'ITG Docverse',
+	siteSubtitle: 'Community',
+	teams: [
+		{
+			name: 'ITG Docverse',
+			logo: BookOpen,
+			plan: 'Community',
+		},
+	],
+	navMain: [
+		{
+			title: 'Dashboard',
+			url: '/dashboard',
+			icon: Home,
+			isActive: true,
+		},
+		{
+			title: 'Content Feed',
+			url: '/feed',
+			icon: RssIcon,
 
-    {
-      title: "Community",
-      url: "/",
-      icon: Users,
-      section: "Community",
-      items: [
-        {
-          title: "All Tags",
-          url: "/tags",
-          section: "Discovery",
-        },
-        
-        {
-          title: "Popular Tags",
-          url: "/tags/popular",
-          section: "Discovery",
-        },
-        {
-          title: "Top Contributors",
-          url: "/contributors",
-          section: "Community",
-        },
-      ],
-    },
-/*    {
-      title: "Code Summaries",
-      url: "/code-summaries",
-      icon: FileText,
-      section: "Content",
-      items: [
-        {
-          title: "Git Repos",
-          url: "/code-summaries/git-repos",
-          section: "Content",
-        },
-        {
-          title: "Documents",
-          url: "/code-summaries/documents",
-          section: "Content",
-        },
-      ],
-    },
+			section: 'Community',
+			items: [
+				{
+					title: 'Latest Content',
+					url: '/feed',
+					section: 'Community',
+				},
+				/*        {
+				title: "Favorite Content",
+				url: "/feed/favorite-posts",
+				section: "Community",
+				}, 
+				{
+				title: "Tagged Favorites",
+				url: "/feed/favorite-tags",
+				section: "Community",
+				}, */
+				{
+					title: 'Trending',
+					url: '/feed/trending',
+					section: 'Community',
+				},
+				{
+					title: 'Discussions',
+					url: '/discussions',
+					section: 'Community',
+				},
+			],
+		},
+		{
+			title: 'Create',
+			url: '/create',
+			icon: PenTool,
+			section: 'Content',
+			items: [
+				{
+					title: 'Write Article',
+					url: '/create/article',
+					icon: PenTool,
+					section: 'Content',
+				},
+				{
+					title: 'Quick Thoughts',
+					url: '/create/thoughts',
+					icon: Zap,
+					section: 'Content',
+				},
+			],
+		},
+
+		{
+			title: 'Community',
+			url: '/',
+			icon: Users,
+			section: 'Community',
+			items: [
+				{
+					title: 'All Tags',
+					url: '/tags',
+					section: 'Discovery',
+				},
+
+				{
+					title: 'Popular Tags',
+					url: '/tags/popular',
+					section: 'Discovery',
+				},
+				{
+					title: 'Top Contributors',
+					url: '/contributors',
+					section: 'Community',
+				},
+			],
+		},
+		/*    {
+	  title: "Code Summaries",
+	  url: "/code-summaries",
+	  icon: FileText,
+	  section: "Content",
+	  items: [
+		{
+		  title: "Git Repos",
+		  url: "/code-summaries/git-repos",
+		  section: "Content",
+		},
+		{
+		  title: "Documents",
+		  url: "/code-summaries/documents",
+		  section: "Content",
+		},
+	  ],
+	},
    {
       title: "Analytics",
       url: "/dashboard",
@@ -248,67 +254,67 @@ export const navigationConfig: NavigationConfig = {
 
 // Helper function to find navigation item by path
 export function findNavigationItem(path: string): { section: string; page: string } | null {
-  // Remove hash, basename, and trailing slash
-  const basename = import.meta.env.VITE_BASENAME || '';
-  let cleanPath = path.replace(/^#/, '');
-  
-  // Remove basename if present
-  if (basename && cleanPath.startsWith(basename)) {
-    cleanPath = cleanPath.slice(basename.length);
-  }
-  
-  cleanPath = cleanPath.replace(/\/$/, '') || '/';
-  
-  // Check main navigation items and their children
-  for (const navItem of navigationConfig.navMain) {
-    const navUrl = navItem.url.replace(/\/$/, '') || '/';
-    
-    if (navUrl === cleanPath) {
-      return {
-        section: navItem.section || 'ITG',
-        page: navItem.title
-      };
-    }
-    
-    // Check sub-items
-    if (navItem.items) {
-      for (const subItem of navItem.items) {
-        const subUrl = subItem.url.replace(/\/$/, '') || '/';
-        if (subUrl === cleanPath) {
-          return {
-            section: subItem.section || navItem.section || 'ITG',
-            page: subItem.title
-          };
-        }
-      }
-    }
-  }
-  
-  // Check project items
-  for (const project of navigationConfig.projects) {
-    const projectUrl = project.url.replace(/\/$/, '') || '/';
-    if (projectUrl === cleanPath) {
-      return {
-        section: project.section || 'ITG',
-        page: project.name
-      };
-    }
-  }
-  
-  // Handle dynamic routes
-  if (cleanPath.startsWith('/post/')) {
-    return { section: 'Community', page: 'Post Detail' };
-  }
-  
-  if (cleanPath.startsWith('/profile/')) {
-    return { section: 'Community', page: 'User Profile' };
-  }
-  
-  if (cleanPath.startsWith('/tags/')) {
-    const tagName = cleanPath.split('/')[2];
-    return { section: 'Discovery', page: `#${tagName}` };
-  }
-  
-  // Default fallback
-  return { section: 'ITG', page: 'Docverse' };
+	// Remove hash, basename, and trailing slash
+	const basename = import.meta.env.VITE_BASENAME || '';
+	let cleanPath = path.replace(/^#/, '');
+
+	// Remove basename if present
+	if (basename && cleanPath.startsWith(basename)) {
+		cleanPath = cleanPath.slice(basename.length);
+	}
+
+	cleanPath = cleanPath.replace(/\/$/, '') || '/';
+
+	// Check main navigation items and their children
+	for (const navItem of navigationConfig.navMain) {
+		const navUrl = navItem.url.replace(/\/$/, '') || '/';
+
+		if (navUrl === cleanPath) {
+			return {
+				section: navItem.section || 'ITG',
+				page: navItem.title,
+			};
+		}
+
+		// Check sub-items
+		if (navItem.items) {
+			for (const subItem of navItem.items) {
+				const subUrl = subItem.url.replace(/\/$/, '') || '/';
+				if (subUrl === cleanPath) {
+					return {
+						section: subItem.section || navItem.section || 'ITG',
+						page: subItem.title,
+					};
+				}
+			}
+		}
+	}
+
+	// Check project items
+	for (const project of navigationConfig.projects) {
+		const projectUrl = project.url.replace(/\/$/, '') || '/';
+		if (projectUrl === cleanPath) {
+			return {
+				section: project.section || 'ITG',
+				page: project.name,
+			};
+		}
+	}
+
+	// Handle dynamic routes
+	if (cleanPath.startsWith('/post/')) {
+		return { section: 'Community', page: 'Post Detail' };
+	}
+
+	if (cleanPath.startsWith('/profile/')) {
+		return { section: 'Community', page: 'User Profile' };
+	}
+
+	if (cleanPath.startsWith('/tags/')) {
+		const tagName = cleanPath.split('/')[2];
+		return { section: 'Discovery', page: `#${tagName}` };
+	}
+
+	// Default fallback
+	return { section: 'ITG', page: 'Docverse' };
 }
