@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
-import { challengesData, getActiveChallenges, getChallengesByDifficulty, getChallengeById } from '@/types/challenges';
-import type { Challenge } from '@/types/challenges';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import type { Challenge } from '@/types/index';
+import { api } from '@/services/api-client';
 
 type DifficultyFilter = Challenge['difficulty'] | 'all';
 type StatusFilter = 'all' | 'active' | 'inactive';
@@ -12,61 +12,88 @@ interface UseChallengesOptions {
 }
 
 export const useChallenges = (options: UseChallengesOptions = {}) => {
-  const { 
-    initialDifficulty = 'all', 
-    initialStatus = 'all', 
-    searchQuery = '' 
+  const {
+    initialDifficulty = 'all',
+    initialStatus = 'all',
+    searchQuery = '',
   } = options;
+
+  const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>(initialDifficulty);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatus);
-  const [searchTerm, setSearchTerm] = useState(searchQuery);
+  const [searchTerm, setSearchTerm] = useState<string>(searchQuery);
 
-  // Filter challenges based on current filters
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const resp = await api.getChallenges();
+        if (resp.success && Array.isArray(resp.data)) {
+          if (mounted) setAllChallenges(resp.data);
+        } else {
+          if (mounted) setAllChallenges([]);
+        }
+      } catch (err: any) {
+        if (mounted) setError(err?.message || 'Failed to load challenges');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const filteredChallenges = useMemo(() => {
-    let filtered = challengesData;
+    let filtered = allChallenges.slice();
 
     // Filter by difficulty
     if (difficultyFilter !== 'all') {
-      filtered = filtered.filter(challenge => challenge.difficulty === difficultyFilter);
+      filtered = filtered.filter((c) => c.difficulty === difficultyFilter);
     }
 
     // Filter by status
     if (statusFilter === 'active') {
-      filtered = filtered.filter(challenge => challenge.isActive);
+      filtered = filtered.filter((c) => c.isActive);
     } else if (statusFilter === 'inactive') {
-      filtered = filtered.filter(challenge => !challenge.isActive);
+      filtered = filtered.filter((c) => !c.isActive);
     }
 
     // Filter by search term
     if (searchTerm.trim()) {
-      const query = searchTerm.toLowerCase();
-      filtered = filtered.filter(challenge => 
-        challenge.title.toLowerCase().includes(query) ||
-        challenge.description.toLowerCase().includes(query) ||
-        challenge.tag.toLowerCase().includes(query)
-      );
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter((c) => {
+        return (
+          (c.title || '').toLowerCase().includes(q) ||
+          (c.description || '').toLowerCase().includes(q) ||
+          (c.tags?.map(t => t.name).join(' ') || '').toLowerCase().includes(q)
+        );
+      });
     }
 
     return filtered;
-  }, [difficultyFilter, statusFilter, searchTerm]);
+  }, [allChallenges, difficultyFilter, statusFilter, searchTerm]);
 
-  // Get challenge by ID
-  const getChallenge = useCallback((id: number) => {
-    return getChallengeById(id);
-  }, []);
+  const getChallenge = useCallback((id: string) => {
+    return allChallenges.find((c) => c.id === id) || null;
+  }, [allChallenges]);
 
-  // Get active challenges
   const getActive = useCallback(() => {
-    return getActiveChallenges();
-  }, []);
+    return allChallenges.filter((c) => c.isActive);
+  }, [allChallenges]);
 
-  // Get challenges by difficulty
   const getByDifficulty = useCallback((difficulty: Challenge['difficulty']) => {
-    return getChallengesByDifficulty(difficulty);
-  }, []);
+    return allChallenges.filter((c) => c.difficulty === difficulty);
+  }, [allChallenges]);
 
-  // Reset filters
   const resetFilters = useCallback(() => {
     setDifficultyFilter('all');
     setStatusFilter('all');
@@ -75,7 +102,9 @@ export const useChallenges = (options: UseChallengesOptions = {}) => {
 
   return {
     challenges: filteredChallenges,
-    allChallenges: challengesData,
+    allChallenges,
+    loading,
+    error,
     difficultyFilter,
     statusFilter,
     searchTerm,
@@ -87,4 +116,4 @@ export const useChallenges = (options: UseChallengesOptions = {}) => {
     getByDifficulty,
     resetFilters,
   };
-}; 
+};

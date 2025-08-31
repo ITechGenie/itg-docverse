@@ -9,7 +9,8 @@ import type {
   ApiResponse, 
   PaginationParams,
   FeedFilters,
-  ReactionType 
+  ReactionType,
+  Challenge
 } from '@/types';
 
 import {getAvatarUrl} from '@/lib/avatar';
@@ -366,8 +367,8 @@ export class ApiClient {
         searchParams.append('post_type', params.type);
       }
       
-      if (params.tag) {
-        searchParams.append('tag', params.tag);
+      if (params.tag_id) {
+        searchParams.append('tag_id', params.tag_id);
       }
 
       if (params.author) {
@@ -401,6 +402,58 @@ export class ApiClient {
       return { success: false, error: 'Failed to load posts' };
     }
   }
+
+  async getChallenges(): Promise<ApiResponse<Challenge[]>> {
+    try {
+      const response = await this.getPosts({ 
+          page: 1, 
+          limit: 10,
+          tag_id: 'challenges'
+        });
+      if (response.success && response.data) {
+        // Transform API response to match UI expectations
+        const transformedPosts =  this.transformPostsToUIChallenge(response.data);
+        return { success: true, data: transformedPosts };
+      }
+      return { success: false, data: undefined };
+    } catch (error) {
+      console.error('Get challenges failed:', error);
+      return { success: false, error: 'Failed to load challenges' };
+    }
+  }
+
+  private transformPostsToUIChallenge(apiChallenge: Post[]): Challenge[] {
+    return apiChallenge.map(post => {
+      // Parse createdAt and add one month for timeLimit
+      let timeLimit = '1 month';
+      if (post.createdAt) {
+      const createdDate = new Date(post.createdAt);
+      createdDate.setMonth(createdDate.getMonth() + 1);
+      timeLimit = createdDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      }
+      return {
+      id: post.id,
+      title: post.title || "Challenge",
+      description: post.content || "Click to view more details !",
+      tags: post.tags,
+      timeLimit,
+      isActive: post.status === 'published',
+      difficulty: post.tags[0]?.description as Challenge['difficulty'] || 'easy',
+      participants: post.stats.totalComments || 0,
+      reward: 'No Rewards',
+      };
+    });
+  }
+
+  // Helper functions
+  getActiveChallenges = (challengesData: Challenge[]) =>
+    challengesData.filter(challenge => challenge.isActive);
+  
+  getChallengesByDifficulty = (challengesData: Challenge[], difficulty: Challenge['difficulty']) =>
+    challengesData.filter(challenge => challenge.difficulty === difficulty);
+  
+  getChallengeById = (id: string, challengesData: Challenge[]) =>
+    challengesData.find(challenge => challenge.id == id); 
 
   // Transform API post format to UI post format
   private transformApiPostToUIPost(apiPost: any): Post {

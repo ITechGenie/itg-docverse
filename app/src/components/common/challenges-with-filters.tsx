@@ -5,7 +5,7 @@ import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Search, Filter, X } from "lucide-react";
 import { useChallenges } from "@/hooks/use-challenges";
-import type { Challenge } from "@/types/challenges";
+import type { Challenge } from "@/types/index";
 
 interface ChallengesWithFiltersProps {
   className?: string;
@@ -16,15 +16,12 @@ interface ChallengesWithFiltersProps {
 
 // Challenge card component
 const ChallengeCard = ({ 
-  challenge, 
-  onClick 
+  challenge
 }: { 
   challenge: Challenge; 
-  onClick?: (challenge: Challenge) => void;
 }) => (
   <Card
     className="sunset-glow-gradient text-white border-0 hover:shadow-lg transition-shadow cursor-pointer"
-    onClick={() => onClick?.(challenge)}
   >
     <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
       <div className="text-2xl font-bold">{challenge.title}</div>
@@ -32,12 +29,18 @@ const ChallengeCard = ({
     <CardContent className="space-y-2">
       <p className="text-xs opacity-90">{challenge.description}</p>
       <div className="flex items-center gap-2 flex-wrap">
-        <Badge
-          variant="secondary"
-          className="hover:bg-primary hover:text-primary-foreground transition-colors text-sm px-3 py-1"
-        >
-          {challenge.tag}
-        </Badge>
+        {challenge.tags
+                    ?.filter((tag) => tag.name.toLowerCase() !== "challenges")
+                    .map((tag) => (
+                      <Badge
+                      key={tag.name}
+                      variant="secondary"
+                        className="hover:bg-primary hover:text-primary-foreground transition-colors text-sm px-3 py-1"
+
+                      >
+                      {tag.name}
+                      </Badge>
+                    ))}
         {challenge.isActive && (
           <Badge variant="outline" className="text-xs px-2 py-0.5">
             Active
@@ -139,7 +142,6 @@ const ChallengeFilters = ({
 
 export const ChallengesWithFilters = ({ 
   className = "",
-  onChallengeClick,
   showFilters = true,
   showSearch = true
 }: ChallengesWithFiltersProps) => {
@@ -181,12 +183,11 @@ export const ChallengesWithFilters = ({
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {challenges.map((challenge) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {challenges.map((challenge: Challenge) => (
             <ChallengeCard
               key={challenge.id}
               challenge={challenge}
-              onClick={onChallengeClick}
             />
           ))}
         </div>
