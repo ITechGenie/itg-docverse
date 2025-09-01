@@ -952,3 +952,376 @@ class PostgreSQLService(DatabaseService):
         )
         stats['comments'] = comment_results[0]['count'] if comment_results else 0
         return stats
+
+    # ============================================
+    # FILE UPLOAD OPERATIONS
+    # ============================================
+    
+    async def create_content_upload(self, upload_data: Dict[str, Any]) -> bool:
+        """Create a new file upload record"""
+        try:
+            await self.execute_command(
+                """INSERT INTO content_uploads 
+                   (id, filename, original_filename, content_type, file_size, file_data,
+                    uploaded_by, is_public, visibility, title, description, created_by, updated_by)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)""",
+                (
+                    upload_data['id'], upload_data['filename'], upload_data['original_filename'],
+                    upload_data['content_type'], upload_data['file_size'], upload_data['file_data'],
+                    upload_data['uploaded_by'], upload_data['is_public'], upload_data['visibility'],
+                    upload_data['title'], upload_data.get('description'), 
+                    upload_data['created_by'], upload_data['updated_by']
+                )
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create content upload: {e}")
+            return False
+    
+    async def get_content_upload(self, file_id: str) -> Optional[Dict[str, Any]]:
+        """Get file upload data by ID"""
+        try:
+            results = await self.execute_query(
+                "SELECT * FROM content_uploads WHERE id = $1 AND is_deleted = $2",
+                (file_id, False)
+            )
+            return dict(results[0]) if results else None
+        except Exception as e:
+            logger.error(f"Failed to get content upload: {e}")
+            return None
+    
+    async def get_user_uploads(self, user_id: str, visibility: Optional[str] = None, 
+                              tags: Optional[List[str]] = None, search: Optional[str] = None,
+                              sort_by: str = "recent", limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        """Get user's uploaded files with filtering"""
+        try:
+            # Base query
+            query = """
+                SELECT DISTINCT cu.* FROM content_uploads cu
+                WHERE cu.uploaded_by = $1 AND cu.is_deleted = $2
+            """
+            params = [user_id, False]
+            param_count = 2
+            
+            # Add visibility filter
+            if visibility:
+                param_count += 1
+                query += f" AND cu.visibility = ${param_count}"
+                params.append(visibility)
+            
+            # Add search filter
+            if search:
+                param_count += 1
+                search_param = f"${param_count}"
+                query += f" AND (cu.title ILIKE {search_param} OR cu.original_filename ILIKE {search_param} OR cu.description ILIKE {search_param})"
+                params.append(f"%{search}%")
+            
+            # Add tag filter
+            if tags:
+                placeholders = ','.join([f"${param_count + i + 1}" for i in range(len(tags))])
+                query += f"""
+                    AND cu.id IN (
+                        SELECT DISTINCT cut.upload_id 
+                        FROM content_upload_tags cut 
+                        JOIN tag_types tt ON cut.tag_id = tt.id 
+                        WHERE tt.name = ANY(ARRAY[{placeholders}])
+                    )
+                """
+                params.extend(tags)
+                param_count += len(tags)
+            
+            # Add sorting
+            if sort_by == "recent":
+                query += " ORDER BY cu.created_ts DESC"
+            elif sort_by == "name":
+                query += " ORDER BY cu.title ASC, cu.original_filename ASC"
+            else:
+                query += " ORDER BY cu.created_ts DESC"
+            
+            # Add pagination
+            param_count += 1
+            query += f" LIMIT ${param_count}"
+            params.append(limit)
+            param_count += 1
+            query += f" OFFSET ${param_count}"
+            params.append(offset)
+            
+            results = await self.execute_query(query, tuple(params))
+            return [dict(row) for row in results]
+        except Exception as e:
+            logger.error(f"Failed to get user uploads: {e}")
+            return []
+    
+    async def count_user_uploads(self, user_id: str, visibility: Optional[str] = None, 
+                                tags: Optional[List[str]] = None, search: Optional[str] = None) -> int:
+        """Count user's uploaded files with filtering"""
+        try:
+            # Base query
+            query = """
+                SELECT COUNT(DISTINCT cu.id) as count FROM content_uploads cu
+                WHERE cu.uploaded_by = $1 AND cu.is_deleted = $2
+            """
+            params = [user_id, False]
+            param_count = 2
+            
+            # Add visibility filter
+            if visibility:
+                param_count += 1
+                query += f" AND cu.visibility = ${param_count}"
+                params.append(visibility)
+            
+            # Add search filter
+            if search:
+                param_count += 1
+                search_param = f"${param_count}"
+                query += f" AND (cu.title ILIKE {search_param} OR cu.original_filename ILIKE {search_param} OR cu.description ILIKE {search_param})"
+                params.append(f"%{search}%")
+            
+            # Add tag filter
+            if tags:
+                placeholders = ','.join([f"${param_count + i + 1}" for i in range(len(tags))])
+                query += f"""
+                    AND cu.id IN (
+                        SELECT DISTINCT cut.upload_id 
+                        FROM content_upload_tags cut 
+                        JOIN tag_types tt ON cut.tag_id = tt.id 
+                        WHERE tt.name = ANY(ARRAY[{placeholders}])
+                    )
+                """
+                params.extend(tags)
+            
+            results = await self.execute_query(query, tuple(params))
+            return results[0]['count'] if results else 0
+        except Exception as e:
+            logger.error(f"Failed to count user uploads: {e}")
+            return 0
+    
+    async def update_content_upload(self, file_id: str, update_data: Dict[str, Any]) -> bool:
+        """Update file upload metadata"""
+        try:
+            # Build dynamic update query
+            set_clauses = []
+            params = []
+            param_count = 0
+            
+            for key, value in update_data.items():
+                if key in ['title', 'description', 'visibility', 'is_public', 'updated_by', 'is_deleted']:
+                    param_count += 1
+                    set_clauses.append(f"{key} = ${param_count}")
+                    params.append(value)
+            
+            if not set_clauses:
+                return True  # No updates needed
+            
+            # Add updated timestamp
+            param_count += 1
+            set_clauses.append(f"updated_ts = CURRENT_TIMESTAMP")
+            
+            # Add WHERE clause
+            param_count += 1
+            params.append(file_id)
+            
+            query = f"UPDATE content_uploads SET {', '.join(set_clauses)} WHERE id = ${param_count}"
+            await self.execute_command(query, tuple(params))
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update content upload: {e}")
+            return False
+    
+    async def get_upload_tags(self, file_id: str) -> List[Dict[str, Any]]:
+        """Get tags associated with a file upload"""
+        try:
+            results = await self.execute_query(
+                """SELECT tt.id, tt.name, tt.description, tt.color 
+                   FROM content_upload_tags cut
+                   JOIN tag_types tt ON cut.tag_id = tt.id
+                   WHERE cut.upload_id = $1
+                   ORDER BY tt.name""",
+                (file_id,)
+            )
+            return [dict(row) for row in results]
+        except Exception as e:
+            logger.error(f"Failed to get upload tags: {e}")
+            return []
+    
+    async def associate_tags_with_upload(self, user_id: str, file_id: str, tag_names: List[str]) -> bool:
+        """Associate tags with a file upload"""
+        try:
+            for tag_name in tag_names:
+                # Get or create tag
+                tag_id = await self._get_or_create_tag_id(tag_name.strip().lower(), user_id)
+                
+                if tag_id:
+                    # Create association (ignore if already exists)
+                    await self.execute_command(
+                        """INSERT INTO content_upload_tags 
+                           (id, upload_id, tag_id, created_by) 
+                           VALUES ($1, $2, $3, $4)
+                           ON CONFLICT (upload_id, tag_id) DO NOTHING""",
+                        (str(uuid.uuid4()), file_id, tag_id, user_id)
+                    )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to associate tags with upload: {e}")
+            return False
+    
+    async def update_upload_tags(self, user_id: str, file_id: str, tag_names: List[str]) -> bool:
+        """Update tags for a file upload"""
+        try:
+            # Remove existing tag associations
+            await self.execute_command(
+                "DELETE FROM content_upload_tags WHERE upload_id = $1",
+                (file_id,)
+            )
+            
+            # Add new associations
+            if tag_names:
+                return await self.associate_tags_with_upload(user_id, file_id, tag_names)
+            
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update upload tags: {e}")
+            return False
+
+    # =====================================================
+    # MIGRATION AND SITE SETTINGS METHODS
+    # =====================================================
+    
+    async def table_exists(self, table_name: str) -> bool:
+        """Check if a table exists in the database"""
+        try:
+            async with self.connection_pool.acquire() as conn:
+                result = await conn.fetchval(
+                    """SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_schema = 'public' 
+                        AND table_name = $1
+                    )""",
+                    table_name
+                )
+                return result
+        except Exception as e:
+            logger.error(f"Failed to check if table {table_name} exists: {e}")
+            return False
+    
+    async def get_site_setting(self, setting_key: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Get a site setting by key"""
+        try:
+            async with self.connection_pool.acquire() as conn:
+                result = await conn.fetchrow(
+                    """SELECT id, setting_key, setting_value, setting_type, user_id, description, 
+                              is_active, created_ts, updated_ts, created_by, updated_by
+                       FROM site_settings 
+                       WHERE setting_key = $1 AND user_id IS NOT DISTINCT FROM $2 AND is_active = TRUE""",
+                    setting_key, user_id
+                )
+                
+                if result:
+                    setting = dict(result)
+                    # Convert value based on type
+                    value = setting['setting_value']
+                    if setting['setting_type'] == 'json':
+                        try:
+                            value = json.loads(value)
+                        except json.JSONDecodeError:
+                            logger.warning(f"Failed to parse JSON setting: {setting_key}")
+                    elif setting['setting_type'] == 'boolean':
+                        value = value.lower() in ('true', '1', 'yes', 'on')
+                    elif setting['setting_type'] == 'number':
+                        try:
+                            value = int(value) if '.' not in value else float(value)
+                        except ValueError:
+                            logger.warning(f"Failed to parse number setting: {setting_key}")
+                    
+                    setting['setting_value'] = value
+                    return setting
+                
+                return None
+        except Exception as e:
+            logger.error(f"Failed to get site setting {setting_key}: {e}")
+            return None
+    
+    async def set_site_setting(self, setting_key: str, setting_value: Any, setting_type: str = 'string', 
+                              description: Optional[str] = None, user_id: Optional[str] = None) -> bool:
+        """Set a site setting"""
+        try:
+            # Convert value to string based on type
+            if setting_type == 'json':
+                value_str = json.dumps(setting_value)
+            elif setting_type == 'boolean':
+                value_str = 'true' if setting_value else 'false'
+            else:
+                value_str = str(setting_value)
+            
+            async with self.connection_pool.acquire() as conn:
+                # Check if setting exists
+                existing = await conn.fetchrow(
+                    "SELECT id FROM site_settings WHERE setting_key = $1 AND user_id IS NOT DISTINCT FROM $2",
+                    setting_key, user_id
+                )
+                
+                if existing:
+                    # Update existing setting
+                    await conn.execute(
+                        """UPDATE site_settings 
+                           SET setting_value = $1, setting_type = $2, description = $3, 
+                               updated_ts = CURRENT_TIMESTAMP, updated_by = $4
+                           WHERE setting_key = $5 AND user_id IS NOT DISTINCT FROM $6""",
+                        value_str, setting_type, description, user_id or 'system', setting_key, user_id
+                    )
+                else:
+                    # Create new setting
+                    await conn.execute(
+                        """INSERT INTO site_settings 
+                           (id, setting_key, setting_value, setting_type, user_id, description, 
+                            created_by, updated_by)
+                           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)""",
+                        str(uuid.uuid4()), setting_key, value_str, setting_type, user_id, 
+                        description, user_id or 'system', user_id or 'system'
+                    )
+            
+            return True
+        except Exception as e:
+            logger.error(f"Failed to set site setting {setting_key}: {e}")
+            return False
+    
+    async def execute_migration(self, migration_sql: str) -> bool:
+        """Execute a migration SQL script"""
+        try:
+            async with self.connection_pool.acquire() as conn:
+                # Split SQL into individual statements
+                statements = [stmt.strip() for stmt in migration_sql.split(';') if stmt.strip()]
+                
+                async with conn.transaction():
+                    for statement in statements:
+                        if statement:
+                            logger.debug(f"Executing migration statement: {statement[:100]}...")
+                            await conn.execute(statement)
+            
+            logger.info("✅ Migration SQL executed successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to execute migration: {e}")
+            return False
+    
+    async def run_full_bootstrap(self) -> bool:
+        """Run the complete bootstrap SQL file"""
+        try:
+            # Read bootstrap SQL file
+            from pathlib import Path
+            bootstrap_sql_path = Path(__file__).parent.parent.parent.parent / "bootstrap.sql"
+            
+            if not bootstrap_sql_path.exists():
+                logger.error(f"Bootstrap SQL file not found: {bootstrap_sql_path}")
+                return False
+                
+            with open(bootstrap_sql_path, 'r', encoding='utf-8') as file:
+                sql_content = file.read()
+            
+            # Execute bootstrap SQL (PostgreSQL version with $1, $2 syntax handling)
+            return await self.execute_bootstrap(sql_content)
+            
+        except Exception as e:
+            logger.error(f"Failed to run full bootstrap: {e}")
+            return False

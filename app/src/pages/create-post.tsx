@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { TagInput } from '@/components/ui/tag-input';
+import { MarkdownImageToolbar } from '@/components/ui/markdown-image-toolbar';
 import { useTheme } from '@/components/theme-provider';
 import { api } from '@/services/api-client';
 import type { CreatePostData, Post } from '@/types';
@@ -45,6 +46,15 @@ export default function CreatePost() {
   const [isLoading, setIsLoading] = useState(isEditMode);
   const [markdownContent, setMarkdownContent] = useState('');
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
+
+  // Function to insert image into markdown content
+  const handleImageInsert = (markdown: string) => {
+    setMarkdownContent(prevContent => {
+      const newContent = prevContent ? `${prevContent}\n\n${markdown}` : markdown;
+      setValue('content', newContent);
+      return newContent;
+    });
+  };
 
   // Update tab when route changes
   useEffect(() => {
@@ -268,8 +278,11 @@ export default function CreatePost() {
         <div>
           {activeTab === 'posts' ? (
             <div data-color-mode={theme === 'dark' ? 'dark' : 'light'}>
-              <div className="flex mt-1 text-xs text-muted-foreground">
-                <span className="ml-auto text-right p-1">
+              <div className="flex justify-between items-center mt-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <MarkdownImageToolbar onImageInsert={handleImageInsert} />
+                </div>
+                <span className="text-right p-1">
                   Use the mode buttons below to switch between Edit and Preview <br />
                 </span>
               </div>
