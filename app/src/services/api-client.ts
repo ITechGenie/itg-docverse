@@ -1146,7 +1146,7 @@ export class ApiClient {
         }
       });
       
-      return { success: true, data: response.data.data };
+      return { success: true, data: response.data };
     } catch (error: any) {
       console.error('Image upload failed:', error);
       const errorMessage = error.response?.data?.detail || error.message || 'Upload failed';
