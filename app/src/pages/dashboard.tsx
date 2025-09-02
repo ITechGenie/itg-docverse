@@ -1,9 +1,8 @@
 import { AroundTheWorldFeed } from "@/components/common/around-the-world-feed"
-import { ChallengesExample } from "@/components/common/challenges-example"
+import { PinnedContent } from "@/components/common/pinned-content"
 import PostCard from "@/components/post-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   SidebarInset,
   SidebarProvider
@@ -11,7 +10,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/services/api-client"
 import type { Post, Tag } from "@/types"
-import { ArrowRight, Flame, Hash, Home, Plus, Swords, Users } from "lucide-react"
+import { ArrowRight, Flame, Hash, Home, Plus, Pin, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
@@ -104,28 +103,24 @@ const DashboardHeader = () => (
   </header>
 )
 
-// Top Challenges Card Component
-const TopChallengesCard = () => (
+// Pinned Content Card Component
+const PinnedContentCard = () => (
   <Card className="col-span-1 md:col-span-2 lg:col-span-1">
     <CardHeader className="flex flex-row items-center justify-between">
       <CardTitle className="flex items-center gap-2">
-        <Swords className="h-5 w-5 text-red-500" />
-        Top Challenges
+        <Pin className="h-5 w-5 text-orange-500" />
+        Pinned Content
       </CardTitle>
-      <Link to="/tags/challenges" className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+      <Link to="/tags/pinned" className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
         View All
         <ArrowRight className="w-4 h-4 inline" />
       </Link>
     </CardHeader>
     <CardContent>
-      <ScrollArea>
-        <div className="space-y-4">
-          <ChallengesExample />
-        </div>
-      </ScrollArea>
+      <PinnedContent limit={10} initialCount={4} />
     </CardContent>
   </Card>
-)
+);
 
 // Trending Posts Card Component
 const TrendingPostsCard = ({ posts, loading }: { posts: Post[], loading: boolean }) => (
@@ -330,7 +325,7 @@ export default function Dashboard() {
           {/* Main Content Area */}
           <div className="flex-1 space-y-4 gap-4">
             <div className="grid gap-4 grid-cols-1 md:grid-cols-1 lg:grid-cols-1">
-              <TopChallengesCard />
+              <PinnedContentCard />
             </div>
 
             <div className="grid gap-4 grid-cols-1 md:grid-cols-1 lg:grid-cols-1">

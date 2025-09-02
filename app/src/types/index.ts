@@ -194,15 +194,3 @@ export interface FeedFilters {
   favoritesPosts?: boolean; // Filter to show only favorite posts
   favoriteTags?: boolean; // Filter to show posts from favorite tags
 }
-
-export interface Challenge {
-  id: string;
-  title: string;
-  description: string;
-  tags: Tag[];
-  timeLimit?: string;
-  isActive?: boolean;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  participants?: number;
-  reward?: string;
-}
