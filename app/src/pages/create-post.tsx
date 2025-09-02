@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { TagInput } from '@/components/ui/tag-input';
-import { createImageUploadCommand } from '@/components/ui/mdeditor-image-command';
+import { createImageUploadCommand, ImageUploadDialog } from '@/components/ui/mdeditor-image-command-new';
 import { useTheme } from '@/components/theme-provider';
 import { api } from '@/services/api-client';
 import type { CreatePostData, Post } from '@/types';
@@ -46,6 +46,7 @@ export default function CreatePost() {
   const [isLoading, setIsLoading] = useState(isEditMode);
   const [markdownContent, setMarkdownContent] = useState('');
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
+  const [showImageDialog, setShowImageDialog] = useState(false);
 
   // Function to insert image into markdown content
   const handleImageInsert = (markdown: string) => {
@@ -58,17 +59,22 @@ export default function CreatePost() {
 
   // Set up global callback for MDEditor image insertion
   useEffect(() => {
+    console.log('Setting up global callbacks...');
     window.insertMarkdownCallback = handleImageInsert;
+    window.showImageUploadDialog = () => {
+      console.log('showImageUploadDialog called!');
+      setShowImageDialog(true);
+    };
     
     return () => {
       delete window.insertMarkdownCallback;
+      delete window.showImageUploadDialog;
     };
   }, []);
 
   // Create custom commands for MDEditor
-  const imageUploadCommand = createImageUploadCommand({
-    onImageInsert: handleImageInsert
-  });
+  const imageUploadCommand = createImageUploadCommand();
+  console.log('Image upload command created:', imageUploadCommand);
 
   const customCommands = [
     commands.bold,
@@ -423,6 +429,13 @@ export default function CreatePost() {
       </form>
         </>
       )}
+
+      {/* Image Upload Dialog */}
+      <ImageUploadDialog 
+        open={showImageDialog} 
+        onOpenChange={setShowImageDialog}
+        onImageInsert={handleImageInsert}
+      />
     </div>
   );
 }

@@ -1128,7 +1128,6 @@ export class ApiClient {
   async uploadImage(formData: FormData): Promise<ApiResponse<{
     id: string;
     filename: string;
-    original_filename: string;
     title: string;
     url: string;
     content_type: string;
@@ -1165,7 +1164,6 @@ export class ApiClient {
     files: Array<{
       id: string;
       filename: string;
-      original_filename: string;
       title: string;
       url: string;
       content_type: string;
@@ -1223,9 +1221,6 @@ export class ApiClient {
     }
   }
 
-  getImageUrl(fileId: string): string {
-    return `${API_BASE_URL}/files/${fileId}`;
-  }
 }
 
 

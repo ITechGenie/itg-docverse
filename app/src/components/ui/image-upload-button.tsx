@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Image, Loader2 } from 'lucide-react';
+import { Image, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/services/api-client';
 import { toast } from 'sonner';
@@ -51,8 +51,8 @@ export const ImageUploadButton: React.FC<ImageUploadButtonProps> = ({
       const response = await api.uploadImage(formData);
       
       if (response.success && response.data) {
-        const imageUrl = api.getImageUrl(response.data.id);
-        onImageUploaded(imageUrl, response.data.original_filename);
+        // Use the URL provided by the backend API
+        onImageUploaded(response.data.url, response.data.filename);
         toast.success('Image uploaded successfully!');
       } else {
         toast.error(response.error || 'Failed to upload image');

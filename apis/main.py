@@ -16,7 +16,7 @@ import logging
 
 from src.config.settings import get_settings
 from src.routers import posts, users, tags, comments, stats, reactions, authors, events, search, files
-from src.routers import public_auth
+from src.routers import public_auth, public_files
 from src.database.connection import get_database_service
 from src.middleware.auth import AuthenticationMiddleware
 from src.middleware.request_context import RequestContextMiddleware
@@ -181,6 +181,7 @@ app.add_middleware(AuthenticationMiddleware, auth_service=auth_service)
 # Include API routers
 # Public endpoints (no authentication required) - Only JWT auth
 app.include_router(public_auth.router, prefix="/apis/public", tags=["Public Auth"])
+app.include_router(public_files.router, prefix="/files", tags=["Public Files"])
 
 # All other endpoints require authentication (handled by middleware)
 app.include_router(posts.router, prefix="/apis/posts", tags=["Posts"])
@@ -190,7 +191,7 @@ app.include_router(authors.router, prefix="/apis/authors", tags=["Authors"])
 app.include_router(reactions.router, prefix="/apis/reactions", tags=["Reactions"])
 app.include_router(events.router, prefix="/apis/events", tags=["Events"])
 app.include_router(search.router, prefix="/apis/search", tags=["Search"])
-app.include_router(files.router, prefix="/apis", tags=["Files"])  # Uses /files prefix internally
+app.include_router(files.router, prefix="/apis/files", tags=["Files"]) 
 app.include_router(comments.router, prefix="/apis/comments", tags=["Comments"])
 app.include_router(stats.router, prefix="/apis/stats", tags=["Statistics"])
 

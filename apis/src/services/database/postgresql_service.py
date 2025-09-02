@@ -545,7 +545,7 @@ class PostgreSQLService(DatabaseService):
         """Get all active role types"""
         return await self.execute_query(
             "SELECT role_id, role_name, role_description, permissions, is_active FROM role_types WHERE is_active = $1 ORDER BY role_name",
-            (1,)
+            (True,)  # Use True instead of 1 for PostgreSQL boolean compatibility
         )
 
     async def assign_role_to_user(self, user_id: str, role_id: str, assigned_by: str = None) -> bool:
@@ -595,7 +595,7 @@ class PostgreSQLService(DatabaseService):
         """Get tag by ID"""
         results = await self.execute_query(
             "SELECT * FROM tag_types WHERE id = $1 AND is_active = $2",
-            (tag_id, 1)  # Use 1 instead of True for PostgreSQL compatibility
+            (tag_id, True)  # Use True instead of 1 for PostgreSQL boolean compatibility
         )
         return results[0] if results else None
 
@@ -603,7 +603,7 @@ class PostgreSQLService(DatabaseService):
         """Get tag by name"""
         results = await self.execute_query(
             "SELECT * FROM tag_types WHERE name = $1 AND is_active = $2",
-            (name, 1)  # Use 1 instead of True for PostgreSQL compatibility
+            (name, True)  # Use True instead of 1 for PostgreSQL boolean compatibility
         )
         return results[0] if results else None
         
@@ -1143,6 +1143,29 @@ class PostgreSQLService(DatabaseService):
         except Exception as e:
             logger.error(f"Failed to get upload tags: {e}")
             return []
+
+    async def _get_or_create_tag_id(self, tag_name: str, user_id: str) -> Optional[str]:
+        """Get existing tag ID or create new tag and return ID"""
+        try:
+            # Check if tag exists
+            existing_tag = await self.get_tag_by_name(tag_name)
+            if existing_tag:
+                return existing_tag['id']
+            
+            # Create new tag
+            import re
+            tag_id = re.sub(r'[^a-zA-Z0-9 ]', '', tag_name).lower().replace(' ', '-')
+            await self.create_tag({
+                'id': tag_id,
+                'name': tag_name,
+                'description': f'Auto-created tag: {tag_name}',
+                'created_by': user_id
+            })
+            return tag_id
+            
+        except Exception as e:
+            logger.error(f"Failed to get or create tag {tag_name}: {e}")
+            return None
     
     async def associate_tags_with_upload(self, user_id: str, file_id: str, tag_names: List[str]) -> bool:
         """Associate tags with a file upload"""

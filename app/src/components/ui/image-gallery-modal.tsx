@@ -13,7 +13,6 @@ import { toast } from 'sonner';
 interface ImageFile {
   id: string;
   filename: string;
-  original_filename: string;
   title: string;
   url: string;
   content_type: string;
@@ -90,8 +89,8 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
   }, [searchQuery]);
 
   const handleImageSelect = (image: ImageFile) => {
-    const imageUrl = api.getImageUrl(image.id);
-    onImageSelected(imageUrl, image.title || image.original_filename);
+    // Use the URL provided by the backend API
+    onImageSelected(image.url, image.title || image.filename);
     setIsOpen(false);
     toast.success('Image inserted!');
   };
@@ -170,7 +169,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
                       <CardContent className="p-0" onClick={() => handleImageSelect(image)}>
                         <div className="aspect-square relative">
                           <img
-                            src={api.getImageUrl(image.id)}
+                            src={image.url}
                             alt={image.title}
                             className="w-full h-full object-cover"
                             loading="lazy"

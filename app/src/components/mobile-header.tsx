@@ -1,10 +1,10 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Menu, Home, Search } from 'lucide-react';
+import { Menu, Home, Search, Plus } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { Input } from '@/components/ui/input';
 import { useSidebar } from '@/components/ui/sidebar';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { findNavigationItem, navigationConfig } from '@/config/navigation';
 
 interface MobileHeaderProps {
@@ -67,6 +67,13 @@ export function MobileHeader({
 
         {/* Right side - Search and Mode Toggle */}
         <div className="flex items-center gap-2">
+          <Link to="/create">
+            <Button className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Create Content</span>
+              <span className="sm:hidden">Create</span>
+            </Button>
+          </Link>
           {showSearch && (
             <form onSubmit={handleSearchSubmit} className="relative">
               <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
