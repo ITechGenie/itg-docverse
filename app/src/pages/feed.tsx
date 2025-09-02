@@ -179,14 +179,14 @@ export default function Feed() {
             </Button>
           </div>
 
-          {/* Create Button */}
+          {/* Create Button 
           <Link to="/create">
             <Button className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Create Content</span>
               <span className="sm:hidden">Create Content</span>
             </Button>
-          </Link>
+          </Link>*/}
         </div>
       </div>
 

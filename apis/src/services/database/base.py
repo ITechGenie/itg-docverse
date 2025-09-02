@@ -271,3 +271,50 @@ class DatabaseService(ABC):
     async def create_discussion(self, discussion_data: Dict[str, Any]) -> str:
         """Create a new discussion/comment"""
         pass
+
+    # ============================================
+    # FILE UPLOAD OPERATIONS
+    # ============================================
+    
+    @abstractmethod
+    async def create_content_upload(self, upload_data: Dict[str, Any]) -> bool:
+        """Create a new file upload record"""
+        pass
+    
+    @abstractmethod
+    async def get_content_upload(self, file_id: str) -> Optional[Dict[str, Any]]:
+        """Get file upload data by ID"""
+        pass
+    
+    @abstractmethod
+    async def get_user_uploads(self, user_id: str, visibility: Optional[str] = None, 
+                              tags: Optional[List[str]] = None, search: Optional[str] = None,
+                              sort_by: str = "recent", limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        """Get user's uploaded files with filtering"""
+        pass
+    
+    @abstractmethod
+    async def count_user_uploads(self, user_id: str, visibility: Optional[str] = None, 
+                                tags: Optional[List[str]] = None, search: Optional[str] = None) -> int:
+        """Count user's uploaded files with filtering"""
+        pass
+    
+    @abstractmethod
+    async def update_content_upload(self, file_id: str, update_data: Dict[str, Any]) -> bool:
+        """Update file upload metadata"""
+        pass
+    
+    @abstractmethod
+    async def get_upload_tags(self, file_id: str) -> List[Dict[str, Any]]:
+        """Get tags associated with a file upload"""
+        pass
+    
+    @abstractmethod
+    async def associate_tags_with_upload(self, user_id: str, file_id: str, tag_names: List[str]) -> bool:
+        """Associate tags with a file upload"""
+        pass
+    
+    @abstractmethod
+    async def update_upload_tags(self, user_id: str, file_id: str, tag_names: List[str]) -> bool:
+        """Update tags for a file upload"""
+        pass

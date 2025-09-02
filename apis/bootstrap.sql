@@ -290,6 +290,82 @@ CREATE TABLE IF NOT EXISTS tag_stats (
 );
 
 -- =====================================================
+-- 12. CONTENT_UPLOADS TABLE - File uploads with metadata
+-- =====================================================
+CREATE TABLE IF NOT EXISTS content_uploads (
+    id VARCHAR(50) PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    content_type VARCHAR(100) NOT NULL,
+    file_size INTEGER NOT NULL,
+    file_data BLOB NOT NULL, -- Store actual file content in DB
+    
+    -- User & Privacy
+    uploaded_by VARCHAR(50) NOT NULL,
+    is_public BOOLEAN DEFAULT FALSE, -- Private by default
+    visibility VARCHAR(20) DEFAULT 'private', -- 'private', 'public', 'shared'
+    
+    -- Organization & Discovery
+    title VARCHAR(255), -- User-friendly name
+    description TEXT,
+    
+    -- Audit columns
+    created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50),
+    is_deleted BOOLEAN DEFAULT FALSE,
+    deleted_ts TIMESTAMP,
+    deleted_by VARCHAR(50),
+    
+    -- Constraints
+    FOREIGN KEY (uploaded_by) REFERENCES users(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (updated_by) REFERENCES users(id),
+    FOREIGN KEY (deleted_by) REFERENCES users(id)
+);
+
+-- =====================================================
+-- 12.1. CONTENT_UPLOAD_TAGS TABLE - Association between uploads and tags
+-- =====================================================
+CREATE TABLE IF NOT EXISTS content_upload_tags (
+    id VARCHAR(50) PRIMARY KEY,
+    upload_id VARCHAR(50) NOT NULL,
+    tag_id VARCHAR(50) NOT NULL,
+    -- Audit columns
+    created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50),
+    -- Constraints
+    FOREIGN KEY (upload_id) REFERENCES content_uploads(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tag_types(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    UNIQUE(upload_id, tag_id) -- Prevent duplicate tags per upload
+);
+
+-- =====================================================
+-- 13. SITE_SETTINGS TABLE - Global and user-level configuration
+-- =====================================================
+CREATE TABLE IF NOT EXISTS site_settings (
+    id VARCHAR(50) PRIMARY KEY,
+    setting_key VARCHAR(100) NOT NULL,
+    setting_value TEXT NOT NULL,
+    setting_type VARCHAR(20) DEFAULT 'string', -- 'string', 'json', 'number', 'boolean'
+    user_id VARCHAR(50), -- NULL for global settings, user_id for user-specific settings
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    -- Audit columns
+    created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50),
+    -- Constraints
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (updated_by) REFERENCES users(id),
+    UNIQUE(setting_key, user_id) -- Prevent duplicate settings per user/global
+);
+
+-- =====================================================
 -- INITIAL DATA SETUP
 -- =====================================================
 
@@ -1314,3 +1390,13 @@ INSERT OR IGNORE INTO role_types (role_id, role_name, role_description, permissi
 INSERT OR IGNORE INTO user_roles (id, user_id, role_id, assigned_by, created_by) VALUES
 ('jj2402cf-9a84-46a5-8484-d32400e7a18d', 'ac2402cf-9a84-46a5-8484-d32400e7a18d', 'role_admin', 'system', 'system'),
 ('jj2402cf-9a84-46a5-8484-d32400e7a18d', '61aa7084-a14f-48ee-ac75-6645e2ad9ec4', 'role_admin', 'system', 'system');
+
+-- =====================================================
+-- SITE SETTINGS - Database version and configuration
+-- =====================================================
+INSERT OR IGNORE INTO site_settings (id, setting_key, setting_value, setting_type, user_id, description, created_by, updated_by) VALUES
+('set-db-version', 'database.version', '2.0.0', 'string', NULL, 'Current database schema version', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'),
+('set-db-init-date', 'database.initialized_at', CURRENT_TIMESTAMP, 'string', NULL, 'Database initialization timestamp', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'),
+('set-site-name', 'site.name', 'ITG DocVerse', 'string', NULL, 'Site name', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'),
+('set-upload-enabled', 'features.upload_enabled', 'true', 'boolean', NULL, 'Enable file uploads', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'),
+('set-max-upload-size', 'upload.max_file_size', '10485760', 'number', NULL, 'Maximum file upload size in bytes (10MB)', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27');

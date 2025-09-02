@@ -15,12 +15,13 @@ import os
 import logging
 
 from src.config.settings import get_settings
-from src.routers import posts, users, tags, comments, stats, reactions, authors, events, search
-from src.routers import public_auth
+from src.routers import posts, users, tags, comments, stats, reactions, authors, events, search, files
+from src.routers import public_auth, public_files
 from src.database.connection import get_database_service
 from src.middleware.auth import AuthenticationMiddleware
 from src.middleware.request_context import RequestContextMiddleware
 from src.auth.jwt_service import AuthService
+from src.services.database.migration import DatabaseMigration
 from bootstrap_data import BootstrapData
 
 # Initialize settings
@@ -120,8 +121,27 @@ async def lifespan(app: FastAPI):
     from src.services.database.factory import DatabaseServiceFactory
     db_service = await DatabaseServiceFactory.initialize_service()
     
-    # Auto-bootstrap if database is empty
-    await auto_bootstrap(db_service)
+    # Check migration configuration
+    if settings.skip_migrations:
+        print("⏭️  Database migrations SKIPPED (SKIP_MIGRATIONS=true)")
+    else:
+        # Check for database migrations
+        print("🔍 Checking database version and migrations...")
+        migration_success = await DatabaseMigration.initialize_or_migrate(db_service)
+        
+        if not migration_success:
+            print("❌ Database migration failed! Application cannot start.")
+            if settings.admin_only_migrations:
+                print("💡 Hint: Migrations require admin privileges (ADMIN_ONLY_MIGRATIONS=true)")
+                print("💡 Set SKIP_MIGRATIONS=true to start without auto-migration")
+            raise RuntimeError("Database migration failed")
+    
+    # Check bootstrap configuration
+    if settings.skip_bootstrap:
+        print("⏭️  Sample data bootstrap SKIPPED (SKIP_BOOTSTRAP=true)")
+    else:
+        # Auto-bootstrap sample data if database is empty
+        await auto_bootstrap(db_service)
     
     print("✅ Application started successfully!")
     
@@ -161,6 +181,7 @@ app.add_middleware(AuthenticationMiddleware, auth_service=auth_service)
 # Include API routers
 # Public endpoints (no authentication required) - Only JWT auth
 app.include_router(public_auth.router, prefix="/apis/public", tags=["Public Auth"])
+app.include_router(public_files.router, prefix="/files", tags=["Public Files"])
 
 # All other endpoints require authentication (handled by middleware)
 app.include_router(posts.router, prefix="/apis/posts", tags=["Posts"])
@@ -170,7 +191,7 @@ app.include_router(authors.router, prefix="/apis/authors", tags=["Authors"])
 app.include_router(reactions.router, prefix="/apis/reactions", tags=["Reactions"])
 app.include_router(events.router, prefix="/apis/events", tags=["Events"])
 app.include_router(search.router, prefix="/apis/search", tags=["Search"])
-
+app.include_router(files.router, prefix="/apis/files", tags=["Files"]) 
 app.include_router(comments.router, prefix="/apis/comments", tags=["Comments"])
 app.include_router(stats.router, prefix="/apis/stats", tags=["Statistics"])
 

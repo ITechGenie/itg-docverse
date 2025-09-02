@@ -38,3 +38,4 @@ create proper routes and manage them properly in the appropriate route files
 - /apis/seucre/user/<user_id> - use for user or profile level operations 
 - /apis/secure/posts - to manage the posts - use the filters to return properly 
 
+can we also add a site_settings with a key value pair in table, value can be string, have a type column so we can put string or json etc in the value column .. have a non mandatory user_id column also so global setting and user level setting can be stored.. 
