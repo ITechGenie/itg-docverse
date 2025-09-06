@@ -51,8 +51,14 @@ export const PinnedContent: React.FC<PinnedContentProps> = ({
     const fetchPinnedPosts = async () => {
       try {
         setLoading(true);
-        const response = await api.getPosts({ page: 1, tag_id: 'pinned', limit });
+        const response = await api.getPosts({ 
+          page: 1, 
+          limit,
+          tag_id: 'pinned'
+        });
+        console.log('Pinned posts response:', response); // Debug log
         if (response.success && response.data) {
+          console.log('Pinned posts found:', response.data.length); // Debug log
           setPinnedPosts(response.data);
         } else {
           setPinnedPosts([]);
@@ -171,7 +177,7 @@ export const PinnedContent: React.FC<PinnedContentProps> = ({
           ) : (
             <>
               <ChevronDown className="w-4 h-4" />
-              View All ({pinnedPosts.length} pinned)
+              View top {pinnedPosts.length} pinned content
             </>
           )}
         </Button>
