@@ -71,6 +71,12 @@ class Settings(BaseModel):
     max_file_size: int = 10485760  # 10MB
     upload_dir: str = "./uploads"
     
+    # Database Migration and Setup Configuration
+    skip_migrations: bool = False  # Skip automatic database migrations
+    skip_bootstrap: bool = False   # Skip automatic sample data bootstrap
+    allow_ddl_operations: bool = True  # Allow DDL operations (CREATE, ALTER, DROP tables)
+    admin_only_migrations: bool = False  # Require admin role for migrations
+    
     def get_database_url(self) -> str:
         """Get the appropriate database URL based on database type"""
         if self.database_type == "redis":
@@ -118,6 +124,10 @@ def get_settings() -> Settings:
         "port": int(os.getenv("PORT", defaults.port)),
         "max_file_size": int(os.getenv("MAX_FILE_SIZE", defaults.max_file_size)),
         "upload_dir": os.getenv("UPLOAD_DIR", defaults.upload_dir),
+        "skip_migrations": os.getenv("SKIP_MIGRATIONS", str(defaults.skip_migrations)).lower() == "true",
+        "skip_bootstrap": os.getenv("SKIP_BOOTSTRAP", str(defaults.skip_bootstrap)).lower() == "true",
+        "allow_ddl_operations": os.getenv("ALLOW_DDL_OPERATIONS", str(defaults.allow_ddl_operations)).lower() == "true",
+        "admin_only_migrations": os.getenv("ADMIN_ONLY_MIGRATIONS", str(defaults.admin_only_migrations)).lower() == "true",
     }
     return Settings(**settings_data)
 

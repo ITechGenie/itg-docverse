@@ -4,7 +4,7 @@ import { MobileFooter } from "@/components/mobile-footer"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Home } from "lucide-react"
+import { Search, Home, Plus } from "lucide-react"
 import { Toaster } from "@/components/ui/sonner"
 import {
   Breadcrumb,
@@ -21,7 +21,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { useEffect, useState } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import { findNavigationItem, navigationConfig } from "@/config/navigation"
 import { createUrl } from "@/lib/routing"
 
@@ -115,6 +115,13 @@ export default function Layout({ children }: LayoutProps) {
               </Breadcrumb>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-4">
+              <Link to="/create">
+                <Button className="flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Create Content</span>
+                  <span className="sm:hidden">Create</span>
+                </Button>
+              </Link>
               <form onSubmit={handleSearchSubmit} className="relative">
                 <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input

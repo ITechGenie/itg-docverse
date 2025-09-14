@@ -1120,6 +1120,107 @@ export class ApiClient {
       return { success: false, error: 'Failed to load top authors' };
     }
   }
+
+  // ============================================
+  // FILE UPLOAD OPERATIONS
+  // ============================================
+
+  async uploadImage(formData: FormData): Promise<ApiResponse<{
+    id: string;
+    filename: string;
+    title: string;
+    url: string;
+    content_type: string;
+    file_size: number;
+    visibility: string;
+    tags: string[];
+  }>> {
+    try {
+      // Use direct axios call for file upload to handle FormData properly
+      const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      const response = await this.client.post('/files/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      });
+      
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      console.error('Image upload failed:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Upload failed';
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  async getMyImages(params?: {
+    visibility?: string;
+    tags?: string;
+    search?: string;
+    sort_by?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ApiResponse<{
+    files: Array<{
+      id: string;
+      filename: string;
+      title: string;
+      url: string;
+      content_type: string;
+      file_size: number;
+      visibility: string;
+      tags: string[];
+      created_at: string;
+      updated_at: string;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+  }>> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.visibility) queryParams.append('visibility', params.visibility);
+      if (params?.tags) queryParams.append('tags', params.tags);
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.offset) queryParams.append('offset', params.offset.toString());
+
+      const url = `/files/my-images${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      return this.apiCall(url);
+    } catch (error) {
+      console.error('Get my images failed:', error);
+      return { success: false, error: 'Failed to load images' };
+    }
+  }
+
+  async updateImageMetadata(fileId: string, formData: FormData): Promise<ApiResponse<{ message: string }>> {
+    try {
+      const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      const response = await this.client.post(`/files/${fileId}/update`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      });
+      
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      console.error('Update image metadata failed:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Update failed';
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  async deleteImage(fileId: string): Promise<ApiResponse<{ message: string }>> {
+    try {
+      return this.apiCall(`/files/${fileId}/delete`, 'POST');
+    } catch (error) {
+      console.error('Delete image failed:', error);
+      return { success: false, error: 'Failed to delete image' };
+    }
+  }
+
 }
 
 

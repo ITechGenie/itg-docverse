@@ -3,12 +3,13 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import MDEditor from '@uiw/react-md-editor';
+import MDEditor, { commands } from '@uiw/react-md-editor';
 import { Plus, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { TagInput } from '@/components/ui/tag-input';
+import { createImageUploadCommand, ImageUploadDialog } from '@/components/ui/mdeditor-image-command-new';
 import { useTheme } from '@/components/theme-provider';
 import { api } from '@/services/api-client';
 import type { CreatePostData, Post } from '@/types';
@@ -45,6 +46,60 @@ export default function CreatePost() {
   const [isLoading, setIsLoading] = useState(isEditMode);
   const [markdownContent, setMarkdownContent] = useState('');
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
+  const [showImageDialog, setShowImageDialog] = useState(false);
+
+  // Function to insert image into markdown content
+  const handleImageInsert = (markdown: string) => {
+    setMarkdownContent(prevContent => {
+      const newContent = prevContent ? `${prevContent}\n\n${markdown}` : markdown;
+      setValue('content', newContent);
+      return newContent;
+    });
+  };
+
+  // Set up global callback for MDEditor image insertion
+  useEffect(() => {
+    console.log('Setting up global callbacks...');
+    window.insertMarkdownCallback = handleImageInsert;
+    window.showImageUploadDialog = () => {
+      console.log('showImageUploadDialog called!');
+      setShowImageDialog(true);
+    };
+    
+    return () => {
+      delete window.insertMarkdownCallback;
+      delete window.showImageUploadDialog;
+    };
+  }, []);
+
+  // Create custom commands for MDEditor
+  const imageUploadCommand = createImageUploadCommand();
+  console.log('Image upload command created:', imageUploadCommand);
+
+  const customCommands = [
+    commands.bold,
+    commands.italic,
+    commands.strikethrough,
+    commands.hr,
+    commands.title,
+    commands.divider,
+    commands.link,
+    commands.image, // Original image command for external URLs
+    imageUploadCommand, // Our custom image upload command
+    commands.code,
+    commands.codeBlock,
+    commands.comment,
+    commands.divider,
+    commands.unorderedListCommand,
+    commands.orderedListCommand,
+    commands.checkedListCommand,
+    commands.divider,
+    commands.codeEdit,
+    commands.codeLive,
+    commands.codePreview,
+    commands.divider,
+    commands.fullscreen,
+  ];
 
   // Update tab when route changes
   useEffect(() => {
@@ -268,11 +323,6 @@ export default function CreatePost() {
         <div>
           {activeTab === 'posts' ? (
             <div data-color-mode={theme === 'dark' ? 'dark' : 'light'}>
-              <div className="flex mt-1 text-xs text-muted-foreground">
-                <span className="ml-auto text-right p-1">
-                  Use the mode buttons below to switch between Edit and Preview <br />
-                </span>
-              </div>
               <MDEditor
                 value={markdownContent}
                 onChange={(value) => {
@@ -282,6 +332,7 @@ export default function CreatePost() {
                 data-color-mode={theme === 'dark' ? 'dark' : 'light'}
                 preview="live"
                 height={400}
+                commands={customCommands}
               />
             </div>
           ) : (
@@ -378,6 +429,13 @@ export default function CreatePost() {
       </form>
         </>
       )}
+
+      {/* Image Upload Dialog */}
+      <ImageUploadDialog 
+        open={showImageDialog} 
+        onOpenChange={setShowImageDialog}
+        onImageInsert={handleImageInsert}
+      />
     </div>
   );
 }
