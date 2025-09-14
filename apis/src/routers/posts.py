@@ -6,7 +6,7 @@ Handles all post-related endpoints (requires authentication)
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Query
 
-from ..models.post import Post, PostCreate, PostUpdate, PostPublic, PostType, PostStatus
+from ..models.post import Post, PostCreate, PostUpdate, PostPublic, PostType, PostStatus, PostSummary, PostAnalytics, UserAnalytics
 from ..services.database.factory import DatabaseServiceFactory
 from ..services.database.base import DatabaseService
 from ..middleware.dependencies import get_current_user_from_middleware
@@ -155,6 +155,8 @@ async def get_posts(
     limit: int = Query(10, ge=1, le=100, description="Number of posts to return"), 
     author_id: Optional[str] = Query(None, description="Filter by author ID"),
     tag_id: Optional[str] = Query(None, description="Filter by tag ID"),
+    trending: Optional[bool] = Query(None, description="Filter to show only trending posts"),
+    timeframe: Optional[str] = Query(None, description="Timeframe filter for trending posts (today, week, month, all)"),
     post_type: Optional[PostType] = Query(None, description="Filter by post type"),
     favorites_posts: Optional[bool] = Query(None, description="Filter to show only favorite posts"),
     favorite_tags: Optional[bool] = Query(None, description="Filter to show posts from favorite tags"),
@@ -165,7 +167,7 @@ async def get_posts(
     """Get posts with filtering and pagination (requires authentication)"""
     try:
         # Log query parameters - just like log4j!
-        logger.info(f"Fetching posts with params: skip={skip}, limit={limit}, author_id={author_id}, tag_id={tag_id}, post_type={post_type}, status={status}, favorites_posts={favorites_posts}, favorite_tags={favorite_tags}")
+        logger.info(f"Fetching posts with params: skip={skip}, limit={limit}, author_id={author_id}, tag_id={tag_id}, post_type={post_type}, status={status}, trending={trending}, timeframe={timeframe}, favorites_posts={favorites_posts}, favorite_tags={favorite_tags}")
 
         # Handle favorite filtering
         if favorites_posts or favorite_tags:
@@ -188,6 +190,8 @@ async def get_posts(
                 limit=limit,
                 author_id=author_id,
                 tag_id=tag_id,
+                trending=trending,
+                timeframe=timeframe,
                 post_type=post_type,
                 status=status
             )
@@ -214,9 +218,10 @@ async def get_posts(
                 'is_document': False,  # Default value since not in DB schema
                 'project_id': post.get('project_id'),
                 'git_url': post.get('git_url'),
-                'view_count': 0,  # TODO: Fetch from reactions/stats
-                'like_count': 0,  # TODO: Fetch from reactions
-                'comment_count': 0,  # TODO: Fetch from discussions
+                'view_count': post.get('view_count', 0),  # Use actual view count from user_events
+                'like_count': post.get('reaction_count', 0),  # Use actual reaction count
+                'comment_count': post.get('comment_count', 0),  # Use actual comment count from post_discussions
+                # No revision field for list view - use feed_content for performance
                 'created_at': post['created_ts'],
                 'updated_at': post['updated_ts'],
                 'published_at': None  # TODO: Add published timestamp logic
@@ -257,9 +262,10 @@ async def get_post(
             'is_document': False,  # Default value since not in DB schema
             'project_id': post.get('project_id'),
             'git_url': post.get('git_url'),
-            'view_count': 0,  # TODO: Fetch from reactions/stats
-            'like_count': 0,  # TODO: Fetch from reactions
-            'comment_count': 0,  # TODO: Fetch from discussions
+            'view_count': post.get('view_count', 0),  # Use actual view count from user_events
+            'like_count': 0,  # TODO: Get reaction count for individual post
+            'comment_count': post.get('comment_count', 0),  # Use actual comment count from post_discussions
+            'revision': post.get('revision', 0),  # Include revision from posts_content table
             'created_at': post['created_ts'],
             'updated_at': post['updated_ts'],
             'published_at': None  # TODO: Add published timestamp logic
@@ -271,6 +277,194 @@ async def get_post(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching post: {str(e)}")
 
+@router.get("/{post_id}/summary", response_model=PostSummary)
+async def get_post_summary(
+    post_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
+    db: DatabaseService = Depends(get_db_service)
+):
+    """Get analytics summary for a specific post (requires authentication)"""
+    try:
+        # Check if post exists
+        post = await db.get_post_by_id(post_id)
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+        
+        # Get analytics summary from database
+        # Views from user_events table with event-view type
+        views_query = """
+            SELECT COUNT(*) as total_views
+            FROM user_events 
+            WHERE target_id = ? AND target_type = 'post' AND event_type_id = 'event-view'
+        """
+        
+        # Reactions from reactions table (all reaction types for the post)
+        reactions_query = """
+            SELECT COUNT(*) as total_reactions
+            FROM reactions r
+            INNER JOIN event_types et ON r.event_type_id = et.id
+            WHERE r.target_id = ? AND r.target_type = 'post' AND et.category = 'reaction'
+        """
+        
+        # Comments from post_discussions table (only root level comments)
+        comments_query = """
+            SELECT COUNT(*) as total_comments
+            FROM post_discussions 
+            WHERE post_id = ? AND parent_discussion_id IS NULL AND is_deleted = FALSE
+        """
+        
+        try:
+            # Execute queries
+            views_result = await db.execute_query(views_query, (post_id,))
+            total_views = views_result[0]['total_views'] if views_result else 0
+        except Exception as e:
+            logger.warning(f"Error fetching views for post {post_id}: {e}")
+            total_views = 0
+            
+        try:
+            reactions_result = await db.execute_query(reactions_query, (post_id,))
+            total_reactions = reactions_result[0]['total_reactions'] if reactions_result else 0
+        except Exception as e:
+            logger.warning(f"Error fetching reactions for post {post_id}: {e}")
+            total_reactions = 0
+            
+        try:
+            comments_result = await db.execute_query(comments_query, (post_id,))
+            total_comments = comments_result[0]['total_comments'] if comments_result else 0
+        except Exception as e:
+            logger.warning(f"Error fetching comments for post {post_id}: {e}")
+            total_comments = 0
+        
+        return PostSummary(
+            total_views=total_views,
+            total_reactions=total_reactions,
+            total_comments=total_comments
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching post summary for {post_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching post summary: {str(e)}")
+
+@router.get("/{post_id}/analytics", response_model=PostAnalytics)
+async def get_post_analytics(
+    post_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
+    db: DatabaseService = Depends(get_db_service)
+):
+    """Get full analytics with user breakdown for a specific post (requires authentication)"""
+    try:
+        # Check if post exists
+        post = await db.get_post_by_id(post_id)
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+        
+        # Get user-level analytics data
+        user_analytics_query = """
+            SELECT 
+                u.id as user_id,
+                u.username as user_name,
+                u.display_name,
+                COALESCE(views.view_count, 0) as views,
+                COALESCE(reactions.reaction_count, 0) as reactions,
+                COALESCE(comments.comment_count, 0) as comments
+            FROM users u
+            LEFT JOIN (
+                SELECT user_id, COUNT(*) as view_count
+                FROM user_events 
+                WHERE target_id = ? AND target_type = 'post' AND event_type_id = 'event-view'
+                GROUP BY user_id
+            ) views ON u.id = views.user_id
+            LEFT JOIN (
+                SELECT user_id, COUNT(*) as reaction_count
+                FROM reactions r
+                INNER JOIN event_types et ON r.event_type_id = et.id
+                WHERE r.target_id = ? AND r.target_type = 'post' AND et.category = 'reaction'
+                GROUP BY user_id
+            ) reactions ON u.id = reactions.user_id
+            LEFT JOIN (
+                SELECT author_id as user_id, COUNT(*) as comment_count
+                FROM post_discussions 
+                WHERE post_id = ? AND is_deleted = FALSE
+                GROUP BY author_id
+            ) comments ON u.id = comments.user_id
+            WHERE views.view_count > 0 OR reactions.reaction_count > 0 OR comments.comment_count > 0
+            ORDER BY (COALESCE(views.view_count, 0) + COALESCE(reactions.reaction_count, 0) + COALESCE(comments.comment_count, 0)) DESC
+        """
+        
+        # Get totals
+        total_views_query = """
+            SELECT COUNT(*) as total 
+            FROM user_events 
+            WHERE target_id = ? AND target_type = 'post' AND event_type_id = 'event-view'
+        """
+        total_reactions_query = """
+            SELECT COUNT(*) as total 
+            FROM reactions r
+            INNER JOIN event_types et ON r.event_type_id = et.id
+            WHERE r.target_id = ? AND r.target_type = 'post' AND et.category = 'reaction'
+        """
+        total_comments_query = """
+            SELECT COUNT(*) as total 
+            FROM post_discussions 
+            WHERE post_id = ? AND is_deleted = FALSE
+        """
+        
+        try:
+            # Get user-level data
+            user_data = await db.execute_query(user_analytics_query, (post_id, post_id, post_id))
+            user_analytics = []
+            
+            for row in user_data or []:
+                user_analytics.append(UserAnalytics(
+                    user_id=row['user_id'],
+                    user_name=row['user_name'] or '',
+                    display_name=row['display_name'] or row['user_name'] or 'Unknown',
+                    views=row['views'],
+                    reactions=row['reactions'],
+                    comments=row['comments']
+                ))
+                
+        except Exception as e:
+            logger.warning(f"Error fetching user analytics for post {post_id}: {e}")
+            user_analytics = []
+        
+        # Get totals
+        try:
+            views_result = await db.execute_query(total_views_query, (post_id,))
+            total_views = views_result[0]['total'] if views_result else 0
+        except Exception as e:
+            logger.warning(f"Error fetching total views for post {post_id}: {e}")
+            total_views = 0
+            
+        try:
+            reactions_result = await db.execute_query(total_reactions_query, (post_id,))
+            total_reactions = reactions_result[0]['total'] if reactions_result else 0
+        except Exception as e:
+            logger.warning(f"Error fetching total reactions for post {post_id}: {e}")
+            total_reactions = 0
+            
+        try:
+            comments_result = await db.execute_query(total_comments_query, (post_id,))
+            total_comments = comments_result[0]['total'] if comments_result else 0
+        except Exception as e:
+            logger.warning(f"Error fetching total comments for post {post_id}: {e}")
+            total_comments = 0
+        
+        return PostAnalytics(
+            user_analytics=user_analytics,
+            total_views=total_views,
+            total_reactions=total_reactions,
+            total_comments=total_comments
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching post analytics for {post_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching post analytics: {str(e)}")
+
 @router.post("/", response_model=PostPublic)
 async def create_post(
     post_data: PostCreate,
@@ -278,35 +472,59 @@ async def create_post(
     db: DatabaseService = Depends(get_db_service)
 ):
     """Create a new post (requires authentication)"""
-    logger.debug(f"Incoming post body: {post_data.model_dump_json()}")
-    logger.debug(f"Current user from middleware: {current_user}")
     try:
         # Use authenticated user as author
         author_id = current_user.get("user_id")
-        logger.debug(f"Extracted author_id: {author_id}")
 
         logger.info(f"Creating post with type: {post_data.post_type}, tags: {post_data.tags}")
 
         # Convert Post model to database format
         import uuid
         import hashlib
-        post_id = str(uuid.uuid4())
+        import re
         
-        # Generate title if not provided
+        # Generate title if not provided first
         title = post_data.title
-        feed_content = str(post_data.content)[:100] + "..."  # First 100 chars as feed content
         if not title:
             if post_data.post_type == PostType.THOUGHTS:
-
-                hash_id = hashlib.sha256(post_id.encode()).hexdigest()[:8]
-
                 # For thoughts, use first 50 characters of content as title
-                title = f"Thought #{hash_id}"
-                post_id = f"thought-{hash_id}"
-                feed_content = str(post_data.content)
+                content_preview = str(post_data.content)[:50]
+                title = f"{content_preview}..." if len(str(post_data.content)) > 50 else content_preview
             else:
                 # For other types, use a default title
                 title = f"Untitled {post_data.post_type.value.replace('-', ' ').title()}"
+        
+        # Generate post_id based on type
+        if post_data.post_type == PostType.THOUGHTS:
+            # Thoughts: Keep existing hash-based ID
+            base_uuid = str(uuid.uuid4())
+            hash_id = hashlib.sha256(base_uuid.encode()).hexdigest()[:8]
+            post_id = f"thought-{hash_id}"
+        else:
+            # Posts: Create slug-like ID from title + hash
+            # Clean title: lowercase, replace spaces/special chars with hyphens, remove extra hyphens
+            title_slug = re.sub(r'[^a-zA-Z0-9\s-]', '', title.lower())  # Remove special chars
+            title_slug = re.sub(r'\s+', '-', title_slug)  # Replace spaces with hyphens
+            title_slug = re.sub(r'-+', '-', title_slug)  # Replace multiple hyphens with single
+            title_slug = title_slug.strip('-')  # Remove leading/trailing hyphens
+            
+            # Take first characters of slug to ensure total length stays under 50
+            # Formula: title_part + "-" + hash(8) = max 47 chars for post_id  
+            # Content ID is now a UUID, so no length constraints from that
+            title_part = title_slug[:38].rstrip('-')  # 38 + 1 + 8 = 47 chars for post_id
+            
+            # Generate 8-character hash for uniqueness
+            base_uuid = str(uuid.uuid4())
+            hash_id = hashlib.sha256(base_uuid.encode()).hexdigest()[:8]
+            
+            # Combine: title-slug + hash
+            post_id = f"{title_part}-{hash_id}" if title_part else f"post-{hash_id}"
+            
+            # Log the generated post_id
+            logger.debug(f"Generated post_id: '{post_id}' (length: {len(post_id)})")
+        
+        # Generate feed content
+        feed_content = str(post_data.content)[:100] + "..." if len(str(post_data.content)) > 100 else str(post_data.content)
 
         # Prepare data for database (convert Pydantic model to dict with correct field names)
         db_post_data = {
@@ -323,11 +541,8 @@ async def create_post(
             'read_time': 0
         }
 
-        logger.debug(f"Prepared post data for DB: {db_post_data}")
-
         # Create the post in the database
         created_post_id = await db.create_post(db_post_data)
-
         logger.info(f"Post created with ID: {created_post_id}")
 
         # Handle tags if provided
@@ -335,39 +550,45 @@ async def create_post(
             await db.associate_tags_with_post(author_id, created_post_id, post_data.tags)
             logger.debug(f"Associated {len(post_data.tags)} tags with post {created_post_id}")
 
-        logger.info(f"Successfully created post with ID: {created_post_id}")
-
         # Fetch the created post to return the proper response
         created_post = await db.get_post_by_id(created_post_id)
+        
         if not created_post:
             raise HTTPException(status_code=500, detail="Failed to retrieve created post")
         
         # Transform database fields to match PostPublic model
-        transformed_post = {
-            'id': created_post['id'],
-            'title': created_post['title'],
-            'content': created_post.get('content') or '',  # Ensure content is never None
-            'author_id': created_post['author_id'],
-            'author_name': created_post['display_name'],
-            'author_username': created_post['username'],
-            'post_type': PostType(created_post['post_type_id']),  # Convert string to enum
-            'status': PostStatus(created_post['status']),  # Convert string to enum
-            'tags': [
-                    {"id": tag.strip(), "name": tag.strip(), "color": "#24A890"}
-                    for tag in created_post.get('tags', '').split(',') if tag.strip()
-                ] if created_post.get('tags') else [],
-            'is_document': False,  # Default value since not in DB schema
-            'project_id': created_post.get('project_id'),
-            'git_url': created_post.get('git_url'),
-            'view_count': 0,  # TODO: Fetch from reactions/stats
-            'like_count': 0,  # TODO: Fetch from reactions
-            'comment_count': 0,  # TODO: Fetch from discussions
-            'created_at': created_post['created_ts'],
-            'updated_at': created_post['updated_ts'],
-            'published_at': None  # TODO: Add published timestamp logic
-        }
-        
-        return PostPublic(**transformed_post)
+        try:
+            transformed_post = {
+                'id': created_post['id'],
+                'title': created_post['title'],
+                'content': created_post.get('content') or '',  # Ensure content is never None
+                'author_id': created_post['author_id'],
+                'author_name': created_post['display_name'],
+                'author_username': created_post['username'],
+                'post_type': PostType(created_post['post_type_id']),  # Convert string to enum
+                'status': PostStatus(created_post['status']),  # Convert string to enum
+                'tags': [
+                        {"id": tag.strip(), "name": tag.strip(), "color": "#24A890"}
+                        for tag in created_post.get('tags', '').split(',') if tag.strip()
+                    ] if created_post.get('tags') else [],
+                'is_document': False,  # Default value since not in DB schema
+                'project_id': created_post.get('project_id'),
+                'git_url': created_post.get('git_url'),
+                'view_count': created_post.get('view_count', 0),  # Use actual view count
+                'like_count': 0,  # New posts have no reactions yet
+                'comment_count': created_post.get('comment_count', 0),  # Use actual comment count
+                'revision': created_post.get('revision', 0),  # Include revision for detailed response
+                'created_at': created_post['created_ts'],
+                'updated_at': created_post['updated_ts'],
+                'published_at': None  # TODO: Add published timestamp logic
+            }
+            
+            return PostPublic(**transformed_post)
+            
+        except Exception as transform_error:
+            logger.error(f"❌ Error during post transformation: {str(transform_error)}")
+            logger.error(f"🔍 Raw post data: {created_post}")
+            raise HTTPException(status_code=500, detail=f"Error transforming post data: {str(transform_error)}")
     except Exception as e:
         logger.error(f"Error creating post: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error creating post: {str(e)}")
@@ -423,6 +644,8 @@ async def update_post(
             'title': updated_post['title'],
             'content': updated_post.get('content') or '',
             'author_id': updated_post['author_id'],
+            'author_name': updated_post['display_name'],
+            'author_username': updated_post['username'],
             'post_type': PostType(updated_post['post_type_id']),
             'status': PostStatus(updated_post['status']),
             'tags': [
@@ -432,9 +655,10 @@ async def update_post(
             'is_document': False,
             'project_id': updated_post.get('project_id'),
             'git_url': updated_post.get('git_url'),
-            'view_count': 0,
-            'like_count': 0,
-            'comment_count': 0,
+            'view_count': updated_post.get('view_count', 0),  # Use actual view count
+            'like_count': 0,  # TODO: Get reaction count for individual post
+            'comment_count': updated_post.get('comment_count', 0),  # Use actual comment count
+            'revision': updated_post.get('revision', 0),  # Include revision for detailed response
             'created_at': updated_post['created_ts'],
             'updated_at': updated_post['updated_ts'],
             'published_at': None

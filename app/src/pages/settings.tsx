@@ -128,7 +128,9 @@ export default function Settings() {
                         <p className="font-medium">Site Analytics</p>
                         <p className="text-sm text-muted-foreground">View usage and activity reports</p>
                       </div>
-                      <Button size="sm" variant="outline">View</Button>
+                      <Link to="/analytics">
+                        <Button size="sm" variant="outline">View Analytics</Button>
+                      </Link>
                     </li>
                   </ul>
                 ) : (

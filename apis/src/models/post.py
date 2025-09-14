@@ -97,6 +97,7 @@ class PostPublic(BaseModel):
     view_count: int = 0
     like_count: int = 0
     comment_count: int = 0
+    revision: Optional[int] = None  # Only populated for detailed view
     created_at: datetime
     updated_at: datetime
     published_at: Optional[datetime] = None
@@ -106,3 +107,34 @@ class PostPublic(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
+
+class PostSummary(BaseModel):
+    """Post summary analytics model"""
+    total_views: int = Field(default=0, description="Total number of views for the post")
+    total_reactions: int = Field(default=0, description="Total number of reactions for the post")  
+    total_comments: int = Field(default=0, description="Total number of comments for the post")
+    
+    class Config:
+        from_attributes = True
+
+class UserAnalytics(BaseModel):
+    """User-level analytics for a post"""
+    user_id: str = Field(description="User ID")
+    user_name: str = Field(description="Username") 
+    display_name: str = Field(description="User display name")
+    views: int = Field(default=0, description="Number of views by this user")
+    reactions: int = Field(default=0, description="Number of reactions by this user")
+    comments: int = Field(default=0, description="Number of comments by this user")
+    
+    class Config:
+        from_attributes = True
+
+class PostAnalytics(BaseModel):
+    """Full post analytics with user breakdown"""
+    user_analytics: List[UserAnalytics] = Field(default_factory=list, description="User-level engagement data")
+    total_views: int = Field(default=0, description="Total number of views for the post")
+    total_reactions: int = Field(default=0, description="Total number of reactions for the post")  
+    total_comments: int = Field(default=0, description="Total number of comments for the post")
+    
+    class Config:
+        from_attributes = True

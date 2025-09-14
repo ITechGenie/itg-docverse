@@ -24,6 +24,42 @@ async def get_db_service() -> DatabaseService:
     """Dependency to get database service - using singleton pattern"""
     return DatabaseServiceFactory.create_service()
 
+async def get_actual_user_stats(db: DatabaseService, user_id: str) -> Dict[str, int]:
+    """Get actual user statistics by querying the database directly"""
+    try:
+        # Get posts count
+        posts_count_result = await db.execute_query(
+            "SELECT COUNT(*) as count FROM posts WHERE author_id = ? AND status != 'deleted'",
+            (user_id,)
+        )
+        posts_count = posts_count_result[0]['count'] if posts_count_result else 0
+        
+        # Get comments count from post_discussions
+        comments_count_result = await db.execute_query(
+            "SELECT COUNT(*) as count FROM post_discussions WHERE author_id = ? AND is_deleted = FALSE",
+            (user_id,)
+        )
+        comments_count = comments_count_result[0]['count'] if comments_count_result else 0
+        
+        # Get reactions count (reactions given by the user)
+        reactions_count_result = await db.execute_query(
+            "SELECT COUNT(*) as count FROM reactions WHERE user_id = ?",
+            (user_id,)
+        )
+        reactions_count = reactions_count_result[0]['count'] if reactions_count_result else 0
+        
+        logger.debug(f"User {user_id} actual stats: {posts_count} posts, {comments_count} comments, {reactions_count} reactions")
+        
+        return {
+            "posts_count": posts_count,
+            "comments_count": comments_count,
+            "reactions_count": reactions_count,
+            "tags_followed": 0  # We can implement this later if needed
+        }
+    except Exception as e:
+        logger.error(f"Error getting actual user stats for {user_id}: {str(e)}")
+        return {"posts_count": 0, "comments_count": 0, "reactions_count": 0, "tags_followed": 0}
+
 @router.get("/", response_model=List[UserPublic])
 async def get_users(
     skip: int = Query(0, ge=0, description="Number of users to skip"),
@@ -87,10 +123,8 @@ async def get_user(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Get user stats
-        user_stats = await db.get_user_stats(user['id'])
-        if not user_stats:
-            user_stats = {"posts_count": 0, "comments_count": 0, "tags_followed": 0}
+        # Get user stats - use actual stats instead of cached user_stats table
+        user_stats = await get_actual_user_stats(db, user['id'])
         
         # Get user roles - just extract role IDs for lightweight response
         user_roles_raw = await db.get_user_roles(user['id'])
@@ -109,6 +143,7 @@ async def get_user(
             "avatar_url": user.get('avatar_url', ''),
             "post_count": user_stats.get('posts_count', 0),
             "comment_count": user_stats.get('comments_count', 0),
+            "reactions_count": user_stats.get('reactions_count', 0),
             "is_verified": user.get('is_verified', False),
             "roles": role_ids,
             "created_at": user['created_ts']
@@ -180,7 +215,7 @@ async def update_user_roles(
             raise HTTPException(status_code=404, detail="User not found")
 
         # Recompute stats and roles like get_user does
-        user_stats = await db.get_user_stats(user['id']) or {"posts_count": 0, "comments_count": 0, "tags_followed": 0}
+        user_stats = await get_actual_user_stats(db, user['id'])
         user_roles_raw = await db.get_user_roles(user['id'])
         role_ids = [role['role_id'] for role in user_roles_raw if role.get('assignment_active', True)]
 
@@ -194,6 +229,7 @@ async def update_user_roles(
             "avatar_url": user.get('avatar_url', ''),
             "post_count": user_stats.get('posts_count', 0),
             "comment_count": user_stats.get('comments_count', 0),
+            "reactions_count": user_stats.get('reactions_count', 0),
             "is_verified": user.get('is_verified', False),
             "roles": role_ids,
             "created_at": user['created_ts']
@@ -218,10 +254,8 @@ async def get_user_by_username(
             raise HTTPException(status_code=404, detail="User not found")
         
         logger.info(f"Fetched user by username: {username} -> ID: {user['id']}")
-        # Get user stats
-        user_stats = await db.get_user_stats(user['id'])
-        if not user_stats:
-            user_stats = {"posts_count": 0, "comments_count": 0, "tags_followed": 0}
+        # Get user stats - use actual stats instead of cached user_stats table
+        user_stats = await get_actual_user_stats(db, user['id'])
         
         # Get user roles - just extract role IDs for lightweight response
         user_roles_raw = await db.get_user_roles(user['id'])
@@ -240,6 +274,7 @@ async def get_user_by_username(
             "avatar_url": user.get('avatar_url', ''),
             "post_count": user_stats.get('posts_count', 0),
             "comment_count": user_stats.get('comments_count', 0),
+            "reactions_count": user_stats.get('reactions_count', 0),
             "is_verified": user.get('is_verified', False),
             "roles": role_ids,
             "created_at": user['created_ts']

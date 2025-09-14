@@ -13,7 +13,8 @@ import {
   Clock,
   ExternalLink,
   Lock,
-  History
+  History,
+  BarChart3
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,7 @@ const HeartPlusIcon = ({ className }: { className?: string }) => (
     aria-hidden="true"
 >
     <g clipPath="url(#clip0_988_3276)">
-        <path d="M19 14V17H22V19H18.999L19 22H17L16.999 19H14V17H17V14H19ZM20.243 4.75698C22.505 7.02498 22.583 10.637 20.479 12.992L19.059 11.574C20.39 10.05 20.32 7.65998 18.827 6.16998C17.324 4.67098 14.907 4.60698 13.337 6.01698L12.002 7.21498L10.666 6.01798C9.09103 4.60598 6.67503 4.66798 5.17203 6.17198C3.68203 7.66198 3.60703 10.047 4.98003 11.623L13.412 20.069L12 21.485L3.52003 12.993C1.41603 10.637 1.49503 7.01898 3.75603 4.75698C6.02103 2.49298 9.64403 2.41698 12 4.52898C14.349 2.41998 17.979 2.48998 20.242 4.75698H20.243Z" fill="#828282ff"></path>
+        <path d="M19 14V17H22V19H18.999L19 22H17L16.999 19H14V17H17V14H19ZM20.243 4.75698C22.505 7.02498 22.583 10.637 20.479 12.992L19.059 11.574C20.39 10.05 20.32 7.65998 18.827 6.16998C17.324 4.67098 14.907 4.60698 13.337 6.01698L12.002 7.21498L10.666 6.01798C9.09103 4.60598 6.67503 4.66798 5.17203 6.17198C3.68203 7.66198 3.60703 10.047 4.98003 11.623L13.412 20.069L12 21.485L3.52003 12.993C1.41603 10.637 1.49503 7.01898 3.75603 4.75698C6.02103 2.49298 9.64403 2.41698 12 4.52898C14.349 2.41998 17.979 2.48998 20.242 4.75698H20.243Z" fill="currentColor"></path>
     </g>
     <defs>
         <clipPath id="clip0_988_3276">
@@ -176,7 +177,11 @@ export const PostHeader = ({
                 className="flex items-center space-x-1 text-muted-foreground hover:text-foreground px-2"
                 title="Add reaction"
               >
-                <HeartPlusIcon className="w-4 h-4" />
+                <HeartPlusIcon className={`w-4 h-4 ${(() => {
+                  // Check if current user has applied any reactions to this post
+                  const userHasAnyReaction = currentUser && reactions.some(r => r.user_id === currentUser.id);
+                  return userHasAnyReaction ? 'text-red-500' : '';
+                })()}`} />
                 <span className="text-sm">{loadingReactions ? '...' : totalReactions}</span>
               </Button>
             </DropdownMenuTrigger>
@@ -272,6 +277,13 @@ export const PostHeader = ({
                 <Copy className="w-4 h-4 mr-2" />
                 Copy link
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => navigate(`/post/${post.id}/analytics`)}
+                className="cursor-pointer"
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Analytics
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -294,8 +306,8 @@ export const PostHeader = ({
         </div>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-          {/* Show version info and management */}
-          {post.revision !== undefined && (
+          {/* Show version info and management - only in detailed view */}
+          {isDetailView && post.revision !== undefined && post.revision != null && (
             <div className="flex items-center space-x-2">
               <Badge variant="outline" className="text-xs">
                 v{post.revision} {post.isLatest && '(Latest)'}
@@ -406,8 +418,8 @@ export const PostHeader = ({
                 return acc;
               }, {} as Record<ReactionType, number>);
 
-              console.log('Reaction counts:', reactionCounts);
-              console.log('Available emojis:', Object.keys(reactionEmojis));
+              //console.log('Reaction counts:', reactionCounts);
+              //console.log('Available emojis:', Object.keys(reactionEmojis));
 
               return Object.entries(reactionCounts).map(([type, count]) => (
                 <div key={type} className="flex items-center space-x-1 sm:space-x-2">

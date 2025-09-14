@@ -14,6 +14,7 @@ export interface User {
   stats: {
     postsCount: number;
     commentsCount: number;
+    reactionsCount: number;
     tagsFollowed: number;
   };
   badges?: Badge[];
@@ -49,7 +50,7 @@ export interface Post {
   isFavorited?: boolean;
   // Versioning and status
   status: 'draft' | 'published';
-  revision: number; // 0 for draft, increments on each publish
+  revision?: number; // 0 for draft, increments on each publish (only in detailed view)
   isLatest?: boolean; // indicates if this is the latest version
   // Document metadata (for code summaries)
   documentMeta?: {
@@ -193,16 +194,5 @@ export interface FeedFilters {
   status?: 'published' | 'draft' | 'archived'; // Filter posts by status
   favoritesPosts?: boolean; // Filter to show only favorite posts
   favoriteTags?: boolean; // Filter to show posts from favorite tags
-}
-
-export interface Challenge {
-  id: string;
-  title: string;
-  description: string;
-  tags: Tag[];
-  timeLimit?: string;
-  isActive?: boolean;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  participants?: number;
-  reward?: string;
+  trending?: boolean; // Filter to show trending posts (sorted by reaction count)
 }

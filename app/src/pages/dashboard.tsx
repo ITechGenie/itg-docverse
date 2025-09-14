@@ -1,9 +1,8 @@
 import { AroundTheWorldFeed } from "@/components/common/around-the-world-feed"
-import { ChallengesExample } from "@/components/common/challenges-example"
+import { PinnedContent } from "@/components/common/pinned-content"
 import PostCard from "@/components/post-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   SidebarInset,
   SidebarProvider
@@ -11,13 +10,14 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/services/api-client"
 import type { Post, Tag } from "@/types"
-import { ArrowRight, Flame, Hash, Home, Plus, Swords, Users } from "lucide-react"
+import { ArrowRight, Flame, Hash, Home, Plus, Pin, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
 interface TopAuthor {
   id: string
   name: string
+  username: string
   email: string
   avatarUrl: string
   bio: string
@@ -104,57 +104,72 @@ const DashboardHeader = () => (
   </header>
 )
 
-// Top Challenges Card Component
-const TopChallengesCard = () => (
+// Pinned Content Card Component
+const PinnedContentCard = () => (
   <Card className="col-span-1 md:col-span-2 lg:col-span-1">
     <CardHeader className="flex flex-row items-center justify-between">
       <CardTitle className="flex items-center gap-2">
-        <Swords className="h-5 w-5 text-red-500" />
-        Top Challenges
+        <Pin className="h-5 w-5 text-orange-500" />
+        Pinned Content
       </CardTitle>
-      <Link to="/tags/challenges" className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+      <Link to="/tags/pinned" className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
         View All
         <ArrowRight className="w-4 h-4 inline" />
       </Link>
     </CardHeader>
     <CardContent>
-      <ScrollArea>
-        <div className="space-y-4">
-          <ChallengesExample />
-        </div>
-      </ScrollArea>
+      <PinnedContent limit={10} initialCount={4} />
     </CardContent>
   </Card>
-)
+);
 
 // Trending Posts Card Component
-const TrendingPostsCard = ({ posts, loading }: { posts: Post[], loading: boolean }) => (
+const TrendingPostsCard = ({ posts, loading, onTimeframeChange, currentTimeframe }: { 
+  posts: Post[], 
+  loading: boolean, 
+  onTimeframeChange: (timeframe: string) => void,
+  currentTimeframe: string 
+}) => (
   <Card className="col-span-1 md:col-span-2 lg:col-span-1">
     <CardHeader className="flex flex-row items-center justify-between">
       <CardTitle className="flex items-center gap-2">
         <Flame className="h-5 w-5 text-red-500" />
         Trending Content
       </CardTitle>
-      <Link to="/feed">
-        <span className="hidden sm:inline">
-          <Button variant="ghost" size="sm" className="flex items-center gap-2">
-            View Content Feed
-            <ArrowRight className="w-4 h-4" />
-          </Button>
-        </span>
-        <span className="sm:hidden">
-          <Button variant="ghost" size="sm" className="flex items-center gap-2">
-            <ArrowRight className="w-4 h-4" />
-          </Button>
-        </span>
-      </Link>
+      <div className="flex items-center gap-2">
+        {/* Timeframe Filter */}
+        <select 
+          value={currentTimeframe} 
+          onChange={(e) => onTimeframeChange(e.target.value)}
+          className="text-xs px-2 py-1 border rounded-md bg-background"
+        >
+          <option value="today">Today</option>
+          <option value="week">Week</option>
+          <option value="month">Month</option>
+          <option value="all">All Time</option>
+        </select>
+        <Link to="/feed/trending">
+          <span className="hidden sm:inline">
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              View Content Feed
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </span>
+          <span className="sm:hidden">
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </span>
+        </Link>
+      </div>
     </CardHeader>
     <CardContent>
       <div className="space-y-4">
         {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <PostSkeleton key={i} />)
+          Array.from({ length: 10 }).map((_, i) => <PostSkeleton key={i} />)
         ) : posts.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="text-center py-8">
+            <Flame className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No trending posts found.</p>
           </div>
         ) : (
@@ -180,7 +195,7 @@ const PopularTagsCard = ({ tags, loading }: { tags: Tag[], loading: boolean }) =
       <CardContent>
         <div className="space-y-4">
           {loading ? (
-            Array.from({ length: 3 }).map((_, i) => <TagSkeleton key={i} />)
+            Array.from({ length: 5 }).map((_, i) => <TagSkeleton key={i} />)
           ) : tags.length === 0 ? (
             <p className="text-sm text-muted-foreground">No popular tags found.</p>
           ) : (
@@ -210,40 +225,48 @@ const PopularTagsCard = ({ tags, loading }: { tags: Tag[], loading: boolean }) =
 }
 
 // Top Contributors Card Component
-const TopContributorsCard = ({ contributors, loading }: { contributors: TopAuthor[], loading: boolean }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <Users className="w-4 h-4" />
-        Top Contributors
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-4">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <ContributorSkeleton key={i} />)
-        ) : contributors.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No contributors found.</p>
-        ) : (
-          contributors.map((contributor) => (
-            <div key={contributor.id} className="flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                style={{ backgroundColor: contributor.color }}
+const TopContributorsCard = ({ contributors, loading }: { contributors: TopAuthor[], loading: boolean }) => {
+  const navigate = useNavigate()
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="w-4 h-4" />
+          Top Contributors
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => <ContributorSkeleton key={i} />)
+          ) : contributors.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No contributors found.</p>
+          ) : (
+            contributors.map((contributor) => (
+              <div 
+                key={contributor.id} 
+                className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-md p-2 transition-colors"
+                onClick={() => navigate(`/profile/${contributor.username}`)}
               >
-                {contributor.name.charAt(0).toUpperCase()}
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                  style={{ backgroundColor: contributor.color }}
+                >
+                  {contributor.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{contributor.name}</p>
+                  <p className="text-xs text-muted-foreground">{contributor.postsCount} posts</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{contributor.name}</p>
-                <p className="text-xs text-muted-foreground">{contributor.postsCount} posts</p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </CardContent>
-  </Card>
-)
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 // Main Dashboard Component
 export default function Dashboard() {
@@ -257,15 +280,18 @@ export default function Dashboard() {
     topContributors: true,
     popularTags: true
   })
+  const [trendingTimeframe, setTrendingTimeframe] = useState<'today' | 'week' | 'month' | 'all'>('week')
 
   // Data loading functions
-  const loadTrendingPosts = async () => {
+  const loadTrendingPosts = async (timeframe: 'today' | 'week' | 'month' | 'all' = trendingTimeframe) => {
     try {
       setLoading(prev => ({ ...prev, trendingPosts: true }))
       const response = await api.getPosts({
         page: 1,
-        limit: 3,
-        type: 'all'
+        limit: 5,
+        type: 'all',
+        trending: true,  // Use trending attribute to get posts sorted by reaction count
+        timeframe: timeframe
       })
 
       if (response.success && response.data) {
@@ -278,10 +304,16 @@ export default function Dashboard() {
     }
   }
 
+  const handleTimeframeChange = (timeframe: string) => {
+    const validTimeframe = timeframe as 'today' | 'week' | 'month' | 'all'
+    setTrendingTimeframe(validTimeframe)
+    loadTrendingPosts(validTimeframe)
+  }
+
   const loadTopContributors = async () => {
     try {
       setLoading(prev => ({ ...prev, topContributors: true }))
-      const response = await api.getTopAuthors(3, 'posts')
+      const response = await api.getTopAuthors(5, 'posts')
 
       if (response.success && response.data) {
         setData(prev => ({ ...prev, topContributors: response.data || [] }))
@@ -296,7 +328,7 @@ export default function Dashboard() {
   const loadPopularTags = async () => {
     try {
       setLoading(prev => ({ ...prev, popularTags: true }))
-      const response = await api.getPopularTags(3)
+      const response = await api.getPopularTags(5)
 
       if (response.success && response.data) {
         setData(prev => ({ ...prev, popularTags: response.data || [] }))
@@ -330,13 +362,15 @@ export default function Dashboard() {
           {/* Main Content Area */}
           <div className="flex-1 space-y-4 gap-4">
             <div className="grid gap-4 grid-cols-1 md:grid-cols-1 lg:grid-cols-1">
-              <TopChallengesCard />
+              <PinnedContentCard />
             </div>
 
             <div className="grid gap-4 grid-cols-1 md:grid-cols-1 lg:grid-cols-1">
               <TrendingPostsCard
                 posts={data.trendingPosts}
                 loading={loading.trendingPosts}
+                onTimeframeChange={handleTimeframeChange}
+                currentTimeframe={trendingTimeframe}
               />
             </div>
 

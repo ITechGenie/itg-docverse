@@ -25,6 +25,8 @@ const SearchPage = lazy(() => import('@/pages/search'));
 const LoginPage = lazy(() => import('@/pages/login'));
 const DiscussionsPage = lazy(() => import('@/pages/discussions'));
 const ManageUsers = lazy(() => import('@/pages/manage-users'));
+const Analytics = lazy(() => import('@/pages/analytics'));
+const PostAnalytics = lazy(() => import('@/pages/post-analytics'));
 
 // Loading fallback components for different sections
 const PageLoadingFallback = () => (
@@ -269,6 +271,18 @@ export default function AppRouter() {
         } />
 
         {/** All admin routes here */}
+
+        <Route path="/analytics" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Analytics />
+          </Suspense>
+        } />
+
+        <Route path="/post/:id/analytics" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <PostAnalytics />
+          </Suspense>
+        } />
 
         <Route path="/settings" element={
           <Suspense fallback={<PageLoadingFallback />}>

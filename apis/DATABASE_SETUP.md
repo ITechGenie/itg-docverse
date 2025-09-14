@@ -21,10 +21,9 @@ apis/
     └── services/
         └── database/
             ├── factory.py          # Database service factory (updated)
-            ├── sqlite_service.py   # SQLite implementation (new)
-            ├── postgresql_service.py # PostgreSQL implementation (new)
-            ├── redis_service.py    # Redis implementation (existing)
-            └── mock_service.py     # Mock implementation (existing)
+            ├── sqlite_service.py   # SQLite implementation 
+            ├── postgresql_service.py # PostgreSQL implementation 
+            └── redis_service.py    # Redis implementation
 ```
 
 ## 🗄️ **Database Schema (12 Tables)**

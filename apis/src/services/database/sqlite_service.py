@@ -209,30 +209,90 @@ class SQLiteService(DatabaseService):
                        author_id: Optional[str] = None,
                        tag_id: Optional[str] = None,
                        post_type: Optional[str] = None,
-                       status: str = "published") -> List[Dict[str, Any]]:
+                       status: str = "published",
+                       trending: Optional[bool] = None,
+                       timeframe: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get posts with optional filters"""
-        query = """
-            SELECT 
-                p.*, 
-                pt.name AS post_type_name, 
-                u.username, 
-                u.display_name,
-                u.email, 
-                u.avatar_url, 
-                pc.content,
-                (
-                    SELECT GROUP_CONCAT(tt.name, ', ')
-                    FROM post_tags ptg
-                    JOIN tag_types tt ON ptg.tag_id = tt.id
-                    WHERE ptg.post_id = p.id
-                ) AS tags
-            FROM posts p
-            JOIN post_types pt ON p.post_type_id = pt.id
-            JOIN users u ON p.author_id = u.id
-            LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = ?
-            WHERE p.status = ? AND p.is_latest = ?
-        """
-        params = [True, status, True]
+        
+        # Base query with reaction count subquery for trending
+        if trending:
+            query = """
+                SELECT 
+                    p.*, 
+                    pt.name AS post_type_name, 
+                    u.username, 
+                    u.display_name,
+                    u.email, 
+                    u.avatar_url, 
+                    p.feed_content as content,
+                    (
+                        SELECT GROUP_CONCAT(tt.name, ', ')
+                        FROM post_tags ptg
+                        JOIN tag_types tt ON ptg.tag_id = tt.id
+                        WHERE ptg.post_id = p.id
+                    ) AS tags,
+                    (
+                        SELECT COUNT(*)
+                        FROM reactions r
+                        WHERE r.target_id = p.id AND r.target_type = 'post'
+                    ) AS reaction_count,
+                    (
+                        SELECT COUNT(*)
+                        FROM user_events ue
+                        WHERE ue.target_id = p.id AND ue.target_type = 'post' AND ue.event_type_id = 'event-view'
+                    ) AS view_count,
+                    (
+                        SELECT COUNT(*)
+                        FROM post_discussions pd
+                        WHERE pd.post_id = p.id
+                    ) AS comment_count
+                FROM posts p
+                JOIN post_types pt ON p.post_type_id = pt.id
+                JOIN users u ON p.author_id = u.id
+                WHERE p.status = ? AND p.is_latest = ?
+            """
+        else:
+            query = """
+                SELECT 
+                    p.*, 
+                    pt.name AS post_type_name, 
+                    u.username, 
+                    u.display_name,
+                    u.email, 
+                    u.avatar_url, 
+                    p.feed_content as content,
+                    (
+                        SELECT GROUP_CONCAT(tt.name, ', ')
+                        FROM post_tags ptg
+                        JOIN tag_types tt ON ptg.tag_id = tt.id
+                        WHERE ptg.post_id = p.id
+                    ) AS tags,
+                    (
+                        SELECT COUNT(*)
+                        FROM user_events ue
+                        WHERE ue.target_id = p.id AND ue.target_type = 'post' AND ue.event_type_id = 'event-view'
+                    ) AS view_count,
+                    (
+                        SELECT COUNT(*)
+                        FROM post_discussions pd
+                        WHERE pd.post_id = p.id
+                    ) AS comment_count
+                FROM posts p
+                JOIN post_types pt ON p.post_type_id = pt.id
+                JOIN users u ON p.author_id = u.id
+                WHERE p.status = ? AND p.is_latest = ?
+            """
+        
+        params = [status, True]
+        
+        # Add timeframe filter for trending posts
+        if trending and timeframe and timeframe != 'all':
+            if timeframe == 'today':
+                query += " AND p.created_ts >= datetime('now', '-1 day')"
+            elif timeframe == 'week':
+                query += " AND p.created_ts >= datetime('now', '-7 days')"
+            elif timeframe == 'month':
+                query += " AND p.created_ts >= datetime('now', '-30 days')"
         
         if author_id:
             query += " AND p.author_id = ?"
@@ -247,8 +307,14 @@ class SQLiteService(DatabaseService):
                 SELECT 1 FROM post_tags pt WHERE pt.post_id = p.id AND pt.tag_id = ?
             )"""
             params.append(tag_id)
+        
+        # Order by reaction count for trending, otherwise by created date
+        if trending:
+            query += " ORDER BY reaction_count DESC, p.created_ts DESC"
+        else:
+            query += " ORDER BY p.created_ts DESC"
             
-        query += " ORDER BY p.created_ts DESC LIMIT ? OFFSET ?"
+        query += " LIMIT ? OFFSET ?"
         params.extend([limit, skip])
         
         results = await self.execute_query(query, tuple(params))
@@ -258,7 +324,17 @@ class SQLiteService(DatabaseService):
         """Get post by ID"""
         results = await self.execute_query(
             """SELECT p.*, pt.name as post_type_name, u.username, u.display_name,
-                      u.email, u.avatar_url, pc.content
+                      u.email, u.avatar_url, pc.content, pc.revision,
+                      (
+                          SELECT COUNT(*)
+                          FROM user_events ue
+                          WHERE ue.target_id = p.id AND ue.target_type = 'post' AND ue.event_type_id = 'event-view'
+                      ) AS view_count,
+                      (
+                          SELECT COUNT(*)
+                          FROM post_discussions pd
+                          WHERE pd.post_id = p.id
+                      ) AS comment_count
                FROM posts p
                JOIN post_types pt ON p.post_type_id = pt.id
                JOIN users u ON p.author_id = u.id
@@ -290,11 +366,14 @@ class SQLiteService(DatabaseService):
         
         # Insert content if provided
         if 'content' in post_data:
+            # Use UUID for content ID since we have post_id column for relationship
+            import uuid
+            content_id = str(uuid.uuid4())
             await self.execute_command(
                 """INSERT INTO posts_content (id, post_id, revision, content, is_current, created_by)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 (
-                    f"{post_data['id']}-content-{post_data.get('revision', 0)}",
+                    content_id,
                     post_data['id'], post_data.get('revision', 0),
                     post_data['content'], True,
                     post_data.get('created_by', post_data['author_id'])
@@ -658,17 +737,42 @@ class SQLiteService(DatabaseService):
         return results[0] if results else None
         
     async def update_post(self, post_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Update a post"""
-        # Handle content update separately (goes to posts_content table)
+        """Update a post and create new content version if content is provided"""
+        # Handle content update separately (create new version)
         if 'content' in updates:
             content = updates.pop('content')  # Remove from updates dict
             
-            # Update the current content in posts_content table
+            # First, mark current content as not current
             await self.execute_command(
                 """UPDATE posts_content 
-                   SET content = ? 
+                   SET is_current = ? 
                    WHERE post_id = ? AND is_current = ?""",
-                (content, post_id, True)
+                (False, post_id, True)
+            )
+            
+            # Get the next revision number
+            result = await self.execute_query(
+                """SELECT COALESCE(MAX(revision), 0) + 1 as next_revision
+                   FROM posts_content
+                   WHERE post_id = ?""",
+                (post_id,)
+            )
+            next_revision = result[0]['next_revision'] if result else 1
+            
+            # Create new content version with UUID
+            import uuid
+            content_id = str(uuid.uuid4())
+            await self.execute_command(
+                """INSERT INTO posts_content (id, post_id, revision, content, is_current, created_by)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    content_id,
+                    post_id,
+                    next_revision,
+                    content,
+                    True,
+                    updates.get('updated_by')
+                )
             )
         
         # Build dynamic update query for posts table

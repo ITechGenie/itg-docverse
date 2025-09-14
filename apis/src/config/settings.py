@@ -15,7 +15,7 @@ class Settings(BaseModel):
     """Application settings"""
     
     # Database Configuration
-    database_type: str = "sqlite"  # redis, sqlite, postgresql, mock
+    database_type: str = "sqlite"  # redis, sqlite, postgresql
     
     # Redis Configuration
     redis_host: str = "localhost"

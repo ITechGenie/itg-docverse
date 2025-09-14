@@ -15,15 +15,15 @@ export default function Feed() {
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [postTypeFilter, setPostTypeFilter] = useState<'all' | 'posts' | 'thoughts'>('all');
+  const [timeframeFilter, setTimeframeFilter] = useState<'today' | 'week' | 'month' | 'all'>('all');
   const [searchParams] = useSearchParams();
   const { tagName, filter } = useParams<{ tagName?: string; filter?: string }>();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const filters: FeedFilters = {
     type: postTypeFilter === 'all' ? 'all' : postTypeFilter,
-    timeframe: (searchParams.get('timeframe') as FeedFilters['timeframe']) || 'all',
-    favoritesPosts: filter === 'favorite-posts',
-    favoriteTags: filter === 'favorite-tags',
+    timeframe: filter === 'trending' ? timeframeFilter : (searchParams.get('timeframe') as FeedFilters['timeframe']) || 'all',
+    trending: filter === 'trending',
   };
 
   const loadPosts = async (reset = false) => {
@@ -109,12 +109,12 @@ export default function Feed() {
     setCurrentPage(1);
     setHasMore(true);
     loadPosts(true);
-  }, [searchParams.toString(), tagName, filter, postTypeFilter]);
+  }, [searchParams.toString(), tagName, filter, postTypeFilter, timeframeFilter]);
 
   return (
     <div className="w-full space-y-6">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight min-w-0 flex-1">
           {tagName ? (
             <div className="flex items-center gap-2 flex-wrap">
@@ -148,45 +148,78 @@ export default function Feed() {
         </h1>
         
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Filter Toggle */}
-          <div className="flex items-center border rounded-lg p-1">
+          {/* Timeline Filter - only show when on trending page */}
+          {filter === 'trending' && (
+            <div className="flex items-center border rounded-lg p-1 overflow-x-auto">
+              <Button
+                variant={timeframeFilter === 'all' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTimeframeFilter('all')}
+                className="h-8 px-2 md:px-3 whitespace-nowrap text-xs md:text-sm"
+              >
+                <span className="hidden md:inline">All Time</span>
+                <span className="md:hidden">All</span>
+              </Button>
+              <Button
+                variant={timeframeFilter === 'today' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTimeframeFilter('today')}
+                className="h-8 px-2 md:px-3 whitespace-nowrap text-xs md:text-sm"
+              >
+                <span className="hidden md:inline">Today</span>
+                <span className="md:hidden">1d</span>
+              </Button>
+              <Button
+                variant={timeframeFilter === 'week' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTimeframeFilter('week')}
+                className="h-8 px-2 md:px-3 whitespace-nowrap text-xs md:text-sm"
+              >
+                <span className="hidden md:inline">This Week</span>
+                <span className="md:hidden">1w</span>
+              </Button>
+              <Button
+                variant={timeframeFilter === 'month' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTimeframeFilter('month')}
+                className="h-8 px-2 md:px-3 whitespace-nowrap text-xs md:text-sm"
+              >
+                <span className="hidden md:inline">This Month</span>
+                <span className="md:hidden">1m</span>
+              </Button>
+            </div>
+          )}
+
+          {/* Post Type Filter */}
+          <div className="flex items-center border rounded-lg p-1 overflow-x-auto">
             <Button
               variant={postTypeFilter === 'all' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setPostTypeFilter('all')}
-              className="h-8 px-2 sm:px-3"
+              className="h-8 px-2 md:px-3 whitespace-nowrap text-xs md:text-sm"
             >
-              <Grid className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">All</span>
+              <Grid className="w-4 h-4 md:mr-1" />
+              <span className="hidden md:inline">All</span>
             </Button>
             <Button
               variant={postTypeFilter === 'posts' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setPostTypeFilter('posts')}
-              className="h-8 px-2 sm:px-3"
+              className="h-8 px-2 md:px-3 whitespace-nowrap text-xs md:text-sm"
             >
-              <FileText className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Posts</span>
+              <FileText className="w-4 h-4 md:mr-1" />
+              <span className="hidden md:inline">Posts</span>
             </Button>
             <Button
               variant={postTypeFilter === 'thoughts' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setPostTypeFilter('thoughts')}
-              className="h-8 px-2 sm:px-3"
+              className="h-8 px-2 md:px-3 whitespace-nowrap text-xs md:text-sm"
             >
-              <MessageCircle className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Thoughts</span>
+              <MessageCircle className="w-4 h-4 md:mr-1" />
+              <span className="hidden md:inline">Thoughts</span>
             </Button>
           </div>
-
-          {/* Create Button 
-          <Link to="/create">
-            <Button className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Create Content</span>
-              <span className="sm:hidden">Create Content</span>
-            </Button>
-          </Link>*/}
         </div>
       </div>
 

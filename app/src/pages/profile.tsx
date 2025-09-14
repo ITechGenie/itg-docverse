@@ -38,8 +38,18 @@ export default function Profile() {
     setLoading(true);
     try {
       if (!username) {
-        // Show current user's profile
-        setProfileUser(currentUser);
+        // For current user's profile, fetch fresh data to ensure we have latest stats
+        if (currentUser?.username) {
+          const response = await api.getUserByUsername(currentUser.username);
+          if (response.success && response.data) {
+            setProfileUser(response.data);
+          } else {
+            // Fallback to cached current user
+            setProfileUser(currentUser);
+          }
+        } else {
+          setProfileUser(currentUser);
+        }
       } else {
         // Try to load another user's profile by username
         try {
@@ -230,8 +240,8 @@ export default function Profile() {
         </Card>
         <Card>
           <CardContent className="p-3 sm:p-6 text-center">
-            <div className="text-lg sm:text-2xl font-bold">{displayUser.stats.tagsFollowed}</div>
-            <div className="text-xs sm:text-sm text-muted-foreground">Tags Followed</div>
+            <div className="text-lg sm:text-2xl font-bold">{displayUser.stats.reactionsCount || 0}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Reactions</div>
           </CardContent>
         </Card>
       </div>

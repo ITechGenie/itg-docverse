@@ -9,8 +9,7 @@ import type {
   ApiResponse, 
   PaginationParams,
   FeedFilters,
-  ReactionType,
-  Challenge
+  ReactionType
 } from '@/types';
 
 import {getAvatarUrl} from '@/lib/avatar';
@@ -59,7 +58,7 @@ export class ApiClient {
   // Generic API call method
   private async apiCall<T>(endpoint: string, method: string = 'GET', data?: any): Promise<ApiResponse<T>> {
     try {
-      console.log(`API call: ${method} ${endpoint}`, data);
+      console.debug(`API call: ${method} ${endpoint}`, data);
       // Ensure we have a valid token for API calls
       const authResult = await this.ensureAuthenticated();
       if (!authResult.success) {
@@ -167,6 +166,7 @@ export class ApiClient {
               stats: {
                 postsCount: response.data.post_count || 0,
                 commentsCount: response.data.comment_count || 0,
+                reactionsCount: response.data.reactions_count || 0,
                 tagsFollowed: 0,
               },
             };
@@ -224,6 +224,7 @@ export class ApiClient {
           stats: {
             postsCount: backendUser.post_count || 0,
             commentsCount: backendUser.comment_count || 0,
+            reactionsCount: backendUser.reactions_count || 0,
             tagsFollowed: 0, // Not available in backend yet
           },
         }));
@@ -255,6 +256,7 @@ export class ApiClient {
           stats: {
             postsCount: backendUser.post_count || 0,
             commentsCount: backendUser.comment_count || 0,
+            reactionsCount: backendUser.reactions_count || 0,
             tagsFollowed: 0, // Not available in backend yet
           },
         };
@@ -294,6 +296,7 @@ export class ApiClient {
           stats: {
             postsCount: backendUser.post_count || 0,
             commentsCount: backendUser.comment_count || 0,
+            reactionsCount: backendUser.reactions_count || 0,
             tagsFollowed: 0,
           },
         };
@@ -339,6 +342,7 @@ export class ApiClient {
           stats: {
             postsCount: backendUser.post_count || 0,
             commentsCount: backendUser.comment_count || 0,
+            reactionsCount: backendUser.reactions_count || 0,
             tagsFollowed: 0,
           },
         };
@@ -383,6 +387,14 @@ export class ApiClient {
         searchParams.append('favorite_tags', 'true');
       }
 
+      if (params.trending) {
+        searchParams.append('trending', 'true');
+      }
+
+      if (params.timeframe && params.timeframe !== 'all') {
+        searchParams.append('timeframe', params.timeframe);
+      }
+
       if (params.status) {
         searchParams.append('status', params.status);
       }
@@ -403,58 +415,6 @@ export class ApiClient {
     }
   }
 
-  async getChallenges(): Promise<ApiResponse<Challenge[]>> {
-    try {
-      const response = await this.getPosts({ 
-          page: 1, 
-          limit: 10,
-          tag_id: 'challenges'
-        });
-      if (response.success && response.data) {
-        // Transform API response to match UI expectations
-        const transformedPosts =  this.transformPostsToUIChallenge(response.data);
-        return { success: true, data: transformedPosts };
-      }
-      return { success: false, data: undefined };
-    } catch (error) {
-      console.error('Get challenges failed:', error);
-      return { success: false, error: 'Failed to load challenges' };
-    }
-  }
-
-  private transformPostsToUIChallenge(apiChallenge: Post[]): Challenge[] {
-    return apiChallenge.map(post => {
-      // Parse createdAt and add one month for timeLimit
-      let timeLimit = '1 month';
-      if (post.createdAt) {
-      const createdDate = new Date(post.createdAt);
-      createdDate.setMonth(createdDate.getMonth() + 1);
-      timeLimit = createdDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-      }
-      return {
-      id: post.id,
-      title: post.title || "Challenge",
-      description: post.content || "Click to view more details !",
-      tags: post.tags,
-      timeLimit,
-      isActive: post.status === 'published',
-      difficulty: post.tags[0]?.description as Challenge['difficulty'] || 'easy',
-      participants: post.stats.totalComments || 0,
-      reward: 'No Rewards',
-      };
-    });
-  }
-
-  // Helper functions
-  getActiveChallenges = (challengesData: Challenge[]) =>
-    challengesData.filter(challenge => challenge.isActive);
-  
-  getChallengesByDifficulty = (challengesData: Challenge[], difficulty: Challenge['difficulty']) =>
-    challengesData.filter(challenge => challenge.difficulty === difficulty);
-  
-  getChallengeById = (id: string, challengesData: Challenge[]) =>
-    challengesData.find(challenge => challenge.id == id); 
-
   // Transform API post format to UI post format
   private transformApiPostToUIPost(apiPost: any): Post {
     return {
@@ -474,6 +434,7 @@ export class ApiClient {
         stats: {
           postsCount: 0,
           commentsCount: 0,
+          reactionsCount: 0,
           tagsFollowed: 0,
         }
       },
@@ -489,7 +450,7 @@ export class ApiClient {
         totalComments: apiPost.comment_count || 0,
       },
       status: (apiPost.status === 'published' ? 'published' : 'draft') as 'draft' | 'published',
-      revision: 0, // Default revision for now
+      revision: apiPost.revision, // Use actual revision from API
     };
   }
 
@@ -632,6 +593,43 @@ export class ApiClient {
   // Keep the old method for backward compatibility
   async getPostReactions(postId: string): Promise<ApiResponse<any[]>> {
     return this.getReactions(postId, 'post');
+  }
+
+  // Analytics APIs
+  async getPostAnalytics(postId: string): Promise<ApiResponse<{
+    user_analytics: Array<{
+      user_id: string;
+      user_name: string;
+      display_name: string;
+      views: number;
+      reactions: number;
+      comments: number;
+    }>;
+    total_views: number;
+    total_reactions: number;
+    total_comments: number;
+  }>> {
+    try {
+      const endpoint = `/posts/${postId}/analytics`;
+      return await this.apiCall(endpoint);
+    } catch (error) {
+      console.error('Get post analytics failed:', error);
+      return { success: false, error: 'Failed to get post analytics' };
+    }
+  }
+
+  async getPostSummary(postId: string): Promise<ApiResponse<{
+    total_views: number;
+    total_reactions: number;
+    total_comments: number;
+  }>> {
+    try {
+      const endpoint = `/posts/${postId}/summary`;
+      return await this.apiCall(endpoint);
+    } catch (error) {
+      console.error('Get post summary failed:', error);
+      return { success: false, error: 'Failed to get post summary' };
+    }
   }
 
   async toggleFavorite(_postId: string): Promise<ApiResponse<boolean>> {
@@ -943,6 +941,7 @@ export class ApiClient {
           stats: {
             postsCount: 0,
             commentsCount: 0,
+            reactionsCount: 0,
             tagsFollowed: 0,
           },
         };
@@ -1101,6 +1100,7 @@ export class ApiClient {
           const transformedAuthors = response.data.map((apiAuthor: any) => ({
             id: apiAuthor.id,
             name: apiAuthor.name,
+            username: apiAuthor.username,
             email: apiAuthor.email,
             avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.username || apiAuthor.email),
             bio: apiAuthor.bio,
