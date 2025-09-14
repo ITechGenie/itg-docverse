@@ -7,7 +7,6 @@ import logging
 from typing import Type, Optional
 
 from .base import DatabaseService
-from .mock_service import MockDatabaseService
 from .redis_service import RedisService
 from .sqlite_service import SQLiteService
 from .postgresql_service import PostgreSQLService
@@ -42,10 +41,6 @@ class DatabaseServiceFactory:
         elif db_type == "postgresql":
             logger.info("Creating PostgreSQL database service")
             cls._instance = PostgreSQLService()
-        
-        elif db_type == "mock":
-            logger.info("Creating Mock database service")
-            cls._instance = MockDatabaseService()
         
         else:
             logger.warning(f"Unknown database type '{db_type}', defaulting to SQLite service")
