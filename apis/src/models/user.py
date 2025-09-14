@@ -88,6 +88,7 @@ class UserPublic(BaseModel):
     avatar_url: Optional[str] = None
     post_count: int = 0
     comment_count: int = 0
+    reactions_count: int = 0
     is_verified: bool = False
     roles: List[str] = []
     created_at: datetime

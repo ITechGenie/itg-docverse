@@ -166,7 +166,7 @@ const TrendingPostsCard = ({ posts, loading, onTimeframeChange, currentTimeframe
     <CardContent>
       <div className="space-y-4">
         {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <PostSkeleton key={i} />)
+          Array.from({ length: 10 }).map((_, i) => <PostSkeleton key={i} />)
         ) : posts.length === 0 ? (
           <div className="text-center py-8">
             <Flame className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
@@ -288,7 +288,7 @@ export default function Dashboard() {
       setLoading(prev => ({ ...prev, trendingPosts: true }))
       const response = await api.getPosts({
         page: 1,
-        limit: 3,
+        limit: 5,
         type: 'all',
         trending: true,  // Use trending attribute to get posts sorted by reaction count
         timeframe: timeframe

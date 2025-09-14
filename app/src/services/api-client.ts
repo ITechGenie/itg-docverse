@@ -166,6 +166,7 @@ export class ApiClient {
               stats: {
                 postsCount: response.data.post_count || 0,
                 commentsCount: response.data.comment_count || 0,
+                reactionsCount: response.data.reactions_count || 0,
                 tagsFollowed: 0,
               },
             };
@@ -223,6 +224,7 @@ export class ApiClient {
           stats: {
             postsCount: backendUser.post_count || 0,
             commentsCount: backendUser.comment_count || 0,
+            reactionsCount: backendUser.reactions_count || 0,
             tagsFollowed: 0, // Not available in backend yet
           },
         }));
@@ -254,6 +256,7 @@ export class ApiClient {
           stats: {
             postsCount: backendUser.post_count || 0,
             commentsCount: backendUser.comment_count || 0,
+            reactionsCount: backendUser.reactions_count || 0,
             tagsFollowed: 0, // Not available in backend yet
           },
         };
@@ -293,6 +296,7 @@ export class ApiClient {
           stats: {
             postsCount: backendUser.post_count || 0,
             commentsCount: backendUser.comment_count || 0,
+            reactionsCount: backendUser.reactions_count || 0,
             tagsFollowed: 0,
           },
         };
@@ -338,6 +342,7 @@ export class ApiClient {
           stats: {
             postsCount: backendUser.post_count || 0,
             commentsCount: backendUser.comment_count || 0,
+            reactionsCount: backendUser.reactions_count || 0,
             tagsFollowed: 0,
           },
         };
@@ -429,6 +434,7 @@ export class ApiClient {
         stats: {
           postsCount: 0,
           commentsCount: 0,
+          reactionsCount: 0,
           tagsFollowed: 0,
         }
       },
@@ -444,7 +450,7 @@ export class ApiClient {
         totalComments: apiPost.comment_count || 0,
       },
       status: (apiPost.status === 'published' ? 'published' : 'draft') as 'draft' | 'published',
-      revision: 0, // Default revision for now
+      revision: apiPost.revision, // Use actual revision from API
     };
   }
 
@@ -587,6 +593,43 @@ export class ApiClient {
   // Keep the old method for backward compatibility
   async getPostReactions(postId: string): Promise<ApiResponse<any[]>> {
     return this.getReactions(postId, 'post');
+  }
+
+  // Analytics APIs
+  async getPostAnalytics(postId: string): Promise<ApiResponse<{
+    user_analytics: Array<{
+      user_id: string;
+      user_name: string;
+      display_name: string;
+      views: number;
+      reactions: number;
+      comments: number;
+    }>;
+    total_views: number;
+    total_reactions: number;
+    total_comments: number;
+  }>> {
+    try {
+      const endpoint = `/posts/${postId}/analytics`;
+      return await this.apiCall(endpoint);
+    } catch (error) {
+      console.error('Get post analytics failed:', error);
+      return { success: false, error: 'Failed to get post analytics' };
+    }
+  }
+
+  async getPostSummary(postId: string): Promise<ApiResponse<{
+    total_views: number;
+    total_reactions: number;
+    total_comments: number;
+  }>> {
+    try {
+      const endpoint = `/posts/${postId}/summary`;
+      return await this.apiCall(endpoint);
+    } catch (error) {
+      console.error('Get post summary failed:', error);
+      return { success: false, error: 'Failed to get post summary' };
+    }
   }
 
   async toggleFavorite(_postId: string): Promise<ApiResponse<boolean>> {
@@ -898,6 +941,7 @@ export class ApiClient {
           stats: {
             postsCount: 0,
             commentsCount: 0,
+            reactionsCount: 0,
             tagsFollowed: 0,
           },
         };

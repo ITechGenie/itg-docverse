@@ -330,7 +330,17 @@ class PostgreSQLService(DatabaseService):
                            SELECT COUNT(*)
                            FROM reactions r
                            WHERE r.target_id = p.id AND r.target_type = 'post'
-                       ) AS reaction_count
+                       ) AS reaction_count,
+                       (
+                           SELECT COUNT(*)
+                           FROM user_events ue
+                           WHERE ue.target_id = p.id AND ue.target_type = 'post' AND ue.event_type_id = 'event-view'
+                       ) AS view_count,
+                       (
+                           SELECT COUNT(*)
+                           FROM post_discussions pd
+                           WHERE pd.post_id = p.id
+                       ) AS comment_count
                 FROM posts p
                 JOIN post_types pt ON p.post_type_id = pt.id
                 JOIN users u ON p.author_id = u.id
@@ -345,7 +355,17 @@ class PostgreSQLService(DatabaseService):
                            FROM post_tags ptg
                            JOIN tag_types tt ON ptg.tag_id = tt.id
                            WHERE ptg.post_id = p.id
-                       ) AS tags, p.feed_content as content
+                       ) AS tags, p.feed_content as content,
+                       (
+                           SELECT COUNT(*)
+                           FROM user_events ue
+                           WHERE ue.target_id = p.id AND ue.target_type = 'post' AND ue.event_type_id = 'event-view'
+                       ) AS view_count,
+                       (
+                           SELECT COUNT(*)
+                           FROM post_discussions pd
+                           WHERE pd.post_id = p.id
+                       ) AS comment_count
                 FROM posts p
                 JOIN post_types pt ON p.post_type_id = pt.id
                 JOIN users u ON p.author_id = u.id
@@ -399,13 +419,23 @@ class PostgreSQLService(DatabaseService):
         """Get post by ID"""
         results = await self.execute_query(
             """SELECT p.*, pt.name as post_type_name, u.username, u.display_name,
-                      u.email, u.avatar_url, pc.content,
+                      u.email, u.avatar_url, pc.content, pc.revision,
                       (
                        SELECT string_agg(tt.name, ', ')
                        FROM post_tags ptg
                        JOIN tag_types tt ON ptg.tag_id = tt.id
                        WHERE ptg.post_id = p.id
-                   ) AS tags
+                   ) AS tags,
+                   (
+                       SELECT COUNT(*)
+                       FROM user_events ue
+                       WHERE ue.target_id = p.id AND ue.target_type = 'post' AND ue.event_type_id = 'event-view'
+                   ) AS view_count,
+                   (
+                       SELECT COUNT(*)
+                       FROM post_discussions pd
+                       WHERE pd.post_id = p.id
+                   ) AS comment_count
                FROM posts p
                JOIN post_types pt ON p.post_type_id = pt.id
                JOIN users u ON p.author_id = u.id
@@ -436,11 +466,14 @@ class PostgreSQLService(DatabaseService):
         
         # Insert content if provided
         if 'content' in post_data:
+            # Use UUID for content ID since we have post_id column for relationship
+            import uuid
+            content_id = str(uuid.uuid4())
             await self.execute_command(
                 """INSERT INTO posts_content (id, post_id, revision, content, is_current, created_by)
                    VALUES ($1, $2, $3, $4, $5, $6)""",
                 (
-                    f"{post_data['id']}-content-{post_data.get('revision', 0)}",
+                    content_id,
                     post_data['id'], post_data.get('revision', 0),
                     post_data['content'], True,
                     post_data.get('created_by', post_data['author_id'])
@@ -908,17 +941,48 @@ class PostgreSQLService(DatabaseService):
         return True
     
     async def update_post(self, post_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Update a post and its current content if provided"""
-        # Handle content update separately
+        """Update a post and create new content version if content is provided"""
+        # Handle content update separately (create new version)
         if 'content' in updates:
             content = updates.pop('content')
+            
+            # First, mark current content as not current
             await self.execute_command(
                 """
                 UPDATE posts_content
-                SET content = $1
-                WHERE post_id = $2 AND is_current = TRUE
+                SET is_current = FALSE
+                WHERE post_id = $1 AND is_current = TRUE
                 """,
-                (content, post_id)
+                (post_id,)
+            )
+            
+            # Get the next revision number
+            result = await self.execute_query(
+                """
+                SELECT COALESCE(MAX(revision), 0) + 1 as next_revision
+                FROM posts_content
+                WHERE post_id = $1
+                """,
+                (post_id,)
+            )
+            next_revision = result[0]['next_revision'] if result else 1
+            
+            # Create new content version with UUID
+            import uuid
+            content_id = str(uuid.uuid4())
+            await self.execute_command(
+                """
+                INSERT INTO posts_content (id, post_id, revision, content, is_current, created_by)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                """,
+                (
+                    content_id,
+                    post_id,
+                    next_revision,
+                    content,
+                    True,
+                    updates.get('updated_by')
+                )
             )
         
         # Allowed fields to update in posts table
