@@ -309,24 +309,60 @@ class PostgreSQLService(DatabaseService):
                        author_id: Optional[str] = None,
                        post_type: Optional[str] = None,
                        status: str = "published",
-                       tag_id: Optional[str] = None) -> List[Dict[str, Any]]:
+                       tag_id: Optional[str] = None,
+                       trending: Optional[bool] = None,
+                       timeframe: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get posts with optional filters (author, post_type, tag)"""
-        query = """
-            SELECT p.*, pt.name as post_type_name, u.username, u.display_name,
-                   u.email, u.avatar_url,
-                   (
-                       SELECT string_agg(tt.name, ', ')
-                       FROM post_tags ptg
-                       JOIN tag_types tt ON ptg.tag_id = tt.id
-                       WHERE ptg.post_id = p.id
-                   ) AS tags, p.feed_content as content
-            FROM posts p
-            JOIN post_types pt ON p.post_type_id = pt.id
-            JOIN users u ON p.author_id = u.id
-            WHERE p.status = $1 AND p.is_latest = $2
-        """
+        
+        # Base query with reaction count subquery for trending
+        if trending:
+            query = """
+                SELECT p.*, pt.name as post_type_name, u.username, u.display_name,
+                       u.email, u.avatar_url,
+                       (
+                           SELECT string_agg(tt.name, ', ')
+                           FROM post_tags ptg
+                           JOIN tag_types tt ON ptg.tag_id = tt.id
+                           WHERE ptg.post_id = p.id
+                       ) AS tags, 
+                       p.feed_content as content,
+                       (
+                           SELECT COUNT(*)
+                           FROM reactions r
+                           WHERE r.target_id = p.id AND r.target_type = 'post'
+                       ) AS reaction_count
+                FROM posts p
+                JOIN post_types pt ON p.post_type_id = pt.id
+                JOIN users u ON p.author_id = u.id
+                WHERE p.status = $1 AND p.is_latest = $2
+            """
+        else:
+            query = """
+                SELECT p.*, pt.name as post_type_name, u.username, u.display_name,
+                       u.email, u.avatar_url,
+                       (
+                           SELECT string_agg(tt.name, ', ')
+                           FROM post_tags ptg
+                           JOIN tag_types tt ON ptg.tag_id = tt.id
+                           WHERE ptg.post_id = p.id
+                       ) AS tags, p.feed_content as content
+                FROM posts p
+                JOIN post_types pt ON p.post_type_id = pt.id
+                JOIN users u ON p.author_id = u.id
+                WHERE p.status = $1 AND p.is_latest = $2
+            """
+        
         params: List[Any] = [status, True]
         param_count = 2
+        
+        # Add timeframe filter for trending posts
+        if trending and timeframe and timeframe != 'all':
+            if timeframe == 'today':
+                query += f" AND p.created_ts >= NOW() - INTERVAL '1 day'"
+            elif timeframe == 'week':
+                query += f" AND p.created_ts >= NOW() - INTERVAL '7 days'"
+            elif timeframe == 'month':
+                query += f" AND p.created_ts >= NOW() - INTERVAL '30 days'"
         
         if author_id:
             param_count += 1
@@ -342,9 +378,15 @@ class PostgreSQLService(DatabaseService):
             param_count += 1
             query += f" AND EXISTS (SELECT 1 FROM post_tags ptg WHERE ptg.post_id = p.id AND ptg.tag_id = ${param_count})"
             params.append(tag_id)
+        
+        # Order by reaction count for trending, otherwise by created date
+        if trending:
+            query += " ORDER BY reaction_count DESC, p.created_ts DESC"
+        else:
+            query += " ORDER BY p.created_ts DESC"
             
         param_count += 1
-        query += f" ORDER BY p.created_ts DESC LIMIT ${param_count}"
+        query += f" LIMIT ${param_count}"
         params.append(limit)
         
         param_count += 1

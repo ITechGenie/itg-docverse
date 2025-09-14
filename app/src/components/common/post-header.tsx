@@ -406,8 +406,8 @@ export const PostHeader = ({
                 return acc;
               }, {} as Record<ReactionType, number>);
 
-              console.log('Reaction counts:', reactionCounts);
-              console.log('Available emojis:', Object.keys(reactionEmojis));
+              //console.log('Reaction counts:', reactionCounts);
+              //console.log('Available emojis:', Object.keys(reactionEmojis));
 
               return Object.entries(reactionCounts).map(([type, count]) => (
                 <div key={type} className="flex items-center space-x-1 sm:space-x-2">

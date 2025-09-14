@@ -193,4 +193,5 @@ export interface FeedFilters {
   status?: 'published' | 'draft' | 'archived'; // Filter posts by status
   favoritesPosts?: boolean; // Filter to show only favorite posts
   favoriteTags?: boolean; // Filter to show posts from favorite tags
+  trending?: boolean; // Filter to show trending posts (sorted by reaction count)
 }

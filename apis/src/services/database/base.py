@@ -114,6 +114,7 @@ class DatabaseService(ABC):
         limit: int = 10, 
         author_id: Optional[str] = None,
         tag_id: Optional[str] = None,
+        trending: Optional[bool] = None,
         post_type: Optional[str] = None,
         status: str = "published"
     ) -> List[Dict[str, Any]]:

@@ -209,30 +209,72 @@ class SQLiteService(DatabaseService):
                        author_id: Optional[str] = None,
                        tag_id: Optional[str] = None,
                        post_type: Optional[str] = None,
-                       status: str = "published") -> List[Dict[str, Any]]:
+                       status: str = "published",
+                       trending: Optional[bool] = None,
+                       timeframe: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get posts with optional filters"""
-        query = """
-            SELECT 
-                p.*, 
-                pt.name AS post_type_name, 
-                u.username, 
-                u.display_name,
-                u.email, 
-                u.avatar_url, 
-                pc.content,
-                (
-                    SELECT GROUP_CONCAT(tt.name, ', ')
-                    FROM post_tags ptg
-                    JOIN tag_types tt ON ptg.tag_id = tt.id
-                    WHERE ptg.post_id = p.id
-                ) AS tags
-            FROM posts p
-            JOIN post_types pt ON p.post_type_id = pt.id
-            JOIN users u ON p.author_id = u.id
-            LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = ?
-            WHERE p.status = ? AND p.is_latest = ?
-        """
+        
+        # Base query with reaction count subquery for trending
+        if trending:
+            query = """
+                SELECT 
+                    p.*, 
+                    pt.name AS post_type_name, 
+                    u.username, 
+                    u.display_name,
+                    u.email, 
+                    u.avatar_url, 
+                    pc.content,
+                    (
+                        SELECT GROUP_CONCAT(tt.name, ', ')
+                        FROM post_tags ptg
+                        JOIN tag_types tt ON ptg.tag_id = tt.id
+                        WHERE ptg.post_id = p.id
+                    ) AS tags,
+                    (
+                        SELECT COUNT(*)
+                        FROM reactions r
+                        WHERE r.target_id = p.id AND r.target_type = 'post'
+                    ) AS reaction_count
+                FROM posts p
+                JOIN post_types pt ON p.post_type_id = pt.id
+                JOIN users u ON p.author_id = u.id
+                LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = ?
+                WHERE p.status = ? AND p.is_latest = ?
+            """
+        else:
+            query = """
+                SELECT 
+                    p.*, 
+                    pt.name AS post_type_name, 
+                    u.username, 
+                    u.display_name,
+                    u.email, 
+                    u.avatar_url, 
+                    pc.content,
+                    (
+                        SELECT GROUP_CONCAT(tt.name, ', ')
+                        FROM post_tags ptg
+                        JOIN tag_types tt ON ptg.tag_id = tt.id
+                        WHERE ptg.post_id = p.id
+                    ) AS tags
+                FROM posts p
+                JOIN post_types pt ON p.post_type_id = pt.id
+                JOIN users u ON p.author_id = u.id
+                LEFT JOIN posts_content pc ON p.id = pc.post_id AND pc.is_current = ?
+                WHERE p.status = ? AND p.is_latest = ?
+            """
+        
         params = [True, status, True]
+        
+        # Add timeframe filter for trending posts
+        if trending and timeframe and timeframe != 'all':
+            if timeframe == 'today':
+                query += " AND p.created_ts >= datetime('now', '-1 day')"
+            elif timeframe == 'week':
+                query += " AND p.created_ts >= datetime('now', '-7 days')"
+            elif timeframe == 'month':
+                query += " AND p.created_ts >= datetime('now', '-30 days')"
         
         if author_id:
             query += " AND p.author_id = ?"
@@ -247,8 +289,14 @@ class SQLiteService(DatabaseService):
                 SELECT 1 FROM post_tags pt WHERE pt.post_id = p.id AND pt.tag_id = ?
             )"""
             params.append(tag_id)
+        
+        # Order by reaction count for trending, otherwise by created date
+        if trending:
+            query += " ORDER BY reaction_count DESC, p.created_ts DESC"
+        else:
+            query += " ORDER BY p.created_ts DESC"
             
-        query += " ORDER BY p.created_ts DESC LIMIT ? OFFSET ?"
+        query += " LIMIT ? OFFSET ?"
         params.extend([limit, skip])
         
         results = await self.execute_query(query, tuple(params))

@@ -155,6 +155,8 @@ async def get_posts(
     limit: int = Query(10, ge=1, le=100, description="Number of posts to return"), 
     author_id: Optional[str] = Query(None, description="Filter by author ID"),
     tag_id: Optional[str] = Query(None, description="Filter by tag ID"),
+    trending: Optional[bool] = Query(None, description="Filter to show only trending posts"),
+    timeframe: Optional[str] = Query(None, description="Timeframe filter for trending posts (today, week, month, all)"),
     post_type: Optional[PostType] = Query(None, description="Filter by post type"),
     favorites_posts: Optional[bool] = Query(None, description="Filter to show only favorite posts"),
     favorite_tags: Optional[bool] = Query(None, description="Filter to show posts from favorite tags"),
@@ -165,7 +167,7 @@ async def get_posts(
     """Get posts with filtering and pagination (requires authentication)"""
     try:
         # Log query parameters - just like log4j!
-        logger.info(f"Fetching posts with params: skip={skip}, limit={limit}, author_id={author_id}, tag_id={tag_id}, post_type={post_type}, status={status}, favorites_posts={favorites_posts}, favorite_tags={favorite_tags}")
+        logger.info(f"Fetching posts with params: skip={skip}, limit={limit}, author_id={author_id}, tag_id={tag_id}, post_type={post_type}, status={status}, trending={trending}, timeframe={timeframe}, favorites_posts={favorites_posts}, favorite_tags={favorite_tags}")
 
         # Handle favorite filtering
         if favorites_posts or favorite_tags:
@@ -188,6 +190,8 @@ async def get_posts(
                 limit=limit,
                 author_id=author_id,
                 tag_id=tag_id,
+                trending=trending,
+                timeframe=timeframe,
                 post_type=post_type,
                 status=status
             )

@@ -58,7 +58,7 @@ export class ApiClient {
   // Generic API call method
   private async apiCall<T>(endpoint: string, method: string = 'GET', data?: any): Promise<ApiResponse<T>> {
     try {
-      console.log(`API call: ${method} ${endpoint}`, data);
+      console.debug(`API call: ${method} ${endpoint}`, data);
       // Ensure we have a valid token for API calls
       const authResult = await this.ensureAuthenticated();
       if (!authResult.success) {
@@ -380,6 +380,14 @@ export class ApiClient {
 
       if (params.favoriteTags) {
         searchParams.append('favorite_tags', 'true');
+      }
+
+      if (params.trending) {
+        searchParams.append('trending', 'true');
+      }
+
+      if (params.timeframe && params.timeframe !== 'all') {
+        searchParams.append('timeframe', params.timeframe);
       }
 
       if (params.status) {
@@ -1048,6 +1056,7 @@ export class ApiClient {
           const transformedAuthors = response.data.map((apiAuthor: any) => ({
             id: apiAuthor.id,
             name: apiAuthor.name,
+            username: apiAuthor.username,
             email: apiAuthor.email,
             avatarUrl: apiAuthor.avatar_url || getAvatarUrl(apiAuthor.username || apiAuthor.email),
             bio: apiAuthor.bio,

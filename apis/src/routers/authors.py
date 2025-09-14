@@ -21,6 +21,7 @@ async def get_db_service() -> DatabaseService:
 class AuthorResponse(BaseModel):
     id: str
     name: str
+    username: str
     email: str
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
@@ -46,6 +47,7 @@ async def search_authors(
         SELECT 
             u.id,
             u.display_name AS name,  
+            u.username,
             u.email,
             u.avatar_url,
             u.bio,
@@ -168,6 +170,7 @@ async def get_top_authors(
             authors_list.append(AuthorResponse(
                 id=str(row['id']),
                 name=row['name'],
+                username=row['username'],
                 email=row['email'],
                 avatar_url=row['avatar_url'],
                 bio=row['bio'],
@@ -196,6 +199,7 @@ async def get_author_details(
         SELECT 
             u.id,
             u.display_name AS name,
+            u.username,
             u.email,
             u.avatar_url,
             u.bio,

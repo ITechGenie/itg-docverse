@@ -15,15 +15,15 @@ export default function Feed() {
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [postTypeFilter, setPostTypeFilter] = useState<'all' | 'posts' | 'thoughts'>('all');
+  const [timeframeFilter, setTimeframeFilter] = useState<'today' | 'week' | 'month' | 'all'>('all');
   const [searchParams] = useSearchParams();
   const { tagName, filter } = useParams<{ tagName?: string; filter?: string }>();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const filters: FeedFilters = {
     type: postTypeFilter === 'all' ? 'all' : postTypeFilter,
-    timeframe: (searchParams.get('timeframe') as FeedFilters['timeframe']) || 'all',
-    favoritesPosts: filter === 'favorite-posts',
-    favoriteTags: filter === 'favorite-tags',
+    timeframe: filter === 'trending' ? timeframeFilter : (searchParams.get('timeframe') as FeedFilters['timeframe']) || 'all',
+    trending: filter === 'trending',
   };
 
   const loadPosts = async (reset = false) => {
@@ -109,7 +109,7 @@ export default function Feed() {
     setCurrentPage(1);
     setHasMore(true);
     loadPosts(true);
-  }, [searchParams.toString(), tagName, filter, postTypeFilter]);
+  }, [searchParams.toString(), tagName, filter, postTypeFilter, timeframeFilter]);
 
   return (
     <div className="w-full space-y-6">
@@ -148,7 +148,49 @@ export default function Feed() {
         </h1>
         
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Filter Toggle */}
+          {/* Timeline Filter - only show when on trending page */}
+          {filter === 'trending' && (
+            <div className="flex items-center border rounded-lg p-1">
+              <Button
+                variant={timeframeFilter === 'all' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTimeframeFilter('all')}
+                className="h-8 px-2 sm:px-3"
+              >
+                <span className="hidden sm:inline">All Time</span>
+                <span className="sm:hidden">All</span>
+              </Button>
+              <Button
+                variant={timeframeFilter === 'today' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTimeframeFilter('today')}
+                className="h-8 px-2 sm:px-3"
+              >
+                <span className="hidden sm:inline">Today</span>
+                <span className="sm:hidden">1d</span>
+              </Button>
+              <Button
+                variant={timeframeFilter === 'week' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTimeframeFilter('week')}
+                className="h-8 px-2 sm:px-3"
+              >
+                <span className="hidden sm:inline">This Week</span>
+                <span className="sm:hidden">1w</span>
+              </Button>
+              <Button
+                variant={timeframeFilter === 'month' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTimeframeFilter('month')}
+                className="h-8 px-2 sm:px-3"
+              >
+                <span className="hidden sm:inline">This Month</span>
+                <span className="sm:hidden">1m</span>
+              </Button>
+            </div>
+          )}
+
+          {/* Post Type Filter */}
           <div className="flex items-center border rounded-lg p-1">
             <Button
               variant={postTypeFilter === 'all' ? 'default' : 'ghost'}
