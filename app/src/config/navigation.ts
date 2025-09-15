@@ -40,6 +40,7 @@ export interface MobileNavItem {
 export interface NavigationConfig {
   siteTitle: string;
   siteSubtitle?: string;
+  siteBaseUrl: string;
   teams: Array<{
     name: string;
     logo: LucideIcon;
@@ -54,6 +55,7 @@ export interface NavigationConfig {
 export const navigationConfig: NavigationConfig = {
 	siteTitle: 'ITG Docverse',
 	siteSubtitle: 'Community',
+	siteBaseUrl: import.meta.env.VITE_BASENAME || '',
 	teams: [
 		{
 			name: 'ITG Docverse',

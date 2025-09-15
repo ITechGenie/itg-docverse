@@ -57,7 +57,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         {state === 'collapsed' ? (
           <div className="flex items-center justify-center w-full">
-            <a href="/" aria-label="Made with love" className="text-muted-foreground/60 hover:text-accent">
+            <a href="https://itechgenie.com/myblog/itg-docverse?source=sidebar" aria-label="Made with love" className="text-muted-foreground/60 hover:text-accent">
               ❤️
             </a>
           </div>

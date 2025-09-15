@@ -3,7 +3,6 @@ Users API Router
 Handles all user-related endpoints (requires authentication)
 """
 
-from math import log
 from typing import List, Dict, Any
 
 from fastapi import APIRouter, HTTPException, Depends, Query
@@ -137,6 +136,7 @@ async def get_user(
             "id": user['id'],
             "username": user['username'],
             "display_name": user['display_name'],
+            "email": user['email'],
             "bio": user.get('bio', ''),
             "location": user.get('location', ''),
             "website": user.get('website', ''),

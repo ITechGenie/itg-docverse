@@ -558,7 +558,7 @@ export class ApiClient {
           // Remove existing reaction
           const removeResponse = await this.apiCall(
             `/reactions/${targetType}/${targetId}/remove`,
-            'DELETE',
+            'POST',
             { reaction_type: reactionType }
           );
           return { success: removeResponse.success, data: removeResponse.success };
@@ -748,7 +748,7 @@ export class ApiClient {
 
   async deleteTag(tagId: string): Promise<ApiResponse<{ message: string }>> {
     try {
-      const response = await this.apiCall<{ message: string }>(`/tags/${tagId}`, 'DELETE');
+      const response = await this.apiCall<{ message: string }>(`/tags/${tagId}`, 'POST');
       return response;
     } catch (error) {
       console.error('Delete tag failed:', error);
