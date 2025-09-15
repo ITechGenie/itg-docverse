@@ -323,6 +323,11 @@ export default function CreatePost() {
         <div>
           {activeTab === 'posts' ? (
             <div data-color-mode={theme === 'dark' ? 'dark' : 'light'}>
+              <div className="flex mt-1 text text-xs text-muted-foreground">
+                <span className='ml-auto text-right p-1'>
+                  Use the mode buttons below to switch between Edit, Live Preview, and Split View.<br />
+                </span>
+              </div>
               <MDEditor
                 value={markdownContent}
                 onChange={(value) => {
@@ -422,7 +427,7 @@ export default function CreatePost() {
           >
             {isSubmitting 
               ? (isEditMode ? 'Publishing...' : 'Publishing...') 
-              : (isEditMode ? 'Update Content' : 'Publish Content')
+              : 'Publish Content'
             }
           </Button>
         </div>
@@ -436,6 +441,7 @@ export default function CreatePost() {
         onOpenChange={setShowImageDialog}
         onImageInsert={handleImageInsert}
       />
+      <br /><br />
     </div>
   );
 }

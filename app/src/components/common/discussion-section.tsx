@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Heart, 
-  MessageCircle, 
-  Eye,
+//  Heart, 
+//  MessageCircle, 
+//  Eye,
   ThumbsUp,
   ThumbsDown
 } from 'lucide-react';
@@ -31,6 +31,8 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
   const [submittingComment, setSubmittingComment] = useState(false);
   const [commentReactions, setCommentReactions] = useState<Record<string, any[]>>({});
   const { user: currentUser } = useAuth();
+
+  console.log('showBottomBar:', showBottomBar);
 
   // Handle navigation to user profile
   const handleUserClick = (userId: string) => {
@@ -153,10 +155,10 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      {/* Bottom Reactions Bar */}
+      <hr className="border-border" />
+      {/* Bottom Reactions Bar 
       {showBottomBar && (
         <>
-          <hr className="border-border" />
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4 px-4" id="reactions-section">
             <div className="flex items-center space-x-3 sm:space-x-6 text-sm text-muted-foreground overflow-x-auto">
               <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
@@ -178,7 +180,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
             </Button>
           </div>
         </>
-      )}
+      )} */}
 
       {/* Comments Section */}
       <div id="comments-section" className="py-6">

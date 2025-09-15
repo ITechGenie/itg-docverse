@@ -47,7 +47,7 @@ export default function PostCard({ post }: PostCardProps) {
           onShare={handleShare}
         />
         
-        {/* Content Preview for Feed Cards */}
+        {/* Content Preview for Feed Cards 
         {post.feed_content && ( 
           <>
             <hr className="border-y border-border mb-4" />
@@ -59,7 +59,7 @@ export default function PostCard({ post }: PostCardProps) {
               </div>
             </div>
           </>
-        )}
+        )}*/}
       </CardContent>
     </Card>
   );

@@ -4,6 +4,7 @@ Represents a user in the ITG DocVerse system
 """
 
 from datetime import datetime
+import email
 from typing import Optional, List
 from pydantic import BaseModel, Field
 
@@ -81,6 +82,7 @@ class UserPublic(BaseModel):
     """Public user model (without sensitive information)"""
     id: str
     username: str
+    email: str
     display_name: str
     bio: Optional[str] = None
     location: Optional[str] = None

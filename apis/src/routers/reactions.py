@@ -46,7 +46,7 @@ async def add_reaction_to_post(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error adding reaction: {str(e)}")
 
-@router.delete("/post/{post_id}/remove", response_model=Dict[str, bool])
+@router.post("/post/{post_id}/remove", response_model=Dict[str, bool])
 async def remove_reaction_from_post(
     post_id: str,
     req: ReactionRequest,
@@ -95,7 +95,7 @@ async def add_reaction_to_discussion(
         logger.error(f"Error adding reaction: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error adding reaction: {str(e)}")
 
-@router.delete("/discussion/{discussion_id}/remove", response_model=Dict[str, bool])
+@router.post("/discussion/{discussion_id}/remove", response_model=Dict[str, bool])
 async def remove_reaction_from_discussion(
     discussion_id: str,
     req: ReactionRequest,
@@ -301,7 +301,7 @@ async def add_reaction_to_tag(
         logger.error(f"Error adding reaction to tag: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error adding reaction: {str(e)}")
 
-@router.delete("/tag/{tag_id}/remove")
+@router.post("/tag/{tag_id}/remove")
 async def remove_reaction_from_tag(
     tag_id: str,
     req: ReactionRequest,

@@ -401,9 +401,9 @@ class PostgreSQLService(DatabaseService):
         
         # Order by reaction count for trending, otherwise by created date
         if trending:
-            query += " ORDER BY reaction_count DESC, p.created_ts DESC"
+            query += " ORDER BY reaction_count DESC, p.updated_ts DESC"
         else:
-            query += " ORDER BY p.created_ts DESC"
+            query += " ORDER BY p.updated_ts DESC"
             
         param_count += 1
         query += f" LIMIT ${param_count}"

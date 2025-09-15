@@ -36,9 +36,10 @@ export default function Feed() {
 
     try {
       const page = reset ? 1 : currentPage;
-      const response = await api.getPosts({ 
+      const response = await api.getPosts({
         page, 
         limit: 10, 
+        ...(tagName && { tag_id: tagName }),
         ...filters 
       });
       

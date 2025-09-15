@@ -119,7 +119,7 @@ async def get_favorite_filtered_posts(
         base_query += " WHERE " + " AND ".join(where_conditions)
     
     base_query += """
-    ORDER BY p.created_ts DESC
+    ORDER BY p.updated_ts, p.created_ts DESC
     LIMIT ? OFFSET ?
     """
     params.extend([limit, skip])

@@ -8,6 +8,7 @@ import { AuthorCloud } from '@/components/ui/author-cloud';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '@/services/api-client';
+import { navigateTo } from '@/lib/routing';
 
 interface Author {
   id: string;
@@ -73,7 +74,7 @@ const TopContributors: React.FC = () => {
 
   const handleAuthorClick = (author: Author) => {
     console.log('Author clicked:', author);
-    // TODO: Navigate to author profile or posts
+    navigateTo(`/profile/${author.id}`);
   };
 
   const getSortLabel = () => {

@@ -3,10 +3,12 @@ Configuration management for ITG DocVerse API
 """
 
 import os
+import urllib.parse
 from pydantic import BaseModel
 from typing import List
 from functools import lru_cache
 from dotenv import load_dotenv
+import urllib
 
 # Load environment variables from .env file
 load_dotenv()
@@ -79,16 +81,19 @@ class Settings(BaseModel):
     
     def get_database_url(self) -> str:
         """Get the appropriate database URL based on database type"""
+        
         if self.database_type == "redis":
+            encoded_password = urllib.parse.quote_plus(self.redis_password) # Encode @ in password
             if self.redis_username and self.redis_password:
-                auth_part = f"{self.redis_username}:{self.redis_password}@"
+                auth_part = f"{self.redis_username}:{encoded_password}@"
             elif self.redis_password:
-                auth_part = f":{self.redis_password}@"
+                auth_part = f":{encoded_password}@"
             else:
                 auth_part = ""
             return f"redis://{auth_part}{self.redis_host}:{self.redis_port}/{self.redis_db}"
         elif self.database_type == "postgresql":
-            return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+            encoded_password = urllib.parse.quote_plus(self.postgres_password) # Encode @ in password
+            return f"postgresql://{self.postgres_user}:{encoded_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         else:  # sqlite
             return f"sqlite:///{self.sqlite_path}"
 
