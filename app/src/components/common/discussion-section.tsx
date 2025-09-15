@@ -32,6 +32,8 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
   const [commentReactions, setCommentReactions] = useState<Record<string, any[]>>({});
   const { user: currentUser } = useAuth();
 
+  console.log('showBottomBar:', showBottomBar);
+
   // Handle navigation to user profile
   const handleUserClick = (userId: string) => {
     navigate(`/profile/${userId}`);
