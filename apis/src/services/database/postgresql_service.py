@@ -399,11 +399,11 @@ class PostgreSQLService(DatabaseService):
             query += f" AND EXISTS (SELECT 1 FROM post_tags ptg WHERE ptg.post_id = p.id AND ptg.tag_id = ${param_count})"
             params.append(tag_id)
         
-        # Order by reaction count for trending, otherwise by created date
+        # Order by reaction count for trending, otherwise by most recent activity (updated or created)
         if trending:
-            query += " ORDER BY reaction_count DESC, p.updated_ts DESC"
+            query += " ORDER BY reaction_count DESC, COALESCE(p.updated_ts, p.created_ts) DESC"
         else:
-            query += " ORDER BY p.updated_ts DESC"
+            query += " ORDER BY COALESCE(p.updated_ts, p.created_ts) DESC"
             
         param_count += 1
         query += f" LIMIT ${param_count}"
@@ -1260,7 +1260,8 @@ class PostgreSQLService(DatabaseService):
             
             # Create new tag
             import re
-            tag_id = re.sub(r'[^a-zA-Z0-9 ]', '', tag_name).lower().replace(' ', '-')
+            # Remove # symbol, strip other special chars except hyphens, replace spaces with hyphens, lowercase
+            tag_id = re.sub(r'[^a-zA-Z0-9 -]', '', tag_name.replace('#', '')).lower().replace(' ', '-')
             await self.create_tag({
                 'id': tag_id,
                 'name': tag_name,

@@ -308,11 +308,11 @@ class SQLiteService(DatabaseService):
             )"""
             params.append(tag_id)
         
-        # Order by reaction count for trending, otherwise by created date
+        # Order by reaction count for trending, otherwise by most recent activity (updated or created)
         if trending:
-            query += " ORDER BY reaction_count DESC, p.created_ts DESC"
+            query += " ORDER BY reaction_count DESC, COALESCE(p.updated_ts, p.created_ts) DESC"
         else:
-            query += " ORDER BY p.created_ts DESC"
+            query += " ORDER BY COALESCE(p.updated_ts, p.created_ts) DESC"
             
         query += " LIMIT ? OFFSET ?"
         params.extend([limit, skip])
@@ -1256,7 +1256,8 @@ class SQLiteService(DatabaseService):
                 return existing_tag['id']
             
             # Create new tag
-            tag_id = re.sub(r'[^a-zA-Z0-9 ]', '', tag_name).lower().replace(' ', '-')
+            # Remove # symbol, strip other special chars except hyphens, replace spaces with hyphens, lowercase
+            tag_id = re.sub(r'[^a-zA-Z0-9 -]', '', tag_name.replace('#', '')).lower().replace(' ', '-')
             await self.create_tag({
                 'id': tag_id,
                 'name': tag_name,
