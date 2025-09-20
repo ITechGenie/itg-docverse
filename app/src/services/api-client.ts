@@ -237,6 +237,45 @@ export class ApiClient {
     }
   }
 
+  async searchUsers(query: string): Promise<ApiResponse<User[]>> {
+    try {
+      const searchParams = new URLSearchParams();
+      searchParams.append('query', query);
+      searchParams.append('limit', '10'); // Limit search results
+      
+      const endpoint = `/users/search?${searchParams.toString()}`;
+      const response = await this.apiCall<any[]>(endpoint, 'GET');
+      
+      if (response.success && response.data) {
+        // Transform backend user data to frontend User type
+        const users: User[] = response.data.map((backendUser: any) => ({
+          id: backendUser.id,
+          username: backendUser.username,
+          displayName: backendUser.display_name,
+          email: `${backendUser.username}@itgdocverse.com`,
+          bio: backendUser.bio || '',
+          location: backendUser.location || '',
+          website: backendUser.website || '',
+          avatar: backendUser.avatar_url || getAvatarUrl(backendUser.username, 100),
+          joinedDate: backendUser.created_at,
+          roles: backendUser.roles || [],
+          isVerified: backendUser.is_verified || false,
+          stats: {
+            postsCount: backendUser.post_count || 0,
+            commentsCount: backendUser.comment_count || 0,
+            reactionsCount: backendUser.reactions_count || 0,
+            tagsFollowed: 0,
+          },
+        }));
+        return { success: true, data: users };
+      }
+      return response;
+    } catch (error) {
+      console.error('Search users failed:', error);
+      return { success: false, error: 'Failed to search users' };
+    }
+  }
+
   async getUserByUsername(username: string): Promise<ApiResponse<User>> {
     try {
       const response = await this.apiCall<any>(`/users/username/${username}`, 'GET');
@@ -615,6 +654,26 @@ export class ApiClient {
     } catch (error) {
       console.error('Get post analytics failed:', error);
       return { success: false, error: 'Failed to get post analytics' };
+    }
+  }
+
+  async getUserAnalytics(userId: string): Promise<ApiResponse<{
+    total_interactions: number;
+    posts_interacted: Array<{
+      post_id: string;
+      post_title: string;
+      views: number;
+      reactions: number;
+      comments: number;
+      last_interaction: string;
+    }>;
+  }>> {
+    try {
+      const endpoint = `/users/${userId}/analytics`;
+      return await this.apiCall(endpoint);
+    } catch (error) {
+      console.error('Get user analytics failed:', error);
+      return { success: false, error: 'Failed to get user analytics' };
     }
   }
 
