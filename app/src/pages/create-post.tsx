@@ -57,6 +57,14 @@ export default function CreatePost() {
     const newValue = value || ''; // defaultPlaceholder;
     setMarkdownContent(newValue);
     setValue('content', newValue);
+    
+    // Track cursor position whenever content changes
+    setTimeout(() => {
+      const textarea = document.querySelector('.w-md-editor-text-input') as HTMLTextAreaElement;
+      if (textarea) {
+        setCursorPosition(textarea.selectionStart);
+      }
+    }, 0);
   };
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -87,11 +95,27 @@ export default function CreatePost() {
     }, 0);
   };
 
-  // Function to insert image into markdown content
+  // Function to insert image into markdown content at cursor position
   const handleImageInsert = (markdown: string) => {
     setMarkdownContent(prevContent => {
-      const newContent = prevContent ? `${prevContent}\n\n${markdown}` : markdown;
+      const before = prevContent.substring(0, cursorPosition);
+      const after = prevContent.substring(cursorPosition);
+      const newContent = `${before}\n\n${markdown}\n\n${after}`;
       setValue('content', newContent);
+      
+      // Update cursor position to after inserted image
+      const newCursorPos = before.length + markdown.length + 4; // +4 for \n\n before and after
+      setCursorPosition(newCursorPos);
+      
+      // Focus and set cursor after insertion
+      setTimeout(() => {
+        const textarea = document.querySelector('.w-md-editor-text-input') as HTMLTextAreaElement;
+        if (textarea) {
+          textarea.focus();
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      }, 100);
+      
       return newContent;
     });
   };
@@ -102,6 +126,11 @@ export default function CreatePost() {
     window.insertMarkdownCallback = handleImageInsert;
     window.showImageUploadDialog = () => {
       console.log('showImageUploadDialog called!');
+      // Save current cursor position before opening dialog
+      const textarea = document.querySelector('.w-md-editor-text-input') as HTMLTextAreaElement;
+      if (textarea) {
+        setCursorPosition(textarea.selectionStart);
+      }
       setShowImageDialog(true);
     };
     
