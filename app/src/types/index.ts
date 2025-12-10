@@ -162,6 +162,7 @@ export interface CreatePostData {
   coverImage?: string;
   tags: string[];
   status?: 'draft' | 'published' | 'archived' | 'frozen';
+  mentionedUserIds?: string[]; // User IDs mentioned in the content
 }
 
 export interface ApiResponse<T> {

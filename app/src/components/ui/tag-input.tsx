@@ -40,7 +40,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const { user: currentUser } = useAuth();
 
-  console.log('Current User Roles:', currentUser?.roles);
+  //console.log('Current User Roles:', currentUser?.roles);
   
   // Check if current user is admin
   const isAdmin = currentUser?.roles?.includes('role_admin');
