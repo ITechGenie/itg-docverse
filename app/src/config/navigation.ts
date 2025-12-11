@@ -12,6 +12,7 @@ import {
   Search,
   RssIcon,
   Settings,
+  Bell,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -227,6 +228,12 @@ export const navigationConfig: NavigationConfig = {
       name: "Search",
       url: "/search",
       icon: Search,
+      section: "Discovery",
+    },
+	{
+      name: "Notifications",
+      url: "/notifications",
+      icon: Bell,
       section: "Discovery",
     },
   ],

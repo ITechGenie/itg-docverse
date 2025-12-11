@@ -3,6 +3,7 @@ export interface User {
   username: string;
   displayName: string;
   email: string;
+  mentionsCount?: number;
   avatar?: string;
   bio?: string;
   location?: string;
@@ -16,6 +17,7 @@ export interface User {
     commentsCount: number;
     reactionsCount: number;
     tagsFollowed: number;
+    mentions?: number;
   };
   badges?: Badge[];
 }
@@ -32,6 +34,7 @@ export interface Post {
   id: string;
   type: 'block-diagram' | 'code-snippet' | 'discussion' | 'llm-long' | 'llm-short' | 'posts' | 'thoughts';
   title?: string; // Optional for short content
+  mentionsCount?: number;
   content?: string; // Full content - optional in feed views for posts to save bandwidth
   feed_content?: string; // Preview content for feed - used for all post types
   coverImage?: string;

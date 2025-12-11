@@ -4,7 +4,7 @@ import { MobileFooter } from "@/components/mobile-footer"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Home, Plus } from "lucide-react"
+import { Search, Home, Plus, Bell } from "lucide-react"
 import { Toaster } from "@/components/ui/sonner"
 import {
   Breadcrumb,
@@ -24,6 +24,7 @@ import { useEffect, useState } from "react"
 import { useNavigate, useLocation, Link } from "react-router-dom"
 import { findNavigationItem, navigationConfig } from "@/config/navigation"
 import { createUrl } from "@/lib/routing"
+import NotifyBell from "./ui/notify-icon"
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -134,6 +135,7 @@ export default function Layout({ children }: LayoutProps) {
                 />
               </form>
               <ModeToggle />
+              <NotifyBell />
             </div>
           </header>
           <hr className="hidden lg:block" />

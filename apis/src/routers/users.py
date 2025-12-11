@@ -13,6 +13,7 @@ from ..models.user import User, UserCreate, UserUpdate, UserPublic
 from ..services.database.factory import DatabaseServiceFactory
 from ..services.database.base import DatabaseService
 from ..middleware.dependencies import get_current_user_from_middleware
+from ..config.settings import settings
 
 router = APIRouter()
 
@@ -186,7 +187,37 @@ async def get_user(
         
         # Get user stats - use actual stats instead of cached user_stats table
         user_stats = await get_actual_user_stats(db, user['id'])
-        
+
+        # Mentions count only for /me
+        mentions_count = 0
+        try:
+            if user_id == current_user.get("user_id"):
+                # Determine DB type for 30-day fallback expression
+                is_postgres = settings.database_type == "postgresql"
+                cutoff_expr = (
+                    "CURRENT_TIMESTAMP - INTERVAL '30 days'" if is_postgres
+                    else "DATETIME(CURRENT_TIMESTAMP, '-30 days')"
+                )
+                base_query = f"""
+                SELECT COUNT(*) AS count
+                FROM user_events
+                WHERE event_type_id = 'event-mentioned'
+                    AND user_id = ?
+                    AND created_ts > COALESCE(
+                        (
+                            SELECT created_ts FROM user_events
+                            WHERE event_type_id = 'event-notice-acknowledged' AND user_id = ?
+                            ORDER BY created_ts DESC LIMIT 1
+                        ),
+                        {cutoff_expr}
+                    )
+                """
+                query = db._convert_placeholders(base_query) if is_postgres else base_query
+                result = await db.execute_query(query, (user_id, user_id))
+                mentions_count = (result[0]['count'] if result else 0) or 0
+        except Exception as e:
+            logger.warning(f"Failed to compute mentions for user {user_id}: {e}")
+
         # Get user roles - just extract role IDs for lightweight response
         user_roles_raw = await db.get_user_roles(user['id'])
         role_ids = [role['role_id'] for role in user_roles_raw if role.get('assignment_active', True)]
@@ -206,6 +237,7 @@ async def get_user(
             "post_count": user_stats.get('posts_count', 0),
             "comment_count": user_stats.get('comments_count', 0),
             "reactions_count": user_stats.get('reactions_count', 0),
+            "mentions": mentions_count,
             "is_verified": user.get('is_verified', False),
             "roles": role_ids,
             "created_at": user['created_ts']

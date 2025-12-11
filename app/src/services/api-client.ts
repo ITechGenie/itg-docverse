@@ -163,11 +163,13 @@ export class ApiClient {
               avatar: response.data.avatar_url || getAvatarUrl(response.data.username, 100),
               joinedDate: response.data.created_at || new Date().toISOString(),
               roles: response.data.roles || [],
+              mentionsCount: response.data.mentions ?? 0,
               stats: {
                 postsCount: response.data.post_count || 0,
                 commentsCount: response.data.comment_count || 0,
                 reactionsCount: response.data.reactions_count || 0,
                 tagsFollowed: 0,
+                mentions: response.data.mentions || 0,
               },
             };
             
