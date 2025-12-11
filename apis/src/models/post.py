@@ -66,6 +66,7 @@ class PostCreate(BaseModel):
     project_id: Optional[str] = Field(None, max_length=100)
     git_url: Optional[str] = Field(None, max_length=500)
     status: PostStatus = PostStatus.DRAFT
+    mentioned_user_ids: Optional[List[str]] = Field(default_factory=list)
 
 class PostUpdate(BaseModel):
     """Post update model"""
@@ -76,6 +77,7 @@ class PostUpdate(BaseModel):
     is_document: Optional[bool] = None
     project_id: Optional[str] = Field(None, max_length=100)
     git_url: Optional[str] = Field(None, max_length=500)
+    mentioned_user_ids: Optional[List[str]] = Field(default_factory=list)
 
 class PostPublic(BaseModel):
     """Public post model"""

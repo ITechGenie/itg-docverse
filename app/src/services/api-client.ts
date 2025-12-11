@@ -526,7 +526,7 @@ export class ApiClient {
         post_type: data.type || 'posts',
         tags: data.tags || [],
         status: data.status || 'draft',
-        mentionedUserIds: data.mentionedUserIds || []
+        mentioned_user_ids: data.mentioned_user_ids || []
       };
 
       const response = await this.apiCall<any>('/posts/', 'POST', apiData);
@@ -551,7 +551,7 @@ export class ApiClient {
       if (data.tags !== undefined) apiData.tags = data.tags || [];
       if (data.coverImage !== undefined) apiData.cover_image_url = data.coverImage;
       if (data.status !== undefined) apiData.status = data.status; 
-      if (data.mentionedUserIds !== undefined) apiData.mentionedUserIds = data.mentionedUserIds;
+      if (data.mentioned_user_ids !== undefined) apiData.mentioned_user_ids = data.mentioned_user_ids;
 
       const response = await this.apiCall<any>(`/posts/${postId}`, 'POST', apiData);
       if (response.success) {
@@ -880,7 +880,7 @@ export class ApiClient {
     }
   }
 
-  async createComment(postId: string, content: string, parentId?: string, mentionedUserIds?: string[]): Promise<ApiResponse<Comment>> {
+  async createComment(postId: string, content: string, parentId?: string, mentioned_user_ids?: string[]): Promise<ApiResponse<Comment>> {
     try {
       const response = await this.apiCall<any>(
         '/comments/',
@@ -889,7 +889,7 @@ export class ApiClient {
           post_id: postId,
           content,
           parent_id: parentId,
-          mentioned_user_ids: mentionedUserIds
+          mentioned_user_ids: mentioned_user_ids || []
         }
       );
 

@@ -23,8 +23,6 @@ export function useUserMentions() {
       return;
     }
 
-    debugger;
-
     const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
     
     // Only show suggestions if no space/newline after @

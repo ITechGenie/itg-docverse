@@ -191,7 +191,7 @@ async def get_user(
         user_roles_raw = await db.get_user_roles(user['id'])
         role_ids = [role['role_id'] for role in user_roles_raw if role.get('assignment_active', True)]
         
-        logger.info(f"User roles for {user['username']} ({user['id']}): {role_ids}")
+        logger.info(f"User roles for {user['username']} ({user['id']}): {role_ids}, {user['email']}")
 
         # Build the response with stats and role IDs
         user_response = {
@@ -330,6 +330,7 @@ async def get_user_by_username(
             "id": user['id'],
             "username": user['username'],
             "display_name": user['display_name'],
+            "email": user['email'],
             "bio": user.get('bio', ''),
             "location": user.get('location', ''),
             "website": user.get('website', ''),

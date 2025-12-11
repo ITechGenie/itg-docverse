@@ -131,6 +131,20 @@ async def create_comment(
         
         created_id = await db.create_comment(comment_dict)
         
+        # Log mention events if any users were mentioned
+        if comment_data.mentioned_user_ids:
+            try:
+                await db.log_mention_events(
+                    mentioned_user_ids=comment_data.mentioned_user_ids,
+                    mentioning_user_id=author_id,
+                    entity_type='comment',
+                    entity_id=created_id,
+                    metadata={'post_id': comment_data.post_id}
+                )
+            except Exception as mention_error:
+                logger.warning(f"Failed to log mention events: {mention_error}")
+                # Continue - mention logging should not block comment creation
+        
         # Fetch the created comment to return it
         created_comment_dict = await db.get_comment_by_id(created_id)
         if not created_comment_dict:

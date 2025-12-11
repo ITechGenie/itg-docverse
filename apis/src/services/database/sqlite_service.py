@@ -617,6 +617,74 @@ class SQLiteService(DatabaseService):
         except Exception as e:
             logger.error(f"Failed to log user event: {e}")
             raise
+    
+    async def log_mention_events(self, mentioned_user_ids: List[str], mentioning_user_id: str, 
+                                 entity_type: str, entity_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Log mention events for multiple users"""
+        try:
+            import uuid
+            from datetime import datetime
+            
+            if not mentioned_user_ids:
+                return
+            
+            # Remove duplicates while preserving order
+            mentioned_user_ids = list(dict.fromkeys(mentioned_user_ids))
+            
+            # Validate mentioned users exist and get their usernames
+            placeholders = ','.join('?' * len(mentioned_user_ids))
+            query = f"SELECT id, username FROM users WHERE username IN ({placeholders})"
+            valid_users = await self.execute_query(query, tuple(mentioned_user_ids))
+            
+            if not valid_users:
+                logger.warning(f"None of the mentioned usernames are valid: {mentioned_user_ids}")
+                return
+            
+            valid_user_map = {user['username']: user['id'] for user in valid_users}
+            invalid_usernames = set(mentioned_user_ids) - set(valid_user_map.keys())
+            
+            if invalid_usernames:
+                logger.warning(f"Invalid usernames in mentions: {invalid_usernames}")
+            
+            # Prepare batch insert data
+            now = datetime.utcnow().isoformat()
+            event_metadata = metadata or {}
+            event_metadata['mentioned_by'] = mentioning_user_id
+            metadata_json = json.dumps(event_metadata)
+            
+            events_to_insert = []
+            for username in valid_user_map.keys():
+                user_id = valid_user_map[username]
+                event_id = str(uuid.uuid4())
+                events_to_insert.append((
+                    event_id,
+                    user_id,
+                    'event-mentioned',
+                    entity_type,
+                    entity_id,
+                    None,  # session_id
+                    None,  # ip_address
+                    None,  # user_agent
+                    metadata_json
+                ))
+            
+            # Batch insert
+            if events_to_insert:
+                async with aiosqlite.connect(self.db_path) as db:
+                    await db.executemany(
+                        """INSERT INTO user_events 
+                           (id, user_id, event_type_id, target_type, target_id, session_id,
+                            ip_address, user_agent, metadata)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        events_to_insert
+                    )
+                    await db.commit()
+                    
+                logger.info(f"Logged {len(events_to_insert)} mention events for {entity_type} {entity_id}")
+                
+        except Exception as e:
+            logger.warning(f"Failed to log mention events: {e}")
+            # Don't raise - mention logging should not block post/comment creation
         
     # Statistics operations
     async def get_user_stats(self, user_id: str) -> Optional[Dict[str, Any]]:
@@ -1171,13 +1239,22 @@ class SQLiteService(DatabaseService):
             
             if existing:
                 # Update existing setting
-                await self.execute_command(
-                    """UPDATE site_settings 
-                       SET setting_value = ?, setting_type = ?, description = ?, 
-                           updated_ts = CURRENT_TIMESTAMP, updated_by = ?
-                       WHERE setting_key = ? AND user_id IS ?""",
-                    (value_str, setting_type, description, user_id or 'system', setting_key, user_id)
-                )
+                if user_id is None:
+                    await self.execute_command(
+                        """UPDATE site_settings 
+                           SET setting_value = ?, setting_type = ?, description = ?, 
+                               updated_ts = CURRENT_TIMESTAMP, updated_by = ?
+                           WHERE setting_key = ? AND user_id IS NULL""",
+                        (value_str, setting_type, description, 'system', setting_key)
+                    )
+                else:
+                    await self.execute_command(
+                        """UPDATE site_settings 
+                           SET setting_value = ?, setting_type = ?, description = ?, 
+                               updated_ts = CURRENT_TIMESTAMP, updated_by = ?
+                           WHERE setting_key = ? AND user_id = ?""",
+                        (value_str, setting_type, description, user_id, setting_key, user_id)
+                    )
             else:
                 # Create new setting
                 await self.execute_command(

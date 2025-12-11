@@ -251,7 +251,7 @@ export default function CreatePost() {
       if (isEditMode && id) {
         // Update existing post
         const content = activeTab === 'posts' ? markdownContent : (data.content || '');
-        const mentionedUserIds = activeTab === 'posts' ? extractMentionedUserIds(markdownContent) : [];
+        const mentioned_user_ids = activeTab === 'posts' ? extractMentionedUserIds(markdownContent) : [];
         
         const updateData = {
           title: activeTab === 'posts' ? data.title : undefined,
@@ -259,7 +259,7 @@ export default function CreatePost() {
           coverImage: data.coverImage || undefined,
           tags: data.tags || [],
           status: status,
-          mentionedUserIds,
+          mentioned_user_ids,
         };
 
         console.log('Updating post:', id, updateData);
@@ -272,7 +272,7 @@ export default function CreatePost() {
       } else {
         // Create new post
         const content = activeTab === 'posts' ? markdownContent : (data.content || '');
-        const mentionedUserIds = activeTab === 'posts' ? extractMentionedUserIds(markdownContent) : [];
+        const mentioned_user_ids = activeTab === 'posts' ? extractMentionedUserIds(markdownContent) : [];
         
         const postData: CreatePostData = {
           type: activeTab,
@@ -281,7 +281,7 @@ export default function CreatePost() {
           coverImage: data.coverImage || undefined,
           tags: data.tags || [],
           status: status,
-          mentionedUserIds,
+          mentioned_user_ids,
         };
 
         console.log('Creating post with status:', status, postData);

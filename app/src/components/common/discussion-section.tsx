@@ -116,8 +116,8 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
         }
       }
       
-      const mentionedUserIds = extractPlainTextMentions(commentContent);
-      const response = await api.createComment(post.id, commentContent, undefined, mentionedUserIds);
+      const mentioned_user_ids = extractPlainTextMentions(commentContent);
+      const response = await api.createComment(post.id, commentContent, undefined, mentioned_user_ids);
       
       if (response.success && response.data) {
         // Add new comment to the list
@@ -220,8 +220,8 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
     if (!replyText.trim() || !replyTo) return;
     
     try {
-      const mentionedUserIds = extractPlainTextMentions(replyText);
-      const response = await api.createComment(post.id, replyText.trim(), replyTo.id, mentionedUserIds);
+      const mentioned_user_ids = extractPlainTextMentions(replyText);
+      const response = await api.createComment(post.id, replyText.trim(), replyTo.id, mentioned_user_ids);
       
       if (response.success && response.data) {
         // Add new reply to the comments list

@@ -163,3 +163,9 @@ class DatabaseService(ABC):
     async def search_users(self, query: str, limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:
         """Search users by name or username"""
         pass
+    
+    @abstractmethod
+    async def log_mention_events(self, mentioned_user_ids: List[str], mentioning_user_id: str, 
+                                 entity_type: str, entity_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Log mention events for multiple users"""
+        pass

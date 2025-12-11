@@ -902,6 +902,73 @@ class PostgreSQLService(DatabaseService):
             )
         )
         return event_data['id']
+    
+    async def log_mention_events(self, mentioned_user_ids: List[str], mentioning_user_id: str, 
+                                 entity_type: str, entity_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Log mention events for multiple users"""
+        try:
+            import uuid
+            from datetime import datetime
+            
+            if not mentioned_user_ids:
+                return
+            
+            # Remove duplicates while preserving order
+            mentioned_user_ids = list(dict.fromkeys(mentioned_user_ids))
+            
+            # Validate mentioned users exist and get their usernames
+            placeholders = ','.join(f'${i+1}' for i in range(len(mentioned_user_ids)))
+            query = f"SELECT id, username FROM users WHERE username IN ({placeholders})"
+            valid_users = await self.execute_query(query, tuple(mentioned_user_ids))
+            
+            if not valid_users:
+                logger.warning(f"None of the mentioned usernames are valid: {mentioned_user_ids}")
+                return
+            
+            valid_user_map = {user['username']: user['id'] for user in valid_users}
+            invalid_usernames = set(mentioned_user_ids) - set(valid_user_map.keys())
+            
+            if invalid_usernames:
+                logger.warning(f"Invalid usernames in mentions: {invalid_usernames}")
+            
+            # Prepare batch insert data
+            now = datetime.utcnow().isoformat()
+            event_metadata = metadata or {}
+            event_metadata['mentioned_by'] = mentioning_user_id
+            metadata_json = json.dumps(event_metadata)
+            
+            events_to_insert = []
+            for username in valid_user_map.keys():
+                user_id = valid_user_map[username]
+                event_id = str(uuid.uuid4())
+                events_to_insert.append((
+                    event_id,
+                    user_id,
+                    'event-mentioned',
+                    entity_type,
+                    entity_id,
+                    None,  # session_id
+                    None,  # ip_address
+                    None,  # user_agent
+                    metadata_json
+                ))
+            
+            # Batch insert
+            if events_to_insert:
+                async with self.connection_pool.acquire() as conn:
+                    await conn.executemany(
+                        """INSERT INTO user_events 
+                           (id, user_id, event_type_id, target_type, target_id, session_id,
+                            ip_address, user_agent, metadata)
+                           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""",
+                        events_to_insert
+                    )
+                    
+                logger.info(f"Logged {len(events_to_insert)} mention events for {entity_type} {entity_id}")
+                
+        except Exception as e:
+            logger.warning(f"Failed to log mention events: {e}")
+            # Don't raise - mention logging should not block post/comment creation
         
     # Statistics operations
     async def get_user_stats(self, user_id: str) -> Optional[Dict[str, Any]]:
