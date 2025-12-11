@@ -111,6 +111,19 @@ export interface Comment {
   replies?: Comment[];
 }
 
+export interface Notification {
+  id: string;
+  event_type_id: string;
+  target_type?: string;
+  target_id?: string;
+  post_id?: string;
+  post_title?: string;
+  mentioned_by_username?: string;
+  mentioned_by_display_name?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
 // Search types
 export interface SearchResult {
   post_id: string;

@@ -1068,6 +1068,20 @@ export class ApiClient {
     }
   }
 
+  async getNotifications(params?: { days?: number; limit?: number }): Promise<ApiResponse<any[]>> {
+    try {
+      const searchParams = new URLSearchParams();
+      if (params?.days !== undefined) searchParams.append('days', String(params.days));
+      if (params?.limit !== undefined) searchParams.append('limit', String(params.limit));
+      const query = searchParams.toString();
+      const endpoint = query ? `/events/notifications?${query}` : '/events/notifications';
+      return await this.apiCall<any[]>(endpoint, 'GET');
+    } catch (error) {
+      console.error('Get notifications failed:', error);
+      return { success: false, error: 'Failed to get notifications' };
+    }
+  }
+
   // Search API methods
   async getSearchConfig(): Promise<ApiResponse<any>> {
     try {

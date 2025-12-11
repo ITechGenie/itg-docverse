@@ -558,7 +558,7 @@ async def create_post(
                     mentioning_user_id=author_id,
                     entity_type='post',
                     entity_id=created_post_id,
-                    metadata={'post_title': title}
+                    metadata={'post_id': created_post_id}
                 )
             except Exception as mention_error:
                 logger.warning(f"Failed to log mention events: {mention_error}")
