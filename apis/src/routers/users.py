@@ -13,6 +13,7 @@ from ..models.user import User, UserCreate, UserUpdate, UserPublic
 from ..services.database.factory import DatabaseServiceFactory
 from ..services.database.base import DatabaseService
 from ..middleware.dependencies import get_current_user_from_middleware
+from ..config.settings import settings
 
 router = APIRouter()
 
@@ -66,44 +67,106 @@ async def get_users(
     current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
     db: DatabaseService = Depends(get_db_service)
 ):
-    """Get users with pagination (requires authentication)"""
+    """Get all users (paginated)"""
     try:
+        logger.debug(f"Getting users: skip={skip}, limit={limit}")
         users = await db.get_users(skip=skip, limit=limit)
-        logger.debug(f"Fetched {len(users)} users from database")
-
-        # Ensure each user dict has a non-None 'roles' list so Pydantic validation
-        # for UserPublic (which expects a list) does not fail when DB returns None.
-        processed = []
+        
+        # Add actual stats and roles to each user
         for user in users:
-            # Make a shallow copy in case the DB returns an immutable mapping
-            u = dict(user)
-
-            # Normalize roles: DB may return None, a comma-separated string
-            # (string_agg), or already a list. Ensure we always pass a list
-            # to Pydantic/UserPublic.
-            raw_roles = u.get('roles')
-            if raw_roles is None:
-                roles_list = []
-            elif isinstance(raw_roles, str):
-                # split CSV and trim whitespace; ignore empty items
-                roles_list = [r.strip() for r in raw_roles.split(',') if r.strip()]
-            elif isinstance(raw_roles, (list, tuple)):
-                roles_list = list(raw_roles)
-            else:
-                # Fallback: try to coerce iterable -> list, else empty
-                try:
-                    roles_list = list(raw_roles)
-                except Exception:
-                    roles_list = []
-
-            u['roles'] = roles_list
-            u['created_at'] = u.get('created_ts')  # Map created_ts to created_at for UserPublic    
-            processed.append(UserPublic(**u))
-
-        return processed
+            try:
+                # Get actual stats
+                actual_stats = await get_actual_user_stats(db, user['id'])
+                user.update(actual_stats)
+                
+                # Get user roles - just extract role IDs for lightweight response
+                user_roles_raw = await db.get_user_roles(user['id'])
+                role_ids = [role['role_id'] for role in user_roles_raw if role.get('assignment_active', True)]
+                user['roles'] = role_ids
+                
+                # Map database field names to model field names
+                user['created_at'] = user['created_ts']
+                
+                logger.debug(f"User roles for {user['username']} ({user['id']}): {role_ids}")
+            except Exception as e:
+                logger.error(f"Failed to get stats/roles for user {user['id']}: {e}")
+                # Add defaults if fetching fails
+                user.update({
+                    'post_count': 0,
+                    'comment_count': 0,
+                    'reactions_count': 0,
+                    'roles': [],
+                    'created_at': user.get('created_ts', user.get('joined_date'))
+                })
+        
+        return users
     except Exception as e:
-        logger.error(f"Error fetching users: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error fetching users: {str(e)}")
+        logger.error(f"Failed to get users: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve users")
+
+@router.get("/search", response_model=List[UserPublic])
+async def search_users(
+    query: str = Query(..., min_length=1, description="Search query for user display name or username"),
+    limit: int = Query(10, ge=1, le=50, description="Number of users to return"),
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
+    db: DatabaseService = Depends(get_db_service)
+):
+    """Search users by display name or username"""
+    try:
+        logger.debug(f"Searching users with query: '{query}', limit={limit}")
+        
+        # Search in both display_name and username fields
+        search_query = f"""
+        SELECT * FROM users 
+        WHERE (display_name ILIKE '%{query}%' OR username ILIKE '%{query}%') 
+        AND is_active = TRUE
+        ORDER BY 
+            CASE 
+                WHEN display_name ILIKE '{query}%' THEN 1
+                WHEN username ILIKE '{query}%' THEN 2
+                WHEN display_name ILIKE '%{query}%' THEN 3
+                ELSE 4
+            END,
+            display_name
+        LIMIT {limit}
+        """
+        
+        users = await db.execute_query(search_query)
+        
+        # Convert to list of dicts and add actual stats and roles
+        user_list = []
+        for user in users:
+            user_dict = dict(user)
+            try:
+                # Get actual stats
+                actual_stats = await get_actual_user_stats(db, user_dict['id'])
+                user_dict.update(actual_stats)
+                
+                # Get user roles - just extract role IDs for lightweight response
+                user_roles_raw = await db.get_user_roles(user_dict['id'])
+                role_ids = [role['role_id'] for role in user_roles_raw if role.get('assignment_active', True)]
+                user_dict['roles'] = role_ids
+                
+                # Map database field names to model field names
+                user_dict['created_at'] = user_dict['created_ts']
+                
+                logger.debug(f"User roles for {user_dict['username']} ({user_dict['id']}): {role_ids}")
+            except Exception as e:
+                logger.error(f"Failed to get stats/roles for user {user_dict['id']}: {e}")
+                # Add default stats and roles if actual fetching fails
+                user_dict.update({
+                    'post_count': 0,
+                    'comment_count': 0, 
+                    'reactions_count': 0,
+                    'roles': [],
+                    'created_at': user_dict.get('created_ts', user_dict.get('joined_date'))
+                })
+            user_list.append(user_dict)
+        
+        return user_list
+    except Exception as e:
+        logger.error(f"Failed to search users: {e}")
+        raise HTTPException(status_code=500, detail="Failed to search users")
 
 @router.get("/{user_id}", response_model=UserPublic)
 async def get_user(
@@ -124,12 +187,42 @@ async def get_user(
         
         # Get user stats - use actual stats instead of cached user_stats table
         user_stats = await get_actual_user_stats(db, user['id'])
-        
+
+        # Mentions count only for /me
+        mentions_count = 0
+        try:
+            if user_id == current_user.get("user_id"):
+                # Determine DB type for 30-day fallback expression
+                is_postgres = settings.database_type == "postgresql"
+                cutoff_expr = (
+                    "CURRENT_TIMESTAMP - INTERVAL '30 days'" if is_postgres
+                    else "DATETIME(CURRENT_TIMESTAMP, '-30 days')"
+                )
+                base_query = f"""
+                SELECT COUNT(*) AS count
+                FROM user_events
+                WHERE event_type_id = 'event-mentioned'
+                    AND user_id = ?
+                    AND created_ts > COALESCE(
+                        (
+                            SELECT created_ts FROM user_events
+                            WHERE event_type_id = 'event-notice-acknowledged' AND user_id = ?
+                            ORDER BY created_ts DESC LIMIT 1
+                        ),
+                        {cutoff_expr}
+                    )
+                """
+                query = db._convert_placeholders(base_query) if is_postgres else base_query
+                result = await db.execute_query(query, (user_id, user_id))
+                mentions_count = (result[0]['count'] if result else 0) or 0
+        except Exception as e:
+            logger.warning(f"Failed to compute mentions for user {user_id}: {e}")
+
         # Get user roles - just extract role IDs for lightweight response
         user_roles_raw = await db.get_user_roles(user['id'])
         role_ids = [role['role_id'] for role in user_roles_raw if role.get('assignment_active', True)]
         
-        logger.info(f"User roles for {user['username']} ({user['id']}): {role_ids}")
+        logger.info(f"User roles for {user['username']} ({user['id']}): {role_ids}, {user['email']}")
 
         # Build the response with stats and role IDs
         user_response = {
@@ -144,6 +237,7 @@ async def get_user(
             "post_count": user_stats.get('posts_count', 0),
             "comment_count": user_stats.get('comments_count', 0),
             "reactions_count": user_stats.get('reactions_count', 0),
+            "mentions": mentions_count,
             "is_verified": user.get('is_verified', False),
             "roles": role_ids,
             "created_at": user['created_ts']
@@ -268,6 +362,7 @@ async def get_user_by_username(
             "id": user['id'],
             "username": user['username'],
             "display_name": user['display_name'],
+            "email": user['email'],
             "bio": user.get('bio', ''),
             "location": user.get('location', ''),
             "website": user.get('website', ''),
@@ -337,3 +432,82 @@ async def update_user(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating user: {str(e)}")
+
+
+@router.get("/{user_id}/analytics")
+async def get_user_analytics(
+    user_id: str,
+    db: DatabaseService = Depends(get_db_service),
+    current_user: dict = Depends(get_current_user_from_middleware)
+):
+    """
+    Get user engagement analytics showing posts they've interacted with
+    """
+    try:
+        logger.debug(f"Getting analytics for user: {user_id}")
+        
+        # Get posts the user has interacted with (viewed, reacted, or commented on)
+        # Using the same tables as get_post_summary and get_actual_user_stats
+        query = """
+        SELECT DISTINCT
+            p.id as post_id,
+            p.title as post_title,
+            COALESCE(pv.view_count, 0) as views,
+            COALESCE(pr.reaction_count, 0) as reactions, 
+            COALESCE(pc.comment_count, 0) as comments,
+            GREATEST(
+                COALESCE(pv.last_viewed, '1970-01-01'),
+                COALESCE(pr.last_reaction, '1970-01-01'),
+                COALESCE(pc.last_comment, '1970-01-01')
+            ) as last_interaction
+        FROM posts p
+        LEFT JOIN (
+            SELECT target_id, COUNT(*) as view_count, MAX(created_ts) as last_viewed
+            FROM user_events 
+            WHERE user_id = ? AND target_type = 'post' AND event_type_id = 'event-view'
+            GROUP BY target_id
+        ) pv ON p.id = pv.target_id
+        LEFT JOIN (
+            SELECT target_id, COUNT(*) as reaction_count, MAX(created_ts) as last_reaction  
+            FROM reactions
+            WHERE user_id = ? AND target_type = 'post'
+            GROUP BY target_id
+        ) pr ON p.id = pr.target_id
+        LEFT JOIN (
+            SELECT post_id, COUNT(*) as comment_count, MAX(created_ts) as last_comment
+            FROM post_discussions
+            WHERE author_id = ? AND is_deleted = FALSE
+            GROUP BY post_id  
+        ) pc ON p.id = pc.post_id
+        WHERE (pv.view_count > 0 OR pr.reaction_count > 0 OR pc.comment_count > 0)
+        AND p.status != 'deleted'
+        ORDER BY last_interaction DESC
+        LIMIT 50
+        """
+        
+        posts_interacted = await db.execute_query(query, (user_id, user_id, user_id))
+        
+        # Calculate total interactions
+        total_interactions = sum(
+            (post.get('views', 0) + post.get('reactions', 0) + post.get('comments', 0))
+            for post in posts_interacted
+        )
+        
+        return {
+            "total_interactions": total_interactions,
+            "posts_interacted": [
+                {
+                    "post_id": post['post_id'],
+                    "post_title": post['post_title'],
+                    "views": post['views'],
+                    "reactions": post['reactions'],
+                    "comments": post['comments'],
+                    "last_interaction": str(post['last_interaction'])
+                }
+                for post in posts_interacted
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting user analytics for {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting user analytics: {str(e)}")

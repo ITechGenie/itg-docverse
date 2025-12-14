@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/auth-context';
 import Layout from '@/components/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import Settings from '@/pages/settings';
+import NotificationsPage from '@/pages/notifications';
 
 // Lazy load components for code splitting
 const Dashboard = lazy(() => import('@/pages/dashboard'));
@@ -176,6 +177,13 @@ export default function AppRouter() {
         <Route path="/search" element={
           <Suspense fallback={<PageLoadingFallback />}>
             <SearchPage />
+          </Suspense>
+        } />
+
+        {/* Search Routes */}
+        <Route path="/notifications" element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <NotificationsPage />
           </Suspense>
         } />
 

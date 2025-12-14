@@ -163,11 +163,13 @@ export class ApiClient {
               avatar: response.data.avatar_url || getAvatarUrl(response.data.username, 100),
               joinedDate: response.data.created_at || new Date().toISOString(),
               roles: response.data.roles || [],
+              mentionsCount: response.data.mentions ?? 0,
               stats: {
                 postsCount: response.data.post_count || 0,
                 commentsCount: response.data.comment_count || 0,
                 reactionsCount: response.data.reactions_count || 0,
                 tagsFollowed: 0,
+                mentions: response.data.mentions || 0,
               },
             };
             
@@ -234,6 +236,45 @@ export class ApiClient {
     } catch (error) {
       console.error('Get users failed:', error);
       return { success: false, error: 'Failed to get users' };
+    }
+  }
+
+  async searchUsers(query: string): Promise<ApiResponse<User[]>> {
+    try {
+      const searchParams = new URLSearchParams();
+      searchParams.append('query', query);
+      searchParams.append('limit', '10'); // Limit search results
+      
+      const endpoint = `/users/search?${searchParams.toString()}`;
+      const response = await this.apiCall<any[]>(endpoint, 'GET');
+      
+      if (response.success && response.data) {
+        // Transform backend user data to frontend User type
+        const users: User[] = response.data.map((backendUser: any) => ({
+          id: backendUser.id,
+          username: backendUser.username,
+          displayName: backendUser.display_name,
+          email: `${backendUser.username}@itgdocverse.com`,
+          bio: backendUser.bio || '',
+          location: backendUser.location || '',
+          website: backendUser.website || '',
+          avatar: backendUser.avatar_url || getAvatarUrl(backendUser.username, 100),
+          joinedDate: backendUser.created_at,
+          roles: backendUser.roles || [],
+          isVerified: backendUser.is_verified || false,
+          stats: {
+            postsCount: backendUser.post_count || 0,
+            commentsCount: backendUser.comment_count || 0,
+            reactionsCount: backendUser.reactions_count || 0,
+            tagsFollowed: 0,
+          },
+        }));
+        return { success: true, data: users };
+      }
+      return response;
+    } catch (error) {
+      console.error('Search users failed:', error);
+      return { success: false, error: 'Failed to search users' };
     }
   }
 
@@ -486,7 +527,8 @@ export class ApiClient {
         content: data.content || '',
         post_type: data.type || 'posts',
         tags: data.tags || [],
-        status: data.status || 'draft'
+        status: data.status || 'draft',
+        mentioned_user_ids: data.mentioned_user_ids || []
       };
 
       const response = await this.apiCall<any>('/posts/', 'POST', apiData);
@@ -511,6 +553,7 @@ export class ApiClient {
       if (data.tags !== undefined) apiData.tags = data.tags || [];
       if (data.coverImage !== undefined) apiData.cover_image_url = data.coverImage;
       if (data.status !== undefined) apiData.status = data.status; 
+      if (data.mentioned_user_ids !== undefined) apiData.mentioned_user_ids = data.mentioned_user_ids;
 
       const response = await this.apiCall<any>(`/posts/${postId}`, 'POST', apiData);
       if (response.success) {
@@ -615,6 +658,26 @@ export class ApiClient {
     } catch (error) {
       console.error('Get post analytics failed:', error);
       return { success: false, error: 'Failed to get post analytics' };
+    }
+  }
+
+  async getUserAnalytics(userId: string): Promise<ApiResponse<{
+    total_interactions: number;
+    posts_interacted: Array<{
+      post_id: string;
+      post_title: string;
+      views: number;
+      reactions: number;
+      comments: number;
+      last_interaction: string;
+    }>;
+  }>> {
+    try {
+      const endpoint = `/users/${userId}/analytics`;
+      return await this.apiCall(endpoint);
+    } catch (error) {
+      console.error('Get user analytics failed:', error);
+      return { success: false, error: 'Failed to get user analytics' };
     }
   }
 
@@ -819,7 +882,7 @@ export class ApiClient {
     }
   }
 
-  async createComment(postId: string, content: string, parentId?: string): Promise<ApiResponse<Comment>> {
+  async createComment(postId: string, content: string, parentId?: string, mentioned_user_ids?: string[]): Promise<ApiResponse<Comment>> {
     try {
       const response = await this.apiCall<any>(
         '/comments/',
@@ -827,7 +890,8 @@ export class ApiClient {
         {
           post_id: postId,
           content,
-          parent_id: parentId
+          parent_id: parentId,
+          mentioned_user_ids: mentioned_user_ids || []
         }
       );
 
@@ -1001,6 +1065,20 @@ export class ApiClient {
     } catch (error) {
       console.error('Get event types failed:', error);
       return { success: false, error: 'Failed to get event types' };
+    }
+  }
+
+  async getNotifications(params?: { days?: number; limit?: number }): Promise<ApiResponse<any[]>> {
+    try {
+      const searchParams = new URLSearchParams();
+      if (params?.days !== undefined) searchParams.append('days', String(params.days));
+      if (params?.limit !== undefined) searchParams.append('limit', String(params.limit));
+      const query = searchParams.toString();
+      const endpoint = query ? `/events/notifications?${query}` : '/events/notifications';
+      return await this.apiCall<any[]>(endpoint, 'GET');
+    } catch (error) {
+      console.error('Get notifications failed:', error);
+      return { success: false, error: 'Failed to get notifications' };
     }
   }
 

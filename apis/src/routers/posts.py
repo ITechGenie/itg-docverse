@@ -119,7 +119,7 @@ async def get_favorite_filtered_posts(
         base_query += " WHERE " + " AND ".join(where_conditions)
     
     base_query += """
-    ORDER BY p.updated_ts, p.created_ts DESC
+    ORDER BY COALESCE(p.updated_ts, p.created_ts) DESC
     LIMIT ? OFFSET ?
     """
     params.extend([limit, skip])
@@ -550,6 +550,20 @@ async def create_post(
             await db.associate_tags_with_post(author_id, created_post_id, post_data.tags)
             logger.debug(f"Associated {len(post_data.tags)} tags with post {created_post_id}")
 
+        # Log mention events if any users were mentioned
+        if post_data.mentioned_user_ids:
+            try:
+                await db.log_mention_events(
+                    mentioned_user_ids=post_data.mentioned_user_ids,
+                    mentioning_user_id=author_id,
+                    entity_type='post',
+                    entity_id=created_post_id,
+                    metadata={'post_id': created_post_id}
+                )
+            except Exception as mention_error:
+                logger.warning(f"Failed to log mention events: {mention_error}")
+                # Continue - mention logging should not block post creation
+
         # Fetch the created post to return the proper response
         created_post = await db.get_post_by_id(created_post_id)
         
@@ -637,6 +651,20 @@ async def update_post(
             await db.update_post_tags(current_user.get("user_id"), post_id, post_data.tags)
             # Fetch updated post to get the new tags
             updated_post = await db.get_post_by_id(post_id)
+        
+        # Log mention events if any users were mentioned
+        if post_data.mentioned_user_ids:
+            try:
+                await db.log_mention_events(
+                    mentioned_user_ids=post_data.mentioned_user_ids,
+                    mentioning_user_id=current_user.get("user_id"),
+                    entity_type='post',
+                    entity_id=post_id,
+                    metadata={'post_title': updated_post.get('title', '')}
+                )
+            except Exception as mention_error:
+                logger.warning(f"Failed to log mention events: {mention_error}")
+                # Continue - mention logging should not block post update
         
         # Transform database fields to match PostPublic model
         transformed_post = {

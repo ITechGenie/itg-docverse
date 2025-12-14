@@ -3,6 +3,7 @@ export interface User {
   username: string;
   displayName: string;
   email: string;
+  mentionsCount?: number;
   avatar?: string;
   bio?: string;
   location?: string;
@@ -16,6 +17,7 @@ export interface User {
     commentsCount: number;
     reactionsCount: number;
     tagsFollowed: number;
+    mentions?: number;
   };
   badges?: Badge[];
 }
@@ -32,6 +34,7 @@ export interface Post {
   id: string;
   type: 'block-diagram' | 'code-snippet' | 'discussion' | 'llm-long' | 'llm-short' | 'posts' | 'thoughts';
   title?: string; // Optional for short content
+  mentionsCount?: number;
   content?: string; // Full content - optional in feed views for posts to save bandwidth
   feed_content?: string; // Preview content for feed - used for all post types
   coverImage?: string;
@@ -108,6 +111,19 @@ export interface Comment {
   replies?: Comment[];
 }
 
+export interface Notification {
+  id: string;
+  event_type_id: string;
+  target_type?: string;
+  target_id?: string;
+  post_id?: string;
+  post_title?: string;
+  mentioned_by_username?: string;
+  mentioned_by_display_name?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
 // Search types
 export interface SearchResult {
   post_id: string;
@@ -162,6 +178,7 @@ export interface CreatePostData {
   coverImage?: string;
   tags: string[];
   status?: 'draft' | 'published' | 'archived' | 'frozen';
+  mentioned_user_ids?: string[]; // User IDs mentioned in the content
 }
 
 export interface ApiResponse<T> {

@@ -13,7 +13,7 @@ class DatabaseMigration:
     """Database migration and versioning system"""
     
     # Current database version
-    CURRENT_VERSION = "2.0.0"
+    CURRENT_VERSION = "2.1.0"
     
     # SQLite-specific migrations
     SQLITE_MIGRATIONS: Dict[str, str] = {
@@ -85,6 +85,33 @@ class DatabaseMigration:
         ('set-db-version', 'database.version', '2.0.0', 'string', NULL, 'Current database schema version', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'),
         ('set-upload-enabled', 'features.upload_enabled', 'true', 'boolean', NULL, 'Enable file uploads', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'),
         ('set-max-upload-size', 'upload.max_file_size', '10485760', 'number', NULL, 'Maximum file upload size in bytes (10MB)', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27');
+        """,
+        
+        "2.1.0": """
+        -- Add event-mentioned event type for user mentions
+        INSERT OR IGNORE INTO event_types (id, name, category, description, created_ts, created_by)
+        VALUES (
+            'event-mentioned',
+            'mentioned',
+            'engagement',
+            'User was mentioned in a post or comment',
+            CURRENT_TIMESTAMP,
+            'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'
+        ), 
+            'event-notice-acknowledged',
+            'notice-acknowledged',
+            'engagement',
+            'User acknowledged a notice',
+            CURRENT_TIMESTAMP,
+            'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'
+        ),(
+            'event-digest-email',
+            'digest-email',
+            'engagement',
+            'Email digest sent to user',
+            CURRENT_TIMESTAMP,
+            'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'  -- System user
+        );
         """
     }
     
@@ -159,6 +186,36 @@ class DatabaseMigration:
         ('set-upload-enabled', 'features.upload_enabled', 'true', 'boolean', NULL, 'Enable file uploads', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'),
         ('set-max-upload-size', 'upload.max_file_size', '10485760', 'number', NULL, 'Maximum file upload size in bytes (10MB)', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27', 'ef85dcf4-97dd-4ccb-b481-93067b0cfd27')
         ON CONFLICT (setting_key, user_id) DO NOTHING;
+        """,
+        
+        "2.1.0": """
+        -- Add event-mentioned event type for user mentions
+        INSERT INTO event_types (id, name, category, description, created_ts, created_by)
+        VALUES (
+            'event-mentioned',
+            'mentioned',
+            'engagement',
+            'User was mentioned in a post or comment',
+            CURRENT_TIMESTAMP,
+            'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'
+        ), 
+        (
+            'event-notice-acknowledged',
+            'notice-acknowledged',
+            'engagement',
+            'User acknowledged a notice',
+            CURRENT_TIMESTAMP,
+            'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'
+        ),
+        (
+            'event-digest-email',
+            'digest-email',
+            'engagement',
+            'Email digest sent to user',
+            CURRENT_TIMESTAMP,
+            'ef85dcf4-97dd-4ccb-b481-93067b0cfd27'  -- System user
+        )
+        ON CONFLICT (id) DO NOTHING;
         """
     }
     

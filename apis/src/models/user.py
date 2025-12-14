@@ -84,6 +84,7 @@ class UserPublic(BaseModel):
     username: str
     email: str
     display_name: str
+    mentions: int = 0
     bio: Optional[str] = None
     location: Optional[str] = None
     website: Optional[str] = None

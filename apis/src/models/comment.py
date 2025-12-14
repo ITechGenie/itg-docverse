@@ -4,7 +4,7 @@ Represents a comment in the ITG DocVerse system
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 class Comment(BaseModel):
@@ -30,6 +30,7 @@ class CommentCreate(BaseModel):
     post_id: str
     content: str = Field(..., min_length=1, max_length=1000)
     parent_id: Optional[str] = None
+    mentioned_user_ids: Optional[List[str]] = Field(default_factory=list)
 
 class CommentUpdate(BaseModel):
     """Comment update model"""

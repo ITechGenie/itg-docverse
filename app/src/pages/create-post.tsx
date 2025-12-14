@@ -13,6 +13,8 @@ import { createImageUploadCommand, ImageUploadDialog } from '@/components/ui/mde
 import { useTheme } from '@/components/theme-provider';
 import { api } from '@/services/api-client';
 import type { CreatePostData, Post } from '@/types';
+import { useUserMentions, extractMentionedUserIds } from '@/hooks/use-user-mentions';
+import { UserMentionSuggestions } from '@/components/ui/user-mention-suggestions';
 
 const createPostSchema = z.object({
   title: z.string().optional(),
@@ -24,10 +26,12 @@ const createPostSchema = z.object({
 type CreatePostForm = z.infer<typeof createPostSchema>;
 
 export default function CreatePost() {
+  const defaultPlaceholder = '## Enter your content in markdown format, Type @ to mention users...\n';
   const navigate = useNavigate();
   const location = useLocation();
   const { id, version } = useParams<{ id?: string; version?: string }>();
   const { theme } = useTheme();
+  const mentions = useUserMentions();
   
   // Determine if we're in edit mode
   const isEditMode = !!id;
@@ -47,12 +51,71 @@ export default function CreatePost() {
   const [markdownContent, setMarkdownContent] = useState('');
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
   const [showImageDialog, setShowImageDialog] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState(0);
 
-  // Function to insert image into markdown content
+  const handleEditorChange = (value: string | undefined) => {
+    const newValue = value || ''; // defaultPlaceholder;
+    setMarkdownContent(newValue);
+    setValue('content', newValue);
+    
+    // Track cursor position whenever content changes
+    setTimeout(() => {
+      const textarea = document.querySelector('.w-md-editor-text-input') as HTMLTextAreaElement;
+      if (textarea) {
+        setCursorPosition(textarea.selectionStart);
+      }
+    }, 0);
+  };
+
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    //console.log('Textarea keydown event:', e.key);
+    // Only trigger mention detection on @ key
+    //if (e.key === '@') {
+      const textarea = e.currentTarget;
+      const cursorPos = textarea.selectionStart;
+      //console.debug('Cursor position for mention:', cursorPos);
+      mentions.detectMention(markdownContent, cursorPos, textarea);
+   // }
+  };
+
+  const handleUserSelect = (user: any) => {
+    const { value: newValue, cursorPosition: newCursorPos } = mentions.insertMention(user, markdownContent);
+    setMarkdownContent(newValue);
+    setValue('content', newValue);
+    mentions.setShowSuggestions(false);
+    setCursorPosition(newCursorPos);
+    
+    // Set focus and cursor position after state updates
+    setTimeout(() => {
+      const textarea = document.querySelector('.w-md-editor-text-input') as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  };
+
+  // Function to insert image into markdown content at cursor position
   const handleImageInsert = (markdown: string) => {
     setMarkdownContent(prevContent => {
-      const newContent = prevContent ? `${prevContent}\n\n${markdown}` : markdown;
+      const before = prevContent.substring(0, cursorPosition);
+      const after = prevContent.substring(cursorPosition);
+      const newContent = `${before}\n\n${markdown}\n\n${after}`;
       setValue('content', newContent);
+      
+      // Update cursor position to after inserted image
+      const newCursorPos = before.length + markdown.length + 4; // +4 for \n\n before and after
+      setCursorPosition(newCursorPos);
+      
+      // Focus and set cursor after insertion
+      setTimeout(() => {
+        const textarea = document.querySelector('.w-md-editor-text-input') as HTMLTextAreaElement;
+        if (textarea) {
+          textarea.focus();
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      }, 100);
+      
       return newContent;
     });
   };
@@ -63,6 +126,11 @@ export default function CreatePost() {
     window.insertMarkdownCallback = handleImageInsert;
     window.showImageUploadDialog = () => {
       console.log('showImageUploadDialog called!');
+      // Save current cursor position before opening dialog
+      const textarea = document.querySelector('.w-md-editor-text-input') as HTMLTextAreaElement;
+      if (textarea) {
+        setCursorPosition(textarea.selectionStart);
+      }
       setShowImageDialog(true);
     };
     
@@ -72,9 +140,11 @@ export default function CreatePost() {
     };
   }, []);
 
+  //console.log('Mentions.showSuggestions:', mentions.showSuggestions);
+
   // Create custom commands for MDEditor
   const imageUploadCommand = createImageUploadCommand();
-  console.log('Image upload command created:', imageUploadCommand);
+  //console.log('Image upload command created:', imageUploadCommand);
 
   const customCommands = [
     commands.bold,
@@ -180,12 +250,16 @@ export default function CreatePost() {
     try {
       if (isEditMode && id) {
         // Update existing post
+        const content = activeTab === 'posts' ? markdownContent : (data.content || '');
+        const mentioned_user_ids = activeTab === 'posts' ? extractMentionedUserIds(markdownContent) : [];
+        
         const updateData = {
           title: activeTab === 'posts' ? data.title : undefined,
-          content: activeTab === 'posts' ? markdownContent : (data.content || ''),
+          content,
           coverImage: data.coverImage || undefined,
           tags: data.tags || [],
           status: status,
+          mentioned_user_ids,
         };
 
         console.log('Updating post:', id, updateData);
@@ -197,13 +271,17 @@ export default function CreatePost() {
         }
       } else {
         // Create new post
+        const content = activeTab === 'posts' ? markdownContent : (data.content || '');
+        const mentioned_user_ids = activeTab === 'posts' ? extractMentionedUserIds(markdownContent) : [];
+        
         const postData: CreatePostData = {
           type: activeTab,
           title: activeTab === 'posts' ? data.title : undefined,
-          content: activeTab === 'posts' ? markdownContent : (data.content || ''),
+          content,
           coverImage: data.coverImage || undefined,
           tags: data.tags || [],
           status: status,
+          mentioned_user_ids,
         };
 
         console.log('Creating post with status:', status, postData);
@@ -330,15 +408,27 @@ export default function CreatePost() {
               </div>
               <MDEditor
                 value={markdownContent}
-                onChange={(value) => {
-                  setMarkdownContent(value || '## Enter your content in markdown format');
-                  setValue('content', value || '## Enter your content in markdown format');
+                onChange={handleEditorChange}
+                textareaProps={{
+                  onKeyUp: handleTextareaKeyDown,
+                  placeholder: defaultPlaceholder,
                 }}
                 data-color-mode={theme === 'dark' ? 'dark' : 'light'}
                 preview="live"
                 height={400}
                 commands={customCommands}
               />
+
+              {/* Mention Suggestions */}
+              {mentions.showSuggestions && (
+                <UserMentionSuggestions
+                  searchTerm={mentions.mentionSearch}
+                  position={mentions.mentionPosition}
+                  onSelect={handleUserSelect}
+                  onClose={() => mentions.setShowSuggestions(false)}
+                />
+              )}
+
             </div>
           ) : (
             <div>

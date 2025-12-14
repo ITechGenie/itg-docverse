@@ -40,7 +40,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const { user: currentUser } = useAuth();
 
-  console.log('Current User Roles:', currentUser?.roles);
+  //console.log('Current User Roles:', currentUser?.roles);
   
   // Check if current user is admin
   const isAdmin = currentUser?.roles?.includes('role_admin');
@@ -86,7 +86,8 @@ export const TagInput: React.FC<TagInputProps> = ({
   }, [inputValue, value]);
 
   const addTag = (tagName: string) => {
-    const normalizedTag = tagName.trim().toLowerCase();
+    // Strip # symbol and normalize the tag name
+    const normalizedTag = tagName.trim().replace(/^#+/, '').toLowerCase();
     // Prevent adding restricted tags for non-admin users
     if (RESTRICTED_TAGS.includes(normalizedTag) && !isAdmin) {
       toast.error(`The tag "${normalizedTag}" is restricted to administrators.`);
@@ -229,9 +230,10 @@ export const TagInput: React.FC<TagInputProps> = ({
           ))}
 
           {/* Add new tag option */}
-          {inputValue.trim() && !suggestions.some(s => s.name.toLowerCase() === inputValue.trim().toLowerCase()) && (
+          {inputValue.trim() && !suggestions.some(s => s.name.toLowerCase() === inputValue.trim().replace(/^#+/, '').toLowerCase()) && (
             (() => {
-              const normalized = inputValue.trim().toLowerCase();
+              const cleaned = inputValue.trim().replace(/^#+/, '');
+              const normalized = cleaned.toLowerCase();
               const isRestricted = RESTRICTED_TAGS.includes(normalized);
               return (
                 <div
@@ -247,11 +249,11 @@ export const TagInput: React.FC<TagInputProps> = ({
                       setInputValue('');
                       return;
                     }
-                    addTag(inputValue.trim());
+                    addTag(cleaned);
                   }}
                 >
                   <Plus className="w-3 h-3" />
-                  <span>{isRestricted && !isAdmin ? `Create "${inputValue.trim()}" (admin only)` : `Create "${inputValue.trim()}"`}</span>
+                  <span>{isRestricted && !isAdmin ? `Create "${cleaned}" (admin only)` : `Create "${cleaned}"`}</span>
                 </div>
               );
             })()

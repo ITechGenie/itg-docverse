@@ -6,13 +6,15 @@ Handles user event tracking (views, interactions, etc.)
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timedelta
+import asyncio
 import json
 import uuid
 
 from ..services.database.factory import DatabaseServiceFactory
 from ..services.database.base import DatabaseService
 from ..middleware.dependencies import get_current_user_from_middleware
+from ..config.settings import settings
 
 
 class EventRequest(BaseModel):
@@ -133,6 +135,141 @@ async def log_view_event(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to log view event: {str(e)}"
+        )
+
+
+@router.get("/notifications")
+async def get_notifications(
+    days: Optional[int] = Query(30, ge=0, le=365, description="How many days back to include"),
+    limit: int = Query(50, ge=1, le=200, description="Maximum notifications to return"),
+    current_user: Dict[str, Any] = Depends(get_current_user_from_middleware),
+    db: DatabaseService = Depends(get_db_service)
+):
+    """Get mention notifications for the current user and acknowledge after fetch"""
+    try:
+        params: List[Any] = [current_user["user_id"]]
+        
+        # Build time filter clause
+        time_filter = ""
+        if days and days > 0:
+            cutoff_dt = datetime.utcnow() - timedelta(days=days)
+            time_filter = " AND ue.created_ts >= ?"
+            cutoff_value = cutoff_dt if settings.database_type == "postgresql" else cutoff_dt.isoformat()
+            params.append(cutoff_value)
+
+        # UNION query: fetch mentions from posts and comments with post info and mentioner details
+        # Use different JSON extraction syntax for PostgreSQL vs SQLite
+        is_postgres = settings.database_type == "postgresql"
+        json_extract_expr = "(ue.metadata::json->>'mentioned_by')" if is_postgres else "json_extract(ue.metadata, '$.mentioned_by')"
+        
+        base_query = f"""
+        SELECT 
+            ue.id,
+            ue.event_type_id,
+            ue.target_type,
+            ue.target_id,
+            ue.created_ts,
+            ue.metadata,
+            p.id AS post_id,
+            p.title AS post_title,
+            u.username AS mentioned_by_username,
+            u.display_name AS mentioned_by_display_name
+        FROM user_events ue
+        LEFT JOIN posts p ON ue.target_type = 'post' AND ue.target_id = p.id
+        LEFT JOIN users u ON {json_extract_expr} = u.username
+        WHERE ue.user_id = ? AND ue.event_type_id = 'event-mentioned' AND ue.target_type = 'post' {time_filter}
+        
+        UNION ALL
+        
+        SELECT 
+            ue.id,
+            ue.event_type_id,
+            ue.target_type,
+            ue.target_id,
+            ue.created_ts,
+            ue.metadata,
+            p.id AS post_id,
+            p.title AS post_title,
+            u.username AS mentioned_by_username,
+            u.display_name AS mentioned_by_display_name
+        FROM user_events ue
+        LEFT JOIN post_discussions pd ON ue.target_type = 'comment' AND ue.target_id = pd.id
+        LEFT JOIN posts p ON pd.post_id = p.id
+        LEFT JOIN users u ON {json_extract_expr} = u.username
+        WHERE ue.user_id = ? AND ue.event_type_id = 'event-mentioned' AND ue.target_type = 'comment' {time_filter}
+        
+        ORDER BY created_ts DESC
+        LIMIT ?
+        """
+        
+        # Duplicate user_id and cutoff for the second query in UNION
+        union_params = [current_user["user_id"]]
+        if days and days > 0:
+            union_params.append(cutoff_value)
+        union_params.append(current_user["user_id"])
+        if days and days > 0:
+            union_params.append(cutoff_value)
+        union_params.append(limit)
+
+        query = db._convert_placeholders(base_query) if settings.database_type == "postgresql" else base_query
+        rows = await db.execute_query(query, tuple(union_params))
+
+        notifications = []
+        for row in rows:
+            metadata = {}
+            try:
+                metadata = json.loads(row.get('metadata') or "{}")
+            except Exception:
+                metadata = {}
+
+            notifications.append({
+                "id": row.get('id'),
+                "event_type_id": row.get('event_type_id'),
+                "target_type": row.get('target_type'),
+                "target_id": row.get('target_id'),
+                "post_id": row.get('post_id'),
+                "post_title": row.get('post_title'),
+                "mentioned_by_username": row.get('mentioned_by_username'),
+                "mentioned_by_display_name": row.get('mentioned_by_display_name'),
+                "metadata": metadata,
+                "created_at": row.get('created_ts')
+            })
+
+        async def acknowledge_notifications(count: int):
+            try:
+                await db.log_user_event({
+                    'id': f"event-{uuid.uuid4()}",
+                    'user_id': current_user['user_id'],
+                    'event_type_id': 'event-notice-acknowledged',
+                    'target_type': 'notification',
+                    'target_id': None,
+                    'session_id': None,
+                    'ip_address': None,
+                    'user_agent': None,
+                    'metadata': {
+                        'acknowledged_at': datetime.utcnow().isoformat(),
+                        'count': count
+                    }
+                })
+            except Exception as ack_error:
+                # Non-blocking: acknowledgement failure should not break fetch
+                print(f"Failed to log acknowledgement: {ack_error}")
+
+        asyncio.create_task(acknowledge_notifications(len(notifications)))
+
+        return {
+            "success": True,
+            "data": notifications,
+            "pagination": {
+                "limit": limit,
+                "returned": len(notifications)
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch notifications: {str(e)}"
         )
 
 

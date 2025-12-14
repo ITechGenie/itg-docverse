@@ -11,8 +11,11 @@ from ..models.comment import Comment, CommentCreate, CommentUpdate, CommentPubli
 from ..services.database.factory import DatabaseServiceFactory
 from ..services.database.base import DatabaseService
 from ..middleware.dependencies import get_current_user_from_middleware
+from ..utils.logger import get_logger
 
 router = APIRouter()
+
+logger = get_logger("CommentsAPI", level="DEBUG", json_format=False)
 
 async def get_db_service() -> DatabaseService:
     """Dependency to get database service - using singleton pattern"""
@@ -130,6 +133,20 @@ async def create_comment(
         }
         
         created_id = await db.create_comment(comment_dict)
+        
+        # Log mention events if any users were mentioned
+        if comment_data.mentioned_user_ids:
+            try:
+                await db.log_mention_events(
+                    mentioned_user_ids=comment_data.mentioned_user_ids,
+                    mentioning_user_id=author_id,
+                    entity_type='comment',
+                    entity_id=created_id,
+                    metadata={'post_id': comment_data.post_id}
+                )
+            except Exception as mention_error:
+                logger.warning(f"Failed to log mention events: {mention_error}")
+                # Continue - mention logging should not block comment creation
         
         # Fetch the created comment to return it
         created_comment_dict = await db.get_comment_by_id(created_id)

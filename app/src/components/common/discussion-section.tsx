@@ -11,9 +11,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarUrl } from '@/lib/avatar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { UserMentionSuggestions } from '@/components/ui/user-mention-suggestions';
 import { api } from '@/services/api-client';
 import type { Post, Comment } from '@/types';
 import { useAuth } from "@/contexts/auth-context"
+import { extractPlainTextMentions, useUserMentions } from '@/hooks/use-user-mentions';
 
 interface DiscussionSectionProps {
   post: Post;
@@ -31,6 +33,26 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
   const [submittingComment, setSubmittingComment] = useState(false);
   const [commentReactions, setCommentReactions] = useState<Record<string, any[]>>({});
   const { user: currentUser } = useAuth();
+  
+  // Mention hooks for new comment
+  const {
+    showSuggestions: showCommentSuggestions,
+    mentionSearch: commentMentionSearch,
+    mentionPosition: commentMentionPosition,
+    detectMention: detectCommentMention,
+    insertMention: insertCommentMention,
+    setShowSuggestions: setShowCommentSuggestions
+  } = useUserMentions();
+  
+  // Mention hooks for reply dialog
+  const {
+    showSuggestions: showReplySuggestions,
+    mentionSearch: replyMentionSearch,
+    mentionPosition: replyMentionPosition,
+    detectMention: detectReplyMention,
+    insertMention: insertReplyMention,
+    setShowSuggestions: setShowReplySuggestions
+  } = useUserMentions();
 
   console.log('showBottomBar:', showBottomBar);
 
@@ -60,12 +82,42 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
     }
   };
 
+  const handleCommentTextKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget;
+    detectCommentMention(newComment, textarea.selectionStart, textarea);
+  };
+
+  const handleCommentUserSelect = (user: any) => {
+    const result = insertCommentMention(user, newComment, false);
+    setNewComment(result.value);
+    setShowCommentSuggestions(false);
+    
+    setTimeout(() => {
+      const textarea = document.querySelector('textarea[placeholder="Write a comment..."]') as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(result.cursorPosition, result.cursorPosition);
+      }
+    }, 0);
+  };
+
   const handleSubmitComment = async () => {
     if (!newComment.trim() || submittingComment) return;
     
     try {
       setSubmittingComment(true);
-      const response = await api.createComment(post.id, newComment.trim());
+      
+      // Prepend post author mention if not already present and not commenting on own post
+      let commentContent = newComment.trim();
+      if (post.author?.username && currentUser?.username !== post.author.username) {
+        const authorMention = `@${post.author.username}`;
+        if (!commentContent.startsWith(authorMention)) {
+          commentContent = `${authorMention} ${commentContent}`;
+        }
+      }
+      
+      const mentioned_user_ids = extractPlainTextMentions(commentContent);
+      const response = await api.createComment(post.id, commentContent, undefined, mentioned_user_ids);
       
       if (response.success && response.data) {
         // Add new comment to the list
@@ -125,16 +177,51 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
     }
   };
 
-  const handleReply = (commentId: string, authorName: string) => {
+  const handleReply = (commentId: string, authorName: string, authorUsername?: string) => {
     setReplyTo({ id: commentId, name: authorName });
+    // Prefill with author mention
+    if (authorUsername) {
+      setReplyText(`@${authorUsername} `);
+    }
     setShowReplyDialog(true);
+    
+    // Set cursor position after the prefilled mention
+    setTimeout(() => {
+      const textarea = document.querySelector('textarea[placeholder^="Reply to"]') as HTMLTextAreaElement;
+      if (textarea && authorUsername) {
+        textarea.focus();
+        const cursorPos = `@${authorUsername} `.length;
+        textarea.setSelectionRange(cursorPos, cursorPos);
+      }
+    }, 100);
+  };
+
+  const handleReplyTextKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget;
+    detectReplyMention(replyText, textarea.selectionStart, textarea);
+  };
+
+  const handleReplyUserSelect = (user: any) => {
+    const result = insertReplyMention(user, replyText, false); // false = plain text, not markdown
+    setReplyText(result.value);
+    setShowReplySuggestions(false);
+    
+    // Restore cursor position after state update
+    setTimeout(() => {
+      const textarea = document.querySelector('textarea[placeholder^="Reply to"]') as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(result.cursorPosition, result.cursorPosition);
+      }
+    }, 0);
   };
 
   const handleSubmitReply = async () => {
     if (!replyText.trim() || !replyTo) return;
     
     try {
-      const response = await api.createComment(post.id, replyText.trim(), replyTo.id);
+      const mentioned_user_ids = extractPlainTextMentions(replyText);
+      const response = await api.createComment(post.id, replyText.trim(), replyTo.id, mentioned_user_ids);
       
       if (response.success && response.data) {
         // Add new reply to the comments list
@@ -200,6 +287,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                 placeholder="Write a comment..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
+                onKeyUp={handleCommentTextKeyUp}
                 disabled={submittingComment}
               />
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-3 gap-2">
@@ -218,6 +306,16 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
             </div>
           </div>
         </div>
+
+        {/* Comment Mention Suggestions */}
+        {showCommentSuggestions && (
+          <UserMentionSuggestions
+            searchTerm={commentMentionSearch}
+            position={commentMentionPosition}
+            onSelect={handleCommentUserSelect}
+            onClose={() => setShowCommentSuggestions(false)}
+          />
+        )}
 
         {/* Real Comments List */}
         {loadingComments ? (
@@ -300,7 +398,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
                           variant="ghost" 
                           size="sm" 
                           className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleReply(comment.id, authorName)}
+                          onClick={() => handleReply(comment.id, authorName, comment.author_username)}
                         >
                           Reply
                         </Button>
@@ -404,6 +502,7 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
               placeholder={`Reply to ${replyTo?.name}...`}
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
+              onKeyUp={handleReplyTextKeyUp}
             />
           </div>
           <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
@@ -428,6 +527,16 @@ export const DiscussionSection = ({ post, showBottomBar = true }: DiscussionSect
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reply Mention Suggestions */}
+      {showReplySuggestions && (
+        <UserMentionSuggestions
+          searchTerm={replyMentionSearch}
+          position={replyMentionPosition}
+          onSelect={handleReplyUserSelect}
+          onClose={() => setShowReplySuggestions(false)}
+        />
+      )}
     </div>
   );
 };

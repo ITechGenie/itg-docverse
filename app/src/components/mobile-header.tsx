@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useSidebar } from '@/components/ui/sidebar';
 import { Link, useNavigate } from 'react-router-dom';
 import { findNavigationItem, navigationConfig } from '@/config/navigation';
+import NotifyBell from './ui/notify-icon';
 
 interface MobileHeaderProps {
   currentPath?: string;
@@ -16,7 +17,7 @@ interface MobileHeaderProps {
 export function MobileHeader({ 
   currentPath, 
   onSearch,
-  showSearch = true 
+  showSearch = false 
 }: MobileHeaderProps) {
   const { toggleSidebar } = useSidebar();
   const navigate = useNavigate();
@@ -86,7 +87,8 @@ export function MobileHeader({
               />
             </form>
           )}
-          <ModeToggle />
+          <ModeToggle /> 
+          <NotifyBell />
         </div>
       </div>
     </div>

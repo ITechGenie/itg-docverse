@@ -399,11 +399,11 @@ class PostgreSQLService(DatabaseService):
             query += f" AND EXISTS (SELECT 1 FROM post_tags ptg WHERE ptg.post_id = p.id AND ptg.tag_id = ${param_count})"
             params.append(tag_id)
         
-        # Order by reaction count for trending, otherwise by created date
+        # Order by reaction count for trending, otherwise by most recent activity (updated or created)
         if trending:
-            query += " ORDER BY reaction_count DESC, p.updated_ts DESC"
+            query += " ORDER BY reaction_count DESC, COALESCE(p.updated_ts, p.created_ts) DESC"
         else:
-            query += " ORDER BY p.updated_ts DESC"
+            query += " ORDER BY COALESCE(p.updated_ts, p.created_ts) DESC"
             
         param_count += 1
         query += f" LIMIT ${param_count}"
@@ -902,6 +902,73 @@ class PostgreSQLService(DatabaseService):
             )
         )
         return event_data['id']
+    
+    async def log_mention_events(self, mentioned_user_ids: List[str], mentioning_user_id: str, 
+                                 entity_type: str, entity_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Log mention events for multiple users"""
+        try:
+            import uuid
+            from datetime import datetime
+            
+            if not mentioned_user_ids:
+                return
+            
+            # Remove duplicates while preserving order
+            mentioned_user_ids = list(dict.fromkeys(mentioned_user_ids))
+            
+            # Validate mentioned users exist and get their usernames
+            placeholders = ','.join(f'${i+1}' for i in range(len(mentioned_user_ids)))
+            query = f"SELECT id, username FROM users WHERE username IN ({placeholders})"
+            valid_users = await self.execute_query(query, tuple(mentioned_user_ids))
+            
+            if not valid_users:
+                logger.warning(f"None of the mentioned usernames are valid: {mentioned_user_ids}")
+                return
+            
+            valid_user_map = {user['username']: user['id'] for user in valid_users}
+            invalid_usernames = set(mentioned_user_ids) - set(valid_user_map.keys())
+            
+            if invalid_usernames:
+                logger.warning(f"Invalid usernames in mentions: {invalid_usernames}")
+            
+            # Prepare batch insert data
+            now = datetime.utcnow().isoformat()
+            event_metadata = metadata or {}
+            event_metadata['mentioned_by'] = mentioning_user_id
+            metadata_json = json.dumps(event_metadata)
+            
+            events_to_insert = []
+            for username in valid_user_map.keys():
+                user_id = valid_user_map[username]
+                event_id = str(uuid.uuid4())
+                events_to_insert.append((
+                    event_id,
+                    user_id,
+                    'event-mentioned',
+                    entity_type,
+                    entity_id,
+                    None,  # session_id
+                    None,  # ip_address
+                    None,  # user_agent
+                    metadata_json
+                ))
+            
+            # Batch insert
+            if events_to_insert:
+                async with self.connection_pool.acquire() as conn:
+                    await conn.executemany(
+                        """INSERT INTO user_events 
+                           (id, user_id, event_type_id, target_type, target_id, session_id,
+                            ip_address, user_agent, metadata)
+                           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""",
+                        events_to_insert
+                    )
+                    
+                logger.info(f"Logged {len(events_to_insert)} mention events for {entity_type} {entity_id}")
+                
+        except Exception as e:
+            logger.warning(f"Failed to log mention events: {e}")
+            # Don't raise - mention logging should not block post/comment creation
         
     # Statistics operations
     async def get_user_stats(self, user_id: str) -> Optional[Dict[str, Any]]:
@@ -1260,7 +1327,8 @@ class PostgreSQLService(DatabaseService):
             
             # Create new tag
             import re
-            tag_id = re.sub(r'[^a-zA-Z0-9 ]', '', tag_name).lower().replace(' ', '-')
+            # Remove # symbol, strip other special chars except hyphens, replace spaces with hyphens, lowercase
+            tag_id = re.sub(r'[^a-zA-Z0-9 -]', '', tag_name.replace('#', '')).lower().replace(' ', '-')
             await self.create_tag({
                 'id': tag_id,
                 'name': tag_name,
@@ -1374,6 +1442,7 @@ class PostgreSQLService(DatabaseService):
                               description: Optional[str] = None, user_id: Optional[str] = None) -> bool:
         """Set a site setting"""
         try:
+            logger.info(f"Setting site setting {setting_key} for user {user_id or 'system'} - {setting_value} ({setting_type})")
             # Convert value to string based on type
             if setting_type == 'json':
                 value_str = json.dumps(setting_value)
@@ -1383,6 +1452,14 @@ class PostgreSQLService(DatabaseService):
                 value_str = str(setting_value)
             
             async with self.connection_pool.acquire() as conn:
+                # Get a valid system user ID (username='system') for created_by/updated_by
+                system_user_id = user_id
+                if not system_user_id:
+                    system_user_result = await conn.fetchval(
+                        "SELECT id FROM users WHERE username = 'system' AND is_active = TRUE LIMIT 1"
+                    )
+                    system_user_id = system_user_result or user_id
+                
                 # Check if setting exists
                 existing = await conn.fetchrow(
                     "SELECT id FROM site_settings WHERE setting_key = $1 AND user_id IS NOT DISTINCT FROM $2",
@@ -1396,7 +1473,7 @@ class PostgreSQLService(DatabaseService):
                            SET setting_value = $1, setting_type = $2, description = $3, 
                                updated_ts = CURRENT_TIMESTAMP, updated_by = $4
                            WHERE setting_key = $5 AND user_id IS NOT DISTINCT FROM $6""",
-                        value_str, setting_type, description, user_id or 'system', setting_key, user_id
+                        value_str, setting_type, description, system_user_id, setting_key, user_id
                     )
                 else:
                     # Create new setting
@@ -1406,12 +1483,25 @@ class PostgreSQLService(DatabaseService):
                             created_by, updated_by)
                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)""",
                         str(uuid.uuid4()), setting_key, value_str, setting_type, user_id, 
-                        description, user_id or 'system', user_id or 'system'
+                        description, system_user_id, system_user_id
                     )
             
             return True
         except Exception as e:
             logger.error(f"Failed to set site setting {setting_key}: {e}")
+            return False
+    
+    async def delete_site_setting(self, setting_key: str, user_id: Optional[str] = None) -> bool:
+        """Delete a site setting"""
+        try:
+            async with self.connection_pool.acquire() as conn:
+                await conn.execute(
+                    "DELETE FROM site_settings WHERE setting_key = $1 AND user_id IS NOT DISTINCT FROM $2",
+                    setting_key, user_id
+                )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete site setting {setting_key}: {e}")
             return False
     
     async def execute_migration(self, migration_sql: str) -> bool:
