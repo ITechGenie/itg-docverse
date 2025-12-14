@@ -4,7 +4,7 @@ import { MobileFooter } from "@/components/mobile-footer"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Home, Plus, Bell } from "lucide-react"
+import { Search, Home, Plus } from "lucide-react"
 import { Toaster } from "@/components/ui/sonner"
 import {
   Breadcrumb,
