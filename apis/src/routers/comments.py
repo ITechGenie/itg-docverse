@@ -11,8 +11,11 @@ from ..models.comment import Comment, CommentCreate, CommentUpdate, CommentPubli
 from ..services.database.factory import DatabaseServiceFactory
 from ..services.database.base import DatabaseService
 from ..middleware.dependencies import get_current_user_from_middleware
+from ..utils.logger import get_logger
 
 router = APIRouter()
+
+logger = get_logger("CommentsAPI", level="DEBUG", json_format=False)
 
 async def get_db_service() -> DatabaseService:
     """Dependency to get database service - using singleton pattern"""

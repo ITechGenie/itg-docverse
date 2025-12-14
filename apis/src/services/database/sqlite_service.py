@@ -1234,6 +1234,14 @@ class SQLiteService(DatabaseService):
             else:
                 value_str = str(setting_value)
             
+            # Get a valid system user ID (username='system') for created_by/updated_by
+            system_user_id = user_id
+            if not system_user_id:
+                result = await self.fetch_one(
+                    "SELECT id FROM users WHERE username = 'system' AND is_active = 1 LIMIT 1"
+                )
+                system_user_id = result['id'] if result else user_id
+            
             # Check if setting exists
             existing = await self.get_site_setting(setting_key, user_id)
             
@@ -1245,7 +1253,7 @@ class SQLiteService(DatabaseService):
                            SET setting_value = ?, setting_type = ?, description = ?, 
                                updated_ts = CURRENT_TIMESTAMP, updated_by = ?
                            WHERE setting_key = ? AND user_id IS NULL""",
-                        (value_str, setting_type, description, 'system', setting_key)
+                        (value_str, setting_type, description, system_user_id, setting_key)
                     )
                 else:
                     await self.execute_command(
@@ -1253,7 +1261,7 @@ class SQLiteService(DatabaseService):
                            SET setting_value = ?, setting_type = ?, description = ?, 
                                updated_ts = CURRENT_TIMESTAMP, updated_by = ?
                            WHERE setting_key = ? AND user_id = ?""",
-                        (value_str, setting_type, description, user_id, setting_key, user_id)
+                        (value_str, setting_type, description, system_user_id, setting_key, user_id)
                     )
             else:
                 # Create new setting
@@ -1263,12 +1271,30 @@ class SQLiteService(DatabaseService):
                         created_by, updated_by)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                     (self._generate_id(), setting_key, value_str, setting_type, user_id, 
-                     description, user_id or 'system', user_id or 'system')
+                     description, system_user_id, system_user_id)
                 )
             
             return True
         except Exception as e:
             logger.error(f"Failed to set site setting {setting_key}: {e}")
+            return False
+    
+    async def delete_site_setting(self, setting_key: str, user_id: Optional[str] = None) -> bool:
+        """Delete a site setting"""
+        try:
+            if user_id is None:
+                await self.execute_command(
+                    "DELETE FROM site_settings WHERE setting_key = ? AND user_id IS NULL",
+                    (setting_key,)
+                )
+            else:
+                await self.execute_command(
+                    "DELETE FROM site_settings WHERE setting_key = ? AND user_id = ?",
+                    (setting_key, user_id)
+                )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete site setting {setting_key}: {e}")
             return False
     
     async def execute_migration(self, migration_sql: str) -> bool:

@@ -4,6 +4,7 @@ Configuration management for ITG DocVerse API
 
 import os
 import urllib.parse
+from pathlib import Path
 from pydantic import BaseModel
 from typing import List
 from functools import lru_cache
@@ -15,6 +16,9 @@ load_dotenv()
 
 class Settings(BaseModel):
     """Application settings"""
+    
+    # Base directory for file paths
+    base_dir: Path = Path(__file__).parent.parent.parent
     
     # Database Configuration
     database_type: str = "sqlite"  # redis, sqlite, postgresql
@@ -79,6 +83,19 @@ class Settings(BaseModel):
     allow_ddl_operations: bool = True  # Allow DDL operations (CREATE, ALTER, DROP tables)
     admin_only_migrations: bool = False  # Require admin role for migrations
     
+    # Email/SMTP Configuration
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@itgdocverse.com"
+    smtp_connection_timeout: int = 30  # seconds
+    email_delay_seconds: int = 10  # delay between emails to avoid rate limiting
+    max_emails_per_hour: int = 1000  # maximum emails per hour
+    
+    # Application URLs
+    app_base_url: str = "http://localhost:3000"  # Frontend URL for email links
+    
     def get_database_url(self) -> str:
         """Get the appropriate database URL based on database type"""
         
@@ -133,6 +150,15 @@ def get_settings() -> Settings:
         "skip_bootstrap": os.getenv("SKIP_BOOTSTRAP", str(defaults.skip_bootstrap)).lower() == "true",
         "allow_ddl_operations": os.getenv("ALLOW_DDL_OPERATIONS", str(defaults.allow_ddl_operations)).lower() == "true",
         "admin_only_migrations": os.getenv("ADMIN_ONLY_MIGRATIONS", str(defaults.admin_only_migrations)).lower() == "true",
+        "smtp_host": os.getenv("SMTP_HOST", defaults.smtp_host),
+        "smtp_port": int(os.getenv("SMTP_PORT", defaults.smtp_port)),
+        "smtp_username": os.getenv("SMTP_USERNAME", defaults.smtp_username),
+        "smtp_password": os.getenv("SMTP_PASSWORD", defaults.smtp_password),
+        "smtp_from_email": os.getenv("SMTP_FROM_EMAIL", defaults.smtp_from_email),
+        "smtp_connection_timeout": int(os.getenv("SMTP_CONNECTION_TIMEOUT", defaults.smtp_connection_timeout)),
+        "email_delay_seconds": int(os.getenv("EMAIL_DELAY_SECONDS", defaults.email_delay_seconds)),
+        "max_emails_per_hour": int(os.getenv("MAX_EMAILS_PER_HOUR", defaults.max_emails_per_hour)),
+        "app_base_url": os.getenv("APP_BASE_URL", defaults.app_base_url),
     }
     return Settings(**settings_data)
 

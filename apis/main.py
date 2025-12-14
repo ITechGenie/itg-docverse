@@ -13,15 +13,20 @@ from pathlib import Path
 import uvicorn
 import os
 import logging
+import asyncio
 
 from src.config.settings import get_settings
-from src.routers import posts, users, tags, comments, stats, reactions, authors, events, search, files
+from src.routers import posts, users, tags, comments, stats, reactions, authors, events, search, files, scheduler
 from src.routers import public_auth, public_files
 from src.database.connection import get_database_service
 from src.middleware.auth import AuthenticationMiddleware
 from src.middleware.request_context import RequestContextMiddleware
 from src.auth.jwt_service import AuthService
 from src.services.database.migration import DatabaseMigration
+from src.services.scheduler import SchedulerService, JobConfig, set_scheduler
+from src.services.jobs.weekly_digest import send_weekly_digest
+from src.services.jobs.daily_mentions import send_daily_mentions
+from src.services.jobs.hourly_cleanup import cleanup_stale_data
 from bootstrap_data import BootstrapData
 
 # Initialize settings
@@ -143,12 +148,49 @@ async def lifespan(app: FastAPI):
         # Auto-bootstrap sample data if database is empty
         await auto_bootstrap(db_service)
     
+    # Initialize and start scheduler
+    print("📅 Initializing scheduler...")
+    loop = asyncio.get_event_loop()
+    scheduler = SchedulerService(db_service, event_loop=loop)
+    
+    # Register jobs
+    scheduler.register_job(JobConfig(
+        job_id="weekly_digest",
+        name="Weekly Digest Email",
+        handler=send_weekly_digest,
+        interval_hours=168,  # 7 days
+        enabled=True
+    ))
+    
+    scheduler.register_job(JobConfig(
+        job_id="daily_mentions",
+        name="Daily Mentions Notification",
+        handler=send_daily_mentions,
+        interval_hours=24,
+        enabled=True
+    ))
+    
+    scheduler.register_job(JobConfig(
+        job_id="hourly_cleanup",
+        name="Hourly Cleanup Task",
+        handler=cleanup_stale_data,
+        interval_hours=0.02,
+        enabled=True
+    ))
+    
+    # Start scheduler
+    scheduler.start()
+    set_scheduler(scheduler)
+    print("✅ Scheduler started with 3 jobs")
+    
     print("✅ Application started successfully!")
     
     yield
     
     # Shutdown
     print("🛑 Shutting down application...")
+    scheduler.stop()
+    print("✅ Scheduler stopped")
     await DatabaseServiceFactory.close_service()
     print("✅ Application shutdown complete!")
 
@@ -194,6 +236,7 @@ app.include_router(search.router, prefix="/apis/search", tags=["Search"])
 app.include_router(files.router, prefix="/apis/files", tags=["Files"]) 
 app.include_router(comments.router, prefix="/apis/comments", tags=["Comments"])
 app.include_router(stats.router, prefix="/apis/stats", tags=["Statistics"])
+app.include_router(scheduler.router, prefix="/apis/scheduler", tags=["Scheduler"])
 
 # Health check endpoint
 @app.get("/apis/health")
